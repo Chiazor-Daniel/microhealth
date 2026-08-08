@@ -4,6 +4,12 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
 async function seed() {
+  const existing = await db.query.users.findFirst({ where: eq(users.email, "admin@microhealth.ng") });
+  if (existing) {
+    console.log("[seed] Demo data already present, skipping.");
+    return;
+  }
+
   console.log("[seed] Starting...");
 
   // Admin user
@@ -140,8 +146,14 @@ async function seed() {
   console.log("  Patient:  +2348034567890 (tap Sign In — no password required)");
 }
 
-seed()
-  .catch((err) => {
-    console.error("[seed] Failed:", err);
-    process.exit(1);
-  });
+export async function runSeed() {
+  return seed();
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed()
+    .catch((err) => {
+      console.error("[seed] Failed:", err);
+      process.exit(1);
+    });
+}

@@ -19,5 +19,5 @@ RUN mkdir -p /app/data
 # Expose backend port
 EXPOSE 3001
 
-# Run migrations then start the server (seed separately on first deploy)
+# Run migrations then start the server (auto-seeds if DB is empty)
 CMD ["sh", "-c", "npm run db:migrate && npm start"]
