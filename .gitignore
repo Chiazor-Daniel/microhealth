@@ -43,3 +43,5 @@ coverage/
 # Misc
 backend.log
 frontend.log
+pnpm-lock.yaml
+pnpm-config-tmp.json
