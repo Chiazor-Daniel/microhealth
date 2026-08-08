@@ -1,0 +1,105 @@
+:root {
+  /* Skeuomorphic depth tokens */
+  --skeuo-shadow-sm: 0 2px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+  --skeuo-shadow: 0 6px 14px -3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.85);
+  --skeuo-shadow-lg: 0 12px 28px -6px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.85);
+  --skeuo-shadow-inset: inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.6);
+  --skeuo-card-gradient: linear-gradient(180deg, #FFFFFF 0%, #F8FAFA 100%);
+  --skeuo-input-gradient: linear-gradient(180deg, #FFFFFF 0%, #F3F4F6 100%);
+  --skeuo-border: rgba(0,0,0,0.08);
+}
+
+/* Smooth page transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Card lift */
+.card-lift {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease;
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--skeuo-shadow-lg);
+}
+
+/* Button press */
+.btn-press {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.btn-press:active {
+  transform: scale(0.96) translateY(1px);
+}
+
+/* Subtle shine for primary surfaces */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.6s ease;
+}
+.shine:hover::after {
+  left: 100%;
+}
+
+/* Floating badge pulse */
+@keyframes pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(15,125,122,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(15,125,122,0); }
+}
+.pulse-soft {
+  animation: pulse-soft 2s infinite;
+}
+
+/* Subtle skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(15,125,122,0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15,125,122,0.35);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(15,125,122,0.2);
+  color: #0A5E5C;
+}
+
+html, body, #root {
+  font-family: "Work Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}

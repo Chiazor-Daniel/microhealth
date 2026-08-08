@@ -1,0 +1,46 @@
+{
+  "name": "microhealth-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "drizzle-kit push --force",
+    "db:seed": "tsx src/db/seed.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "socket.io": "^4.8.0",
+    "drizzle-orm": "^0.38.0",
+    "drizzle-zod": "^0.6.0",
+    "zod": "^3.23.0",
+    "dotenv": "^16.4.5",
+    "morgan": "^1.10.0",
+    "cookie-parser": "^1.4.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/morgan": "^1.9.9",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "drizzle-kit": "^0.30.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
+  }
+}

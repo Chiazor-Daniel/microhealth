@@ -2,7 +2,7 @@
 
 :root {
   --font-size: 16px;
-  --background: #F8F9FA;
+  --background: #F3F4F6;
   --foreground: #0D1B2A;
   --card: #ffffff;
   --card-foreground: #0D1B2A;
@@ -13,14 +13,14 @@
   --secondary: #E6F7F6;
   --secondary-foreground: #0A5E5C;
   --muted: #EEF0F4;
-  --muted-foreground: #6B7280;
+  --muted-foreground: #5F6B7A;
   --accent: #36A09D;
   --accent-foreground: #ffffff;
-  --destructive: #F44336;
+  --destructive: #EF4444;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.08);
   --input: transparent;
-  --input-background: #F3F4F6;
+  --input-background: #FFFFFF;
   --switch-background: #CBD5E1;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -29,8 +29,8 @@
   --chart-2: #36A09D;
   --chart-3: #4CAF50;
   --chart-4: #FFB74D;
-  --chart-5: #F44336;
-  --radius: 0.75rem;
+  --chart-5: #EF4444;
+  --radius: 0.875rem;
   --sidebar: #131E33;
   --sidebar-foreground: #E2E8F0;
   --sidebar-primary: #0F7D7A;
@@ -126,6 +126,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Work Sans", sans-serif;
   }
 
   /**
