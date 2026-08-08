@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -18,6 +20,9 @@ import { referralRoutes } from "./routes/referral.routes";
 import { messageRoutes } from "./routes/message.routes";
 import { dashboardRoutes } from "./routes/dashboard.routes";
 import { reportRoutes } from "./routes/report.routes";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const app = express();
 
@@ -44,5 +49,15 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
+
+// Serve built frontend (only in production / bundled deployments)
+const staticPath = path.resolve(__dirname, "../frontend/dist");
+app.use(express.static(staticPath));
+app.get("*", (_req, res, next) => {
+  const file = path.join(staticPath, "index.html");
+  res.sendFile(file, (err) => {
+    if (err) next(err);
+  });
+});
 
 app.use(errorHandler);

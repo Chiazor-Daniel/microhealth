@@ -1,23 +1,41 @@
-# Build stage
 FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies
+# Install frontend dependencies and build
 COPY package*.json ./
 RUN npm install
 
-# Copy source and build
 COPY . .
-ARG VITE_API_URL=/api
-ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_URL=/api
 RUN npm run build
 
-# Serve stage
-FROM nginx:alpine
+# Move built frontend into backend so Express can serve it
+RUN mkdir -p /app/backend/frontend/dist \
+  && cp -r /app/dist/* /app/backend/frontend/dist/
 
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Final runtime image
+FROM node:22-slim
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Install build tools for better-sqlite3 native bindings
+RUN apt-get update && apt-get install -y python3 make g++ curl \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy backend files
+COPY backend/package*.json ./
+RUN npm install
+
+COPY backend/. .
+
+# Copy built frontend into backend/frontend/dist
+COPY --from=builder /app/backend/frontend/dist ./frontend/dist
+
+# Create SQLite data directory
+RUN mkdir -p /app/data
+
+EXPOSE 3001
+
+# Run migrations then start server (seed separately on first deploy)
+CMD ["sh", "-c", "npm run db:migrate && npm start"]
