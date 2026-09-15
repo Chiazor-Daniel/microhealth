@@ -822,8 +822,18 @@ Implemented on branch `patient-redesign`:
 - Updated `PatientLayout.tsx` to use the new `PatientShell`
 - Build passes successfully
 
+### 2025-01-12 — Phase 2 complete
+
+Implemented on branch `patient-redesign`:
+- Backend `POST /api/wearables/reading` route + controller (`backend/src/controllers/wearable.controller.ts`, `backend/src/routes/wearable.routes.ts`)
+- Wired `/api/wearables` into `backend/src/app.ts`
+- Mock wearable now POSTs realistic readings to the backend every 8 seconds
+- Backend persists readings into the existing `vitals` table
+- Backend emits `vital:updated` to the patient's Socket.io room
+- Frontend `useLiveVitals` hook listens for `vital:updated` and refreshes patient data automatically
+- Installed `socket.io-client` in root frontend so build resolves the dependency
+- Both frontend and backend TypeScript builds pass
+
 ### Next
 
-Phase 2: connect mock wearable to backend `/wearables/reading`, persist vitals, and wire real-time Socket.io events.
-Phase 3: deterministic rule engine + Ollama agent with patient RAG + medical knowledge RAG + agent tools.
-Phase 4: interactive GenUI response rendering and full care workflows.
+Phase 3: deterministic rule engine + Ollama Health Agent + patient RAG + medical knowledge RAG + `ai_insights` table + proactive Socket.io insights.
