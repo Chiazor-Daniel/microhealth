@@ -71,10 +71,10 @@ function PatientVitals() {
   ].filter(Boolean) as { label: string; value: string; ref: string; icon: React.ElementType; ok: boolean }[];
 
   return (
-    <div className="py-4 space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-foreground">My Health</h2>
-        <button className="text-xs font-medium" style={{ color: "#0F7D7A" }}>View trends</button>
+        <h2 className="text-[11px] font-extrabold tracking-widest uppercase" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>My Health</h2>
+        <button className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ color: "#0F7D7A", background: "#E6F7F6", border: "1px solid rgba(15,125,122,0.12)" }}>View trends</button>
       </div>
 
       {error && <ErrorState message={error} onRetry={refresh} />}
@@ -100,13 +100,22 @@ function PatientVitals() {
 
           <div className="grid grid-cols-2 gap-3">
             {cards.map(({ label, value, ref, icon: Icon, ok }) => (
-              <div key={label} className="p-4 rounded-xl" style={{ background: "#F8F9FA", border: "1px solid rgba(0,0,0,0.06)" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ background: "#E6F7F6" }}>
-                  <Icon size={14} style={{ color: "#0F7D7A" }} />
+              <div
+                key={label}
+                className="p-3.5 rounded-2xl"
+                style={{
+                  background: ok ? "linear-gradient(180deg, #FFFFFF 0%, #FAFBFB 100%)" : "linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 100%)",
+                  border: ok ? "1px solid rgba(13,27,42,0.06)" : "1px solid rgba(245,158,11,0.18)",
+                  boxShadow: "0 4px 14px rgba(13,27,42,0.06), 0 1px 3px rgba(13,27,42,0.04), inset 0 1px 0 rgba(255,255,255,0.9)",
+                  borderLeft: ok ? undefined : "3px solid #F59E0B",
+                }}
+              >
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2.5" style={{ background: ok ? "#E6F7F6" : "#FEF3C7", border: `1px solid ${ok ? "rgba(15,125,122,0.12)" : "rgba(245,158,11,0.18)"}` }}>
+                  <Icon size={14} style={{ color: ok ? "#0F7D7A" : "#D97706" }} />
                 </div>
-                <p className="text-sm font-bold text-foreground">{value}</p>
-                <p className="text-xs font-medium text-foreground mt-0.5">{label}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{ref}</p>
+                <p className="text-sm font-extrabold text-[#0D1B2A]">{value}</p>
+                <p className="text-xs font-bold text-[#0D1B2A] mt-0.5">{label}</p>
+                <p className="text-[10px] font-medium mt-0.5" style={{ color: "#8A97A8" }}>{ref}</p>
               </div>
             ))}
             {cards.length === 0 && vitals.length > 0 && (

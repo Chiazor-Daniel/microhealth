@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { getToken } from "../services/api";
 
-const SOCKET_URL = import.meta.env.VITE_WS_URL || "http://localhost:3001";
+const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 let globalSocket: Socket | null = null;
 

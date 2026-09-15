@@ -61,24 +61,30 @@ function PatientMessages() {
   if (error) return <ErrorState message={error} onRetry={refresh} />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4 space-y-4 max-w-3xl mx-auto">
-      <h2 className="text-base font-bold text-foreground">Messages & Reminders</h2>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-3xl mx-auto">
+      <h2 className="text-[11px] font-extrabold tracking-widest uppercase" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Messages & Reminders</h2>
 
       <div
         className="rounded-2xl p-4 flex items-start gap-3"
-        style={{ background: "#E6F7F6", border: "1px solid rgba(15,125,122,0.15)", boxShadow: "var(--skeuo-shadow)" }}
+        style={{
+          background: "linear-gradient(135deg, #E6F7F6 0%, #D0EEEA 100%)",
+          border: "1px solid rgba(15,125,122,0.14)",
+          boxShadow: "0 6px 18px rgba(15,125,122,0.10), 0 1px 4px rgba(13,27,42,0.05), inset 0 1px 0 rgba(255,255,255,0.7)",
+        }}
       >
-        <Bell size={16} style={{ color: "#0F7D7A", marginTop: 2 }} />
-        <div className="flex-1">
-          <p className="text-sm font-bold" style={{ color: "#0A5E5C" }}>Enable Push Notifications</p>
-          <p className="text-xs mt-0.5" style={{ color: "#36A09D" }}>Get reminders for medications and appointments.</p>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#fff", boxShadow: "0 2px 8px rgba(15,125,122,0.12)", border: "1px solid rgba(15,125,122,0.10)" }}>
+          <Bell size={14} style={{ color: "#0F7D7A" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-[#0D1B2A]">Enable Push Notifications</p>
+          <p className="text-xs font-medium mt-0.5" style={{ color: "#5F6B7A" }}>Get reminders for medications and appointments.</p>
           <motion.button
             whileTap={{ scale: 0.97 }}
-            className="mt-2 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
-            style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)", boxShadow: "0 3px 8px rgba(15,125,122,0.3)" }}
+            className="mt-2.5 text-xs font-bold px-4 py-2 rounded-xl text-white"
+            style={{ background: "linear-gradient(180deg, #0F7D7A 0%, #0A5E5C 100%)", boxShadow: "0 4px 12px rgba(15,125,122,0.30), inset 0 1px 0 rgba(255,255,255,0.18)" }}
             onClick={handleEnableNotifications}
           >
-            Enable
+            Enable Notifications
           </motion.button>
         </div>
       </div>

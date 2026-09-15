@@ -65,7 +65,7 @@ function PatientHome() {
   if (loading || dataLoading) return <Loading />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="px-0 py-4 space-y-4 max-w-3xl mx-auto">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 max-w-3xl mx-auto">
       {error && <ErrorState message={error} />}
       {dataError && <ErrorState message={dataError} />}
 
@@ -102,79 +102,93 @@ function PatientHome() {
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <h3 className="text-[11px] font-extrabold tracking-widest uppercase mb-3" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Quick Actions</h3>
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { icon: Calendar, label: "Book Appt", path: "book" },
-            { icon: FlaskConical, label: "My Labs", path: "labs" },
-            { icon: Pill, label: "Prescriptions", path: "prescriptions" },
-            { icon: FileText, label: "Records", path: "appointments" },
-          ].map(({ icon: Icon, label, path }) => (
+            { icon: Calendar, label: "Book Appointment", sub: "Find a slot", path: "book", accent: "#0F7D7A" },
+            { icon: FlaskConical, label: "Lab Results", sub: "View reports", path: "labs", accent: "#7C3AED" },
+            { icon: Pill, label: "Prescriptions", sub: "Refill & track", path: "prescriptions", accent: "#0F7D7A" },
+            { icon: FileText, label: "My Records", sub: "Visit history", path: "appointments", accent: "#2563EB" },
+          ].map(({ icon: Icon, label, sub, path, accent }) => (
             <motion.button
               key={label}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => navigate(`/patient/${path}`)}
-              className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all"
+              className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.98]"
               style={{
-                background: "var(--skeuo-card-gradient)",
-                boxShadow: "var(--skeuo-shadow-sm)",
-                border: "1px solid rgba(0,0,0,0.06)",
+                background: "linear-gradient(180deg, #FFFFFF 0%, #FAFBFB 100%)",
+                boxShadow: "0 6px 18px rgba(13,27,42,0.07), 0 1px 4px rgba(13,27,42,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
+                border: "1px solid rgba(13,27,42,0.06)",
               }}
             >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#E6F7F6" }}>
-                <Icon size={16} style={{ color: "#0F7D7A" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: accent + "14", border: `1px solid ${accent}18` }}>
+                <Icon size={18} style={{ color: accent }} />
               </div>
-              <span className="text-[10px] font-bold text-foreground text-center leading-tight">{label}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-[#0D1B2A] leading-none">{label}</p>
+                <p className="text-xs font-medium mt-0.5" style={{ color: "#8A97A8" }}>{sub}</p>
+              </div>
             </motion.button>
           ))}
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">Health Reminders</h3>
-        <div className="space-y-2">
+        <h3 className="text-[11px] font-extrabold tracking-widest uppercase mb-3" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Health Reminders</h3>
+        <div className="space-y-2.5">
           {reminders.length > 0 ? reminders.map(({ icon: Icon, title, sub, color }) => (
-            <motion.div
+            <div
               key={title}
-              whileHover={{ y: -2 }}
-              className="flex items-center gap-3 p-3 rounded-2xl"
+              className="flex items-center gap-3 p-3.5 rounded-2xl"
               style={{
-                background: "var(--skeuo-card-gradient)",
-                boxShadow: "var(--skeuo-shadow-sm)",
-                border: "1px solid rgba(0,0,0,0.06)",
+                background: "linear-gradient(180deg, #FFFFFF 0%, #FAFBFB 100%)",
+                boxShadow: "0 4px 14px rgba(13,27,42,0.06), 0 1px 3px rgba(13,27,42,0.04), inset 0 1px 0 rgba(255,255,255,0.9)",
+                border: "1px solid rgba(13,27,42,0.06)",
+                borderLeft: `3px solid ${color}`,
               }}
             >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + "18" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + "14", border: `1px solid ${color}18` }}>
                 <Icon size={15} style={{ color }} />
               </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground">{sub}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0D1B2A]">{title}</p>
+                <p className="text-xs font-medium" style={{ color: "#8A97A8" }}>{sub}</p>
               </div>
-            </motion.div>
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}66` }} />
+            </div>
           )) : (
-            <div className="p-3 rounded-2xl text-sm text-muted-foreground" style={{ background: "var(--skeuo-card-gradient)", boxShadow: "var(--skeuo-shadow-sm)" }}>No active reminders.</div>
+            <div className="p-4 rounded-2xl text-sm font-medium text-center" style={{ color: "#8A97A8", background: "linear-gradient(180deg, #FFFFFF 0%, #FAFBFB 100%)", boxShadow: "var(--skeuo-shadow-sm)", border: "1px solid rgba(13,27,42,0.06)" }}>No active reminders.</div>
           )}
         </div>
       </div>
 
-      <div className="rounded-3xl overflow-hidden" style={{ border: "1px solid rgba(0,0,0,0.06)", boxShadow: CARD_SHADOW }}>
-        <div className="h-24 w-full" style={{ background: "linear-gradient(135deg, #E6F7F6, #B2E8E6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <MapPin size={32} style={{ color: "#0F7D7A", opacity: 0.5 }} />
-        </div>
-        <div className="p-3 bg-white">
-          <p className="text-sm font-bold text-foreground">Your nearest MicroHealth unit</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Visit the care unit listed on your appointment.</p>
-          <div className="flex gap-2 mt-2">
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              className="flex-1 py-1.5 text-xs font-bold rounded-xl text-white"
-              style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)", boxShadow: "0 3px 8px rgba(15,125,122,0.3)" }}
-              onClick={() => navigate("/patient/appointments")}
-            >
-              See Appointment
-            </motion.button>
+      <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #FAFBFB 100%)", border: "1px solid rgba(13,27,42,0.06)", boxShadow: "0 6px 18px rgba(13,27,42,0.07), 0 1px 4px rgba(13,27,42,0.05), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
+        <div className="h-20 w-full flex items-center gap-3 px-4" style={{ background: "linear-gradient(135deg, #E6F7F6 0%, #D0EEEA 100%)", borderBottom: "1px solid rgba(15,125,122,0.10)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#fff", boxShadow: "0 2px 8px rgba(15,125,122,0.14), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
+            <MapPin size={18} style={{ color: "#0F7D7A" }} />
           </div>
+          <div>
+            <p className="text-sm font-bold text-[#0D1B2A]">Your nearest MicroHealth unit</p>
+            <p className="text-xs font-medium" style={{ color: "#5F6B7A" }}>Visit the care unit on your appointment</p>
+          </div>
+        </div>
+        <div className="p-3.5 flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 py-2.5 text-xs font-bold rounded-xl text-white"
+            style={{ background: "linear-gradient(180deg, #0F7D7A 0%, #0A5E5C 100%)", boxShadow: "0 4px 12px rgba(15,125,122,0.30), inset 0 1px 0 rgba(255,255,255,0.18)" }}
+            onClick={() => navigate("/patient/appointments")}
+          >
+            See Appointment
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 py-2.5 text-xs font-bold rounded-xl"
+            style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F2F4F5 100%)", color: "#0F7D7A", border: "1px solid rgba(15,125,122,0.18)", boxShadow: "0 2px 8px rgba(13,27,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
+            onClick={() => navigate("/patient/book")}
+          >
+            Book Visit
+          </motion.button>
         </div>
       </div>
     </motion.div>

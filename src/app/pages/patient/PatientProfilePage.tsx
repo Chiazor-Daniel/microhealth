@@ -45,12 +45,12 @@ function PatientProfilePage() {
   if (error || dataError) return <ErrorState message={error || dataError || "Failed to load profile"} />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4 space-y-4 max-w-3xl mx-auto">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-3xl mx-auto">
       <div
-        className="rounded-2xl p-5 text-center"
+        className="rounded-2xl p-5 text-center overflow-hidden relative"
         style={{
-          background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)",
-          boxShadow: "0 8px 24px rgba(15,125,122,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+          background: "linear-gradient(145deg, #0F7D7A 0%, #0A5E5C 100%)",
+          boxShadow: "0 12px 32px rgba(15,125,122,0.35), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.08)",
         }}
       >
         <div

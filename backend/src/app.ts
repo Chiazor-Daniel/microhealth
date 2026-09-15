@@ -26,8 +26,31 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: config.CORS_ORIGIN, credentials: true }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      fontSrc: ["'self'", "https:", "data:"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      objectSrc: ["'none'"],
+      scriptSrc: ["'self'"],
+      scriptSrcAttr: ["'none'"],
+      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+      connectSrc: ["'self'", "https:", "ws:", "wss:"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
+app.use(cors({
+  // For dev: reflect any origin (required for ngrok - the host changes each time).
+  // In production you should restrict this to your real domains.
+  origin: true,
+  credentials: true
+}));
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());

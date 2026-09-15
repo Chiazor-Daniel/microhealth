@@ -105,25 +105,47 @@ function BookAppointment() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4 max-w-3xl mx-auto">
-      <div className="flex items-center mb-6">
-        {steps.map((s, i) => (
-          <div key={s} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
-                style={{
-                  background: i + 1 < step ? "#0F7D7A" : i + 1 === step ? "linear-gradient(135deg, #0F7D7A, #0A5E5C)" : "#E5E7EB",
-                  color: i + 1 <= step ? "#fff" : "#9CA3AF",
-                  boxShadow: i + 1 === step ? "0 3px 8px rgba(15,125,122,0.35)" : "none",
-                }}
-              >
-                {i + 1 < step ? <CheckCircle size={14} /> : i + 1}
+      <div className="flex items-center mb-6 gap-0.5">
+        {steps.map((s, i) => {
+          const done = i + 1 < step;
+          const current = i + 1 === step;
+          return (
+            <div key={s} className="flex items-center flex-1 last:flex-none">
+              <div className="flex flex-col items-center gap-1.5 flex-1">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold transition-all flex-shrink-0"
+                  style={{
+                    background: done ? "#0F7D7A" : current ? "linear-gradient(145deg, #0F7D7A, #0A5E5C)" : "linear-gradient(180deg, #FFFFFF 0%, #F0F2F3 100%)",
+                    color: done || current ? "#fff" : "#8A97A8",
+                    border: done || current ? "none" : "1px solid rgba(13,27,42,0.08)",
+                    boxShadow: current
+                      ? "0 4px 12px rgba(15,125,122,0.35), inset 0 1px 0 rgba(255,255,255,0.22)"
+                      : done
+                        ? "0 2px 6px rgba(15,125,122,0.20)"
+                        : "0 1px 4px rgba(13,27,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
+                  }}
+                >
+                  {done ? <CheckCircle size={14} strokeWidth={2.5} /> : i + 1}
+                </div>
+                <span
+                  className="text-center leading-none"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: current ? 800 : 600,
+                    color: current ? "#0F7D7A" : done ? "#5F6B7A" : "#8A97A8",
+                    letterSpacing: "0.02em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {s}
+                </span>
               </div>
-              <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">{s}</span>
+              {i < steps.length - 1 && (
+                <div className="flex-1 h-0.5 mx-1 mb-5 rounded-full" style={{ background: done ? "#0F7D7A" : "rgba(13,27,42,0.10)" }} />
+              )}
             </div>
-            {i < steps.length - 1 && <div className="flex-1 h-px mx-1 mb-4" style={{ background: i + 1 < step ? "#0F7D7A" : "#E5E7EB" }} />}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {error && (

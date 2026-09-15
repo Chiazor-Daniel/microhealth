@@ -57,9 +57,9 @@ function FamilyMembers() {
   if (localError) return <ErrorState message={localError} />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4 space-y-4 max-w-3xl mx-auto">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-foreground">Family Members</h2>
+        <h2 className="text-[11px] font-extrabold tracking-widest uppercase" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Family Members</h2>
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowForm(!showForm)}
