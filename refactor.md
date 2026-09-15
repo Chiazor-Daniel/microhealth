@@ -834,6 +834,28 @@ Implemented on branch `patient-redesign`:
 - Installed `socket.io-client` in root frontend so build resolves the dependency
 - Both frontend and backend TypeScript builds pass
 
+### 2025-01-12 — Phase 3 complete
+
+Implemented on branch `patient-redesign`:
+- New `ai_insights` table added to `backend/src/db/schema.ts`
+- Backend `agent/` module with types, rules, RAG, medical knowledge, Ollama wrapper, engine, insights
+- New API routes: `/api/ai/insights`, `/api/ai/insights/:id/read`, `/api/ai/insights/:id/dismiss`, `/api/ai/chat`
+- Wearable controller now triggers the agent on each new reading
+- Frontend receives live `ai:insight` events via Socket.io
+- AI page and Home page now use real backend insights/chat
+- Frontend and backend builds pass
+
 ### Next
 
-Phase 3: deterministic rule engine + Ollama Health Agent + patient RAG + medical knowledge RAG + `ai_insights` table + proactive Socket.io insights.
+Phase 4: interactive GenUI response rendering, appointment booking through agent, medication/lab workflows, "can't see doctor yet" guided triage, final polish.
+
+## 15. FILES CREATED / MODIFIED SO FAR
+
+- `refactor.md`
+- `src/app/patient/*`
+- `src/app/services/wearable.service.ts`, `src/app/services/ai.service.ts`
+- `backend/src/agent/*`
+- `backend/src/controllers/wearable.controller.ts`, `backend/src/controllers/ai.controller.ts`
+- `backend/src/routes/wearable.routes.ts`, `backend/src/routes/ai.routes.ts`
+- `backend/src/db/schema.ts`
+- `backend/src/app.ts`
