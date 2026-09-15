@@ -301,3 +301,26 @@ export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
     references: [patients.id],
   }),
 }));
+
+export const aiInsights = sqliteTable("ai_insights", {
+  id: id(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  type: text("type").notNull(),
+  priority: text("priority").notNull().default("info"),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  explanation: text("explanation"),
+  suggestedActions: text("suggested_actions"),
+  context: text("context"),
+  isRead: integer("is_read", { mode: "boolean" }).default(false),
+  dismissedAt: integer("dismissed_at", { mode: "timestamp" }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
+  patient: one(patients, {
+    fields: [aiInsights.patientId],
+    references: [patients.id],
+  }),
+}));

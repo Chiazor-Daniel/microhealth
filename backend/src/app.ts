@@ -21,6 +21,7 @@ import { messageRoutes } from "./routes/message.routes";
 import { dashboardRoutes } from "./routes/dashboard.routes";
 import { reportRoutes } from "./routes/report.routes";
 import { wearableRoutes } from "./routes/wearable.routes";
+import { aiRoutes } from "./routes/ai.routes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +74,7 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/wearables", wearableRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/reports", reportRoutes);
 
 // Serve built frontend (only in production / bundled deployments)

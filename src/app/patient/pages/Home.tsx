@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Heart, Activity, Wind, Thermometer, Calendar, ChevronRight, Sparkles } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
+import { useInsights } from "../hooks/useInsights";
 import { dashboardService } from "../../services/dashboard.service";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
@@ -13,6 +14,7 @@ import { HealthStatusCard } from "../components/HealthStatusCard";
 import { GlassCard } from "../components/GlassCard";
 import { Timeline } from "../components/Timeline";
 import { AppointmentCard } from "../components/AppointmentCard";
+import { InsightCard } from "../components/InsightCard";
 import { useWearable } from "../hooks/useWearable";
 
 function getGreeting() {
@@ -43,6 +45,9 @@ export default function Home() {
   const { vitals: existingVitals, prescriptions, appointments, loading: dataLoading, error: dataError } = usePatientData();
   const patientId = user?.profile?.id;
   const { latest: wearableLatest, connected: wearableConnected, lastSynced } = useWearable(patientId, true);
+
+  const { insights } = useInsights();
+  const topInsight = insights.find((i) => !i.isRead) || insights[0];
 
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -186,35 +191,48 @@ export default function Home() {
         )}
       </div>
 
-      {/* AI Insight placeholder */}
-      <GlassCard
-        style={{
-          background: `linear-gradient(135deg, rgba(240,253,244,0.8), rgba(255,255,255,0.7))`,
-          border: `1px solid ${patientTheme.colors.aiAccent}30`,
-        }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center"
-            style={{ background: `${patientTheme.colors.aiAccent}20`, color: patientTheme.colors.aiAccent }}
-          >
-            <Sparkles size={14} />
+      {/* AI Insight */}
+      {topInsight ? (
+        <InsightCard
+          priority={topInsight.priority}
+          title={topInsight.title}
+          message={topInsight.message}
+          type={topInsight.type as any}
+          actions={[
+            { label: "Ask me", onClick: () => navigate("/patient/ai") },
+          ]}
+          onClick={() => navigate("/patient/ai")}
+        />
+      ) : (
+        <GlassCard
+          style={{
+            background: `linear-gradient(135deg, rgba(240,253,244,0.8), rgba(255,255,255,0.7))`,
+            border: `1px solid ${patientTheme.colors.aiAccent}30`,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className="w-6 h-6 rounded-lg flex items-center justify-center"
+              style={{ background: `${patientTheme.colors.aiAccent}20`, color: patientTheme.colors.aiAccent }}
+            >
+              <Sparkles size={14} />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: patientTheme.colors.aiAccent }}>Health Agent</span>
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: patientTheme.colors.aiAccent }}>Health Agent</span>
-        </div>
-        <p className="text-sm leading-relaxed" style={{ color: patientTheme.colors.textPrimary }}>
-          Your vitals look steady today. I’ll keep watching your trends and let you know if anything changes.
-        </p>
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => navigate("/patient/ai")}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-            style={{ background: patientTheme.colors.surface, color: patientTheme.colors.primaryGreen, border: `1px solid ${patientTheme.colors.border}` }}
-          >
-            Ask me
-          </button>
-        </div>
-      </GlassCard>
+          <p className="text-sm leading-relaxed" style={{ color: patientTheme.colors.textPrimary }}>
+            Your vitals look steady today. I’ll keep watching your trends and let you know if anything changes.
+          </p>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => navigate("/patient/ai")}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+              style={{ background: patientTheme.colors.surface, color: patientTheme.colors.primaryGreen, border: `1px solid ${patientTheme.colors.border}` }}
+            >
+              Ask me
+            </button>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Upcoming care */}
       {nextAppt && (

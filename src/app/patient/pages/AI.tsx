@@ -1,34 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Sparkles, Send, Heart, Calendar, Pill, FlaskConical, MessageSquare, ChevronRight } from "lucide-react";
+import { Sparkles, Send, Heart, Calendar, Pill, FlaskConical, MessageSquare } from "lucide-react";
 import { patientTheme } from "../theme";
 import { GlassCard } from "../components/GlassCard";
 import { InsightCard } from "../components/InsightCard";
 import { AIIndicator } from "../components/AIIndicator";
 import { QuickActionButton } from "../components/QuickActionButton";
+import { useInsights } from "../hooks/useInsights";
+import { aiService, type Insight } from "../../services/ai.service";
 
 interface Message {
   id: string;
   role: "agent" | "user";
   text: string;
-  cards?: any[];
+  insight?: Insight;
 }
-
-const activeInsights = [
-  {
-    priority: "watch" as const,
-    title: "Health trend",
-    message: "Your resting heart rate has been slightly higher than usual for the last 3 days. Nothing urgent — I'm keeping an eye on it.",
-    type: "trend" as const,
-  },
-  {
-    priority: "info" as const,
-    title: "Appointment",
-    message: "Your appointment with Dr. Okonkwo is tomorrow at 10:30 AM.",
-    type: "appointment" as const,
-  },
-];
 
 const quickActions = [
   { icon: <Heart size={14} />, label: "Check my health" },
@@ -40,6 +27,7 @@ const quickActions = [
 
 export default function AI() {
   const navigate = useNavigate();
+  const { insights, loading: insightsLoading, refresh } = useInsights();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -55,29 +43,35 @@ export default function AI() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", text: input };
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setTyping(true);
 
-    // Mock agent response — replace with backend agent call in Phase 3
-    setTimeout(() => {
-      let response = "";
-      const q = input.toLowerCase();
-      if (q.includes("appointment")) {
-        response = "Your next appointment is tomorrow at 10:30 AM with Dr. Okonkwo. Would you like to set a reminder or prepare for it?";
-      } else if (q.includes("heart rate") || q.includes("vitals")) {
-        response = "Your latest heart rate is 72 BPM, which is within your usual range of 64–74 BPM. Your blood pressure and SpO₂ also look normal.";
-      } else if (q.includes("medication") || q.includes("medicine")) {
-        response = "You have Amlodipine 5mg due this evening. That's 1 tablet daily for 30 days.";
-      } else {
-        response = "I understand. Let me look at your health context and get back to you with something useful.";
-      }
-      setMessages((m) => [...m, { id: crypto.randomUUID(), role: "agent", text: response }]);
+    const history = messages
+      .filter((m) => m.role === "user" || m.role === "agent")
+      .slice(-6)
+      .map((m) => `${m.role === "user" ? "Patient" : "Agent"}: ${m.text}`)
+      .join("\n");
+
+    try {
+      const reply = await aiService.chat(input, history);
+      setMessages((m) => [...m, { id: crypto.randomUUID(), role: "agent", text: reply.message, insight: reply }]);
+      refresh();
+    } catch (err: any) {
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "agent",
+          text: "I'm having trouble reaching my reasoning engine right now, but I'm still here. You can try again or view your vitals and care details.",
+        },
+      ]);
+    } finally {
       setTyping(false);
-    }, 800);
+    }
   };
 
   return (
@@ -99,15 +93,24 @@ export default function AI() {
       {/* Active insights */}
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: patientTheme.colors.textMuted }}>Active insights</p>
-        {activeInsights.map((insight) => (
-          <InsightCard
-            key={insight.title}
-            {...insight}
-            actions={[
-              { label: "Ask about this", onClick: () => setInput(`Tell me about my ${insight.title.toLowerCase()}`) },
-            ]}
-          />
-        ))}
+        {insightsLoading ? (
+          <p className="text-sm" style={{ color: patientTheme.colors.textMuted }}>Loading insights...</p>
+        ) : insights.length === 0 ? (
+          <p className="text-sm" style={{ color: patientTheme.colors.textMuted }}>Nothing active right now. I'll let you know when I notice something.</p>
+        ) : (
+          insights.slice(0, 3).map((insight) => (
+            <InsightCard
+              key={insight.id}
+              priority={insight.priority}
+              title={insight.title}
+              message={insight.message}
+              type={insight.type as any}
+              actions={[
+                { label: "Ask about this", onClick: () => setInput(`Tell me about my ${insight.title.toLowerCase()}`) },
+              ]}
+            />
+          ))
+        )}
       </div>
 
       {/* Quick actions */}
@@ -142,6 +145,22 @@ export default function AI() {
               }}
             >
               <p className="text-sm leading-relaxed">{msg.text}</p>
+              {msg.insight?.suggestedActions && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {Array.isArray(msg.insight.suggestedActions)
+                    ? msg.insight.suggestedActions.map((action: string) => (
+                        <button
+                          key={action}
+                          onClick={() => setInput(action)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium"
+                          style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
+                        >
+                          {action}
+                        </button>
+                      ))
+                    : null}
+                </div>
+              )}
             </GlassCard>
           </div>
         ))}
@@ -170,7 +189,7 @@ export default function AI() {
         />
         <button
           onClick={handleSend}
-          disabled={!input.trim()}
+          disabled={!input.trim() || typing}
           className="w-11 h-11 rounded-2xl flex items-center justify-center text-white disabled:opacity-50"
           style={{ background: patientTheme.colors.primaryGreen }}
         >

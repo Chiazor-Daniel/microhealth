@@ -3,10 +3,14 @@ import { Outlet } from "react-router";
 import { BottomNavigation } from "./components/BottomNavigation";
 import { patientTheme } from "./theme";
 import { useLiveVitals } from "./hooks/useLiveVitals";
+import { useLiveInsights } from "./hooks/useLiveInsights";
+import { usePatientData } from "../hooks/usePatientData";
 import "./patient.css";
 
 function PatientContent() {
   useLiveVitals();
+  const { refresh } = usePatientData();
+  useLiveInsights(refresh);
   return <Outlet />;
 }
 
