@@ -2,7 +2,13 @@ import { type ReactNode } from "react";
 import { Outlet } from "react-router";
 import { BottomNavigation } from "./components/BottomNavigation";
 import { patientTheme } from "./theme";
+import { useLiveVitals } from "./hooks/useLiveVitals";
 import "./patient.css";
+
+function PatientContent() {
+  useLiveVitals();
+  return <Outlet />;
+}
 
 export function PatientShell() {
   return (
@@ -19,7 +25,7 @@ export function PatientShell() {
         }}
       >
         <div className="mx-auto w-full max-w-md px-5 py-5">
-          <Outlet />
+          <PatientContent />
         </div>
       </main>
       <BottomNavigation />

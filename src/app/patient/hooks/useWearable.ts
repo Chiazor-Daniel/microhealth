@@ -1,14 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-
-export interface WearableReading {
-  patientId: string;
-  timestamp: string;
-  heartRate: number;
-  spo2: number;
-  temperature: number;
-  systolic: number;
-  diastolic: number;
-}
+import { wearableService, type WearableReading } from "../../services/wearable.service";
 
 export interface WearableState {
   connected: boolean;
@@ -40,6 +31,9 @@ export function useWearable(patientId?: string, enabled = true) {
     batteryLevel: 78,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const patientIdRef = useRef(patientId);
+
+  useEffect(() => { patientIdRef.current = patientId; }, [patientId]);
 
   const connect = useCallback(() => {
     setState((s) => ({ ...s, connected: true, lastSynced: "Just now" }));
@@ -48,18 +42,26 @@ export function useWearable(patientId?: string, enabled = true) {
   useEffect(() => {
     if (!enabled || !patientId) return;
     connect();
+
+    // Send first reading immediately so Home/Vitals have data
+    const first = generateReading(patientId);
+    wearableService.sendReading(first).catch(() => {});
+    setState((s) => ({ ...s, latest: first, lastSynced: formatTime(new Date(first.timestamp)) }));
+
     intervalRef.current = setInterval(() => {
-      setState((s) => {
-        const reading = generateReading(patientId);
-        return {
-          ...s,
-          connected: true,
-          latest: reading,
-          lastSynced: formatTime(new Date(reading.timestamp)),
-          batteryLevel: Math.max(10, s.batteryLevel - 0.02),
-        };
-      });
+      const id = patientIdRef.current;
+      if (!id) return;
+      const reading = generateReading(id);
+      wearableService.sendReading(reading).catch(() => {});
+      setState((s) => ({
+        ...s,
+        connected: true,
+        latest: reading,
+        lastSynced: formatTime(new Date(reading.timestamp)),
+        batteryLevel: Math.max(10, (s.batteryLevel ?? 78) - 0.02),
+      }));
     }, 8000);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
