@@ -802,8 +802,28 @@ Mobile-first, off-white background, white cards, green accent, generous whitespa
 | Mock wearable driver | Frontend `MockWearableProvider` for demo; backend `POST /api/wearables/reading` ready for real hardware. |
 | Visual mockups | Cannot be viewed. Rely on written spec and section 13.6 description. |
 
-## 14. FILES CREATED / MODIFIED SO FAR
+## 15. PROGRESS LOG
 
-- `refactor.md` (this file)
+### 2025-01-12 — Phase 1 complete
 
-Next: Phase 1 implementation begins on this branch.
+Implemented on branch `patient-redesign`:
+- Patient-specific design tokens (`src/app/patient/theme.ts`)
+- Patient CSS variables and motion utilities (`src/app/patient/patient.css`)
+- Reusable patient components: GlassCard, BottomNavigation, HealthStatusCard, VitalCard, InsightCard, Timeline, StatusBadge, SegmentedTabs, AIIndicator, WearableStatusCard, AppointmentCard, MedicationCard, LabResultCard, QuickActionButton
+- Mock wearable hook (`useWearable`) generating realistic vital readings every 8 seconds
+- New patient shell with mobile-first bottom nav: Home, Vitals, AI, Care, Profile
+- New pages:
+  - Home: greeting, status, primary/secondary vitals, AI insight card, timeline, upcoming appointment
+  - Vitals: metric selector, segmented time tabs, Recharts area chart, baseline/average stats, recent readings
+  - AI: active insights, quick actions, mock conversational agent (placeholder backend)
+  - Care: hub linking to appointments, prescriptions, labs, messages, family
+  - Profile: header, wearable status, health summary, preferences, sign-out
+- Updated routing in `App.tsx` to new structure while preserving legacy care sub-pages
+- Updated `PatientLayout.tsx` to use the new `PatientShell`
+- Build passes successfully
+
+### Next
+
+Phase 2: connect mock wearable to backend `/wearables/reading`, persist vitals, and wire real-time Socket.io events.
+Phase 3: deterministic rule engine + Ollama agent with patient RAG + medical knowledge RAG + agent tools.
+Phase 4: interactive GenUI response rendering and full care workflows.
