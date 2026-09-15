@@ -40,16 +40,20 @@ import StaffPage from "./pages/admin/StaffPage";
 import MessagesPage from "./pages/admin/MessagesPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
-// Patient pages
-import PatientHome from "./pages/patient/PatientHome";
+// New patient experience
+import Home from "./patient/pages/Home";
+import Vitals from "./patient/pages/Vitals";
+import AI from "./patient/pages/AI";
+import Care from "./patient/pages/Care";
+import Profile from "./patient/pages/Profile";
+
+// Legacy patient sub-pages reused under /patient/care/* and /patient/book, /patient/family
 import BookAppointment from "./pages/patient/BookAppointment";
 import PatientAppointments from "./pages/patient/PatientAppointments";
-import PatientVitals from "./pages/patient/PatientVitals";
 import PatientPrescriptions from "./pages/patient/PatientPrescriptions";
 import PatientLabs from "./pages/patient/PatientLabs";
-import FamilyMembers from "./pages/patient/FamilyMembers";
 import PatientMessages from "./pages/patient/PatientMessages";
-import PatientProfilePage from "./pages/patient/PatientProfilePage";
+import FamilyMembers from "./pages/patient/FamilyMembers";
 
 export default function App() {
   return (
@@ -89,18 +93,26 @@ export default function App() {
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
-      {/* Patient */}
+      {/* Patient — redesigned experience */}
       <Route path="/patient" element={<PatientLayout />}>
         <Route index element={<Navigate to="/patient/home" replace />} />
-        <Route path="home" element={<PatientHome />} />
+
+        {/* New primary screens */}
+        <Route path="home" element={<Home />} />
+        <Route path="vitals" element={<Vitals />} />
+        <Route path="ai" element={<AI />} />
+        <Route path="care" element={<Care />} />
+        <Route path="profile" element={<Profile />} />
+
+        {/* Care sub-pages (legacy pages reused) */}
+        <Route path="care/appointments" element={<PatientAppointments />} />
+        <Route path="care/prescriptions" element={<PatientPrescriptions />} />
+        <Route path="care/labs" element={<PatientLabs />} />
+        <Route path="care/messages" element={<PatientMessages />} />
+
+        {/* Utility routes */}
         <Route path="book" element={<BookAppointment />} />
-        <Route path="appointments" element={<PatientAppointments />} />
-        <Route path="vitals" element={<PatientVitals />} />
-        <Route path="prescriptions" element={<PatientPrescriptions />} />
-        <Route path="labs" element={<PatientLabs />} />
         <Route path="family" element={<FamilyMembers />} />
-        <Route path="messages" element={<PatientMessages />} />
-        <Route path="profile" element={<PatientProfilePage />} />
       </Route>
 
       {/* 404 */}
