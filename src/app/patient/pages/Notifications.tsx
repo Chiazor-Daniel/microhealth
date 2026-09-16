@@ -32,19 +32,41 @@ export default function Notifications() {
   const navigate = useNavigate();
   const { insights, loading, error, markRead } = useInsights();
 
-  const today = insights.filter(
-    (i) => Date.now() - new Date(i.createdAt).getTime() < 24 * 60 * 60 * 1000
-  );
-  const earlier = insights.filter(
-    (i) => Date.now() - new Date(i.createdAt).getTime() >= 24 * 60 * 60 * 1000
-  );
+  /**
+   * The agent re-emits the same insight on every cycle, which would otherwise
+   * fill the feed with one repeated card. Collapse per title, keeping the
+   * newest, and surface how many times it fired rather than hiding that.
+   */
+  const collapse = (list: typeof insights) => {
+    const byTitle = new Map<string, { item: (typeof list)[number]; count: number }>();
+    for (const i of list) {
+      const key = i.title.trim().toLowerCase();
+      const existing = byTitle.get(key);
+      if (!existing) {
+        byTitle.set(key, { item: i, count: 1 });
+      } else {
+        const newer = new Date(i.createdAt) > new Date(existing.item.createdAt);
+        byTitle.set(key, {
+          item: newer ? i : existing.item,
+          count: existing.count + 1,
+        });
+      }
+    }
+    return [...byTitle.values()].sort(
+      (a, b) => new Date(b.item.createdAt).getTime() - new Date(a.item.createdAt).getTime()
+    );
+  };
+
+  const isToday = (iso: string) => Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000;
+  const today = collapse(insights.filter((i) => isToday(i.createdAt)));
+  const earlier = collapse(insights.filter((i) => !isToday(i.createdAt)));
 
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error} />;
 
-  const rows = (list: typeof insights) => (
+  const rows = (list: ReturnType<typeof collapse>) => (
     <div className="space-y-3">
-      {list.map((n) => {
+      {list.map(({ item: n, count }) => {
         const unread = !n.isRead;
         const icon = typeIcons[n.type as string] ?? <Sparkles size={18} />;
         return (
@@ -53,10 +75,7 @@ export default function Notifications() {
             onClick={() => { if (unread) markRead(n.id); }}
             className="mh-card flex items-start gap-3 p-4"
           >
-            <div
-              className="mh-icon w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ color: patientTheme.colors.primaryGreen }}
-            >
+            <div className="mh-icon w-10 h-10" style={{ color: patientTheme.colors.primaryGreen }}>
               {icon}
             </div>
             <div className="flex-1 min-w-0">
@@ -64,6 +83,11 @@ export default function Notifications() {
                 <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
                   {n.title}
                 </p>
+                {count > 1 && (
+                  <span className="mh-pill px-1.5 py-0.5 text-[10px] font-semibold flex-shrink-0">
+                    {count}×
+                  </span>
+                )}
                 {unread && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: patientTheme.colors.primaryGreen }} />}
               </div>
               <p className="text-[13px] leading-snug mt-0.5 line-clamp-2" style={{ color: patientTheme.colors.textSecondary }}>

@@ -1,80 +1,96 @@
-// MicroHealth Patient Experience — Design Tokens
+// MicroHealth Patient Experience — web theme.
 //
-// The visual language: SOFT + TACTILE + DIMENSIONAL + MINT + PREMIUM HEALTHCARE.
-// Physically believable depth, extremely soft shadows, a pale mint atmosphere,
-// restrained emerald green, navy ink (never pure black). Scoped to the patient
-// redesign — does not affect the admin theme.
+// Values come from src/tokens (shared with the React Native build) and are
+// rendered into web shapes here: CSS length strings and box-shadow /
+// linear-gradient text. Editing a token updates web and native together.
+
+import {
+  colors as t,
+  semantic,
+  typography as typeTokens,
+  spacing as spacingTokens,
+  radii as radiusTokens,
+  elevation,
+  coloredElevation,
+  gradients as gradientTokens,
+  elevationToCSS,
+  gradientToCSS,
+  metricTint,
+} from "../../tokens";
 
 export const patientTheme = {
   colors: {
-    /* ---- Green ramp: rich, natural emerald. Never neon. ---- */
-    green50: "#F0FDF4",
-    green100: "#DCFCE7",
-    green200: "#BBF7D0",
-    green300: "#86EFAC",
-    green400: "#4ADE80",
-    green500: "#22C55E",
-    green600: "#16A34A", // primary action
-    green700: "#15803D", // deep — active states, text on mint
-    green800: "#166534",
-    green900: "#14532D",
+    /* ---- Green ramp ---- */
+    green50: t.green50,
+    green100: t.green100,
+    green200: t.green200,
+    green300: t.green300,
+    green400: t.green400,
+    green500: t.green500,
+    green600: t.green600,
+    green700: t.green700,
+    green800: t.green800,
+    green900: t.green900,
 
     /* ---- Mint atmosphere ---- */
-    mint: "#EAF7EE",
-    mintDeep: "#DCF0E3",
-    mintPale: "#F3FAF5",
+    mint: t.mint,
+    mintDeep: t.mintDeep,
+    mintPale: t.mintPale,
 
     /* ---- Ink: navy / blue-gray. Never pure black. ---- */
-    ink: "#0F172A",
-    inkSecondary: "#64748B",
-    inkMuted: "#94A3B8",
+    ink: t.ink,
+    inkSecondary: t.inkSecondary,
+    inkMuted: t.inkMuted,
 
     /* ---- Surfaces ---- */
-    background: "#F7FAF8",
-    surface: "#FFFFFF",
-    surfaceRaised: "#FFFFFF",
-    surfaceSecondary: "#F4F7F9",
-    hairline: "#E8EEF2",
-    hairlineSoft: "#F1F5F7",
+    background: t.background,
+    surface: t.surface,
+    surfaceRaised: t.surfaceRaised,
+    surfaceSecondary: t.surfaceSecondary,
+    hairline: t.hairline,
+    hairlineSoft: t.hairlineSoft,
+    scrim: t.scrim,
 
-    // Aliases kept for existing components
-    border: "#E8EEF2",
-    borderLight: "#F1F5F7",
-    textPrimary: "#0F172A",
-    textSecondary: "#64748B",
-    textMuted: "#94A3B8",
+    /* ---- Aliases kept for existing components ---- */
+    border: semantic.border,
+    borderLight: semantic.borderSoft,
+    textPrimary: semantic.textPrimary,
+    textSecondary: semantic.textSecondary,
+    textMuted: semantic.textMuted,
 
-    primaryGreen: "#16A34A",
-    primaryDark: "#15803D",
-    primaryDeep: "#14532D",
-    primarySoft: "#DCFCE7",
-    primaryPale: "#F0FDF4",
-    aiAccent: "#16A34A",
+    primaryGreen: t.green600,
+    primaryDark: t.green700,
+    primaryDeep: t.green900,
+    primarySoft: t.green100,
+    primaryPale: t.green50,
+    aiAccent: t.green600,
 
     /* ---- Status ---- */
-    success: "#16A34A",
-    successSoft: "#DCFCE7",
-    warning: "#F59E0B",
-    warningSoft: "#FEF3C7",
-    error: "#EF4444",
-    errorSoft: "#FEE2E2",
-    info: "#3B82F6",
-    infoSoft: "#DBEAFE",
+    success: t.success,
+    successSoft: t.successSoft,
+    warning: t.warning,
+    warningSoft: t.warningSoft,
+    error: t.error,
+    errorSoft: t.errorSoft,
+    info: t.info,
+    infoSoft: t.infoSoft,
 
-    /* ---- Tints for dimensional icon containers ---- */
-    rose: "#E11D48",
-    roseSoft: "#FFE4E9",
-    amber: "#D97706",
-    amberSoft: "#FEF3C7",
-    blue: "#2563EB",
-    blueSoft: "#DBEAFE",
-    teal: "#0D9488",
-    tealSoft: "#CCFBF1",
+    /* ---- Icon-container tints ---- */
+    rose: t.rose,
+    roseSoft: t.roseSoft,
+    amber: t.amber,
+    amberSoft: t.amberSoft,
+    blue: t.blue,
+    blueSoft: t.blueSoft,
+    teal: t.teal,
+    tealSoft: t.tealSoft,
+    onGreen: t.onGreen,
+    onGreenMuted: t.onGreenMuted,
   },
 
+  /* Type scale as CSS-ready objects (px strings + numeric tracking). */
   typography: {
-    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-    /* Weight and size carry the hierarchy — not everything is bold. */
+    fontFamily: typeTokens.fontFamily,
     pageTitle: { size: 23, weight: 700, lineHeight: 1.25, tracking: "-0.02em" },
     h1: { size: 23, weight: 700, lineHeight: 1.25, tracking: "-0.02em" },
     sectionTitle: { size: 16, weight: 650, lineHeight: 1.3, tracking: "-0.01em" },
@@ -87,87 +103,54 @@ export const patientTheme = {
     metric: { size: 26, weight: 700, lineHeight: 1.05, tracking: "-0.03em" },
     metricLarge: { size: 32, weight: 700, lineHeight: 1.05, tracking: "-0.03em" },
     vitalNumber: { size: 26, weight: 700, lineHeight: 1.05, tracking: "-0.03em" },
-    heroNumber: { size: 32, weight: 700, lineHeight: 1.05, tracking: "-0.03em" },
+    heroNumber: { size: 34, weight: 700, lineHeight: 1.02, tracking: "-0.03em" },
   },
 
-  /* Strict 4 / 8 / 12 / 16 / 24 / 32 scale. Sections breathe at 24. */
-  spacing: {
-    xxs: 4,
-    xs: 8,
-    sm: 12,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    pageX: 20,
-    pageY: 16,
-    cardPadding: 18,
-    sectionGap: 24,
-    itemGap: 12,
-  },
+  spacing: { ...spacingTokens },
 
   radius: {
-    small: 16,
-    card: 20,
-    feature: 24,
-    control: 14,
-    button: 999,
-    pill: 9999,
+    small: radiusTokens.small,
+    card: radiusTokens.card,
+    feature: radiusTokens.feature,
+    control: radiusTokens.control,
+    button: radiusTokens.pill,
+    pill: radiusTokens.pill,
   },
 
-  /* Elevation ladder. Every step is extremely soft and spread —
-     ambient shadow for contact, secondary for lift, never dark or sharp. */
+  /* Elevation ladder, rendered to CSS from the shared shadow tokens. */
   shadows: {
-    e1: "0 1px 2px rgba(16,24,40,0.04), 0 4px 12px -4px rgba(16,24,40,0.06)",
-    e2: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.10)",
-    e3: "0 2px 4px rgba(16,24,40,0.05), 0 20px 40px -12px rgba(16,24,40,0.14)",
+    e1: elevationToCSS(elevation.e1),
+    e2: elevationToCSS(elevation.e2),
+    e3: elevationToCSS(elevation.e3),
 
     // Aliases kept for existing components
-    soft: "0 1px 2px rgba(16,24,40,0.04), 0 4px 12px -4px rgba(16,24,40,0.06)",
-    medium: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.10)",
-    strong: "0 2px 4px rgba(16,24,40,0.05), 0 20px 40px -12px rgba(16,24,40,0.14)",
+    soft: elevationToCSS(elevation.e1),
+    medium: elevationToCSS(elevation.e2),
+    strong: elevationToCSS(elevation.e3),
 
-    /** Lit top edge of a raised surface. */
     emboss: "inset 0 1px 0 rgba(255,255,255,0.9)",
-    /** Gel key — colored ground shadow + lit top. */
     gel: "inset 0 1px 0 rgba(255,255,255,0.30), 0 4px 12px -2px rgba(22,163,74,0.38)",
     inset: "inset 0 1px 0 rgba(255,255,255,0.6)",
-
-    /* Green feature cards */
-    greenCard: "0 2px 6px rgba(16,24,40,0.06), 0 16px 32px -12px rgba(22,101,52,0.35)",
+    greenCard: elevationToCSS(coloredElevation.greenCard),
   },
 
-  /* Named gradients — the atmosphere and lit surfaces */
+  /* Gradients rendered from the shared stop data. */
   gradients: {
-    /* Page atmosphere: near-white revealing pale mint */
-    atmosphere:
-      "radial-gradient(120% 80% at 15% -10%, rgba(214,244,224,0.55) 0%, rgba(214,244,224,0) 55%)," +
-      "radial-gradient(100% 70% at 95% 5%, rgba(219,234,254,0.35) 0%, rgba(219,234,254,0) 55%)," +
-      "radial-gradient(90% 60% at 50% 108%, rgba(203,239,217,0.42) 0%, rgba(203,239,217,0) 60%)," +
-      "linear-gradient(180deg, #F8FBF9 0%, #F5F9F6 55%, #F2F8F4 100%)",
-
-    /* Raised white card: lit at the top, settling slightly at the base */
-    card: "linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 62%, #FBFDFC 100%)",
-
-    /* Green hero / feature card */
-    greenCard: "linear-gradient(158deg, #1CAE51 0%, #16A34A 32%, #15803D 72%, #14703A 100%)",
-    greenCardSoft: "linear-gradient(158deg, #22C55E 0%, #16A34A 55%, #15803D 100%)",
-
-    /* Primary pill button */
-    buttonPrimary: "linear-gradient(180deg, #1FB055 0%, #16A34A 55%, #158840 100%)",
-
-    /* Mint surface — feature cards, welcome panels */
-    mint: "linear-gradient(165deg, #F0FBF3 0%, #E6F6EC 60%, #DFF2E6 100%)",
-
-    /* Dimensional icon container */
-    tile: "linear-gradient(160deg, #F4FCF6 0%, #E8F8EE 55%, #DCF2E5 100%)",
-    tileRose: "linear-gradient(160deg, #FFF5F7 0%, #FFE7EC 55%, #FFDCE3 100%)",
-    tileAmber: "linear-gradient(160deg, #FFFBF0 0%, #FEF3C7 55%, #FDE9B0 100%)",
-    tileBlue: "linear-gradient(160deg, #F4F8FF 0%, #E3EEFE 55%, #D8E8FD 100%)",
-    tileTeal: "linear-gradient(160deg, #F0FCFA 0%, #D9F7F1 55%, #CCF3EA 100%)",
-    tileSlate: "linear-gradient(160deg, #FAFCFD 0%, #F0F4F8 55%, #E9EFF4 100%)",
-
-    /* Floating navigation surface */
-    nav: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(252,254,253,0.96) 100%)",
+    atmosphere: gradientToCSS(gradientTokens.atmosphere),
+    card: gradientToCSS(gradientTokens.card),
+    greenCard: gradientToCSS(gradientTokens.greenCard),
+    greenCardSoft: gradientToCSS(gradientTokens.greenCard),
+    buttonPrimary: gradientToCSS(gradientTokens.buttonPrimary),
+    mint: gradientToCSS(gradientTokens.mint),
+    tile: gradientToCSS(gradientTokens.tile),
+    tileRose: gradientToCSS(gradientTokens.tileRose),
+    tileAmber: gradientToCSS(gradientTokens.tileAmber),
+    tileBlue: gradientToCSS(gradientTokens.tileBlue),
+    tileTeal: gradientToCSS(gradientTokens.tileTeal),
+    tileSlate: gradientToCSS(gradientTokens.tileSlate),
+    iconGreen: gradientToCSS(gradientTokens.iconGreen),
+    surfaceRaise: gradientToCSS(gradientTokens.surfaceRaise),
+    nav: "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(250,253,251,0.97) 100%)",
   },
 
   motion: {
@@ -179,23 +162,7 @@ export const patientTheme = {
 
 export type PatientTheme = typeof patientTheme;
 
-/** Per-category tint for dimensional icon containers. */
-export function metricTint(metric: string): { fg: string; tile: string } {
-  const c = patientTheme.colors;
-  const g = patientTheme.gradients;
-  switch (metric) {
-    case "heartRate":
-      return { fg: c.rose, tile: g.tileRose };
-    case "bloodPressure":
-      return { fg: c.blue, tile: g.tileBlue };
-    case "spo2":
-      return { fg: c.teal, tile: g.tileTeal };
-    case "temperature":
-      return { fg: c.amber, tile: g.tileAmber };
-    default:
-      return { fg: c.primaryDark, tile: g.tile };
-  }
-}
+export { metricTint };
 
 // Status color helpers
 export function statusColor(priority: "info" | "watch" | "attention" | "urgent") {
