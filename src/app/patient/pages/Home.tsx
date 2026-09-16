@@ -152,7 +152,7 @@ export default function Home() {
               delta={hrDelta ?? (heartRate > 85 ? "Slightly above range" : "Normal range")}
               deltaTone={hrDelta ? (heartRate >= (prev?.heartRate ?? heartRate) ? "up" : "down") : "up"}
               icon={<Heart size={18} />}
-              onClick={() => navigate("/patient/vitals")}
+              onClick={() => navigate("/patient/vitals/heartRate")}
             />
           )}
           {bpSys !== null && (
@@ -165,7 +165,7 @@ export default function Home() {
               delta={bpDelta ?? (bpSys > 125 ? "Elevated" : "Normal")}
               deltaTone={bpDelta ? (bpSys >= (prev?.systolic ?? bpSys) ? "up" : "down") : "up"}
               icon={<Activity size={18} />}
-              onClick={() => navigate("/patient/vitals")}
+              onClick={() => navigate("/patient/vitals/bloodPressure")}
             />
           )}
           {spo2 !== null && (
@@ -177,7 +177,7 @@ export default function Home() {
               status={spo2 < 95 ? "attention" : "normal"}
               subtext={spo2 < 95 ? "Below 95%" : "Normal"}
               icon={<Wind size={18} />}
-              onClick={() => navigate("/patient/vitals")}
+              onClick={() => navigate("/patient/vitals/spo2")}
             />
           )}
           {temp !== null && (
@@ -189,7 +189,7 @@ export default function Home() {
               status={temp > 37.6 ? "attention" : temp > 37.2 ? "high" : "normal"}
               subtext={temp > 37.2 ? "Slightly elevated" : "Normal"}
               icon={<Thermometer size={18} />}
-              onClick={() => navigate("/patient/vitals")}
+              onClick={() => navigate("/patient/vitals/temperature")}
             />
           )}
           {heartRate === null && bpSys === null && spo2 === null && temp === null && (
@@ -205,7 +205,7 @@ export default function Home() {
 
       {/* AI insights */}
       <section>
-        <SectionHeader title="AI Insights" actionLabel="View All" onAction={() => navigate("/patient/ai")} />
+        <SectionHeader title="AI Insights" actionLabel="View All" onAction={() => navigate("/patient/insights")} />
         <div className="space-y-3">
           {homeInsights.length > 0 ? (
             homeInsights.map((insight) => (

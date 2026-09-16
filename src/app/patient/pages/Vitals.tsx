@@ -222,7 +222,7 @@ export default function Vitals() {
         <div className="h-44 mt-4 -mx-1">
           {chartData.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 6, left: -22, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="mhVitalGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.22} />
@@ -256,7 +256,7 @@ export default function Vitals() {
                   tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
                   axisLine={false}
                   tickLine={false}
-                  width={40}
+                  width={44}
                   domain={["dataMin - 4", "dataMax + 4"]}
                 />
                 <Tooltip
