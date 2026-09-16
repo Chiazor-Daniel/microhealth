@@ -98,7 +98,7 @@ export default function AI() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex flex-col h-[calc(100dvh-180px)] space-y-4"
+      className="flex flex-col space-y-4"
     >
       <div className="flex items-center gap-3">
         <AIIndicator size={36} active={typing} />
@@ -144,7 +144,7 @@ export default function AI() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
+      <div className="space-y-3 pb-4">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <GlassCard
@@ -192,7 +192,7 @@ export default function AI() {
         <div ref={scrollRef} />
       </div>
 
-      <div className="flex items-center gap-2 pt-2">
+      <div className="flex items-center gap-2 pt-4">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

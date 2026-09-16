@@ -17,21 +17,24 @@ function PatientContent() {
 export function PatientShell() {
   return (
     <div
-      className="patient-shell flex flex-col min-h-dvh overflow-hidden"
+      className="patient-shell relative flex flex-col min-h-dvh"
       style={{ background: patientTheme.colors.background }}
     >
+      {/* Scrollable content area */}
       <main
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "calc(84px + env(safe-area-inset-bottom))",
+          paddingTop: "max(12px, env(safe-area-inset-top))",
+          paddingBottom: "calc(110px + env(safe-area-inset-bottom))",
           WebkitOverflowScrolling: "touch",
         }}
       >
-        <div className="mx-auto w-full max-w-md px-5 py-5">
+        <div className="mx-auto w-full max-w-md px-5 py-6">
           <PatientContent />
         </div>
       </main>
+
+      {/* Fixed bottom navigation sits above content */}
       <BottomNavigation />
     </div>
   );
