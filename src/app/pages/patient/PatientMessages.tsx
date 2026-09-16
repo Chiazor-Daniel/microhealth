@@ -6,21 +6,13 @@ import { usePatientData } from "../../hooks/usePatientData";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { success, error as showError } from "../../components/shared/SweetAlert";
+import { patientTheme } from "../../patient/theme";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type?: string;
-  createdAt?: string;
-  isRead?: boolean;
-}
-
-const ICON_MAP: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  medication: { icon: Pill, color: "#0F7D7A", bg: "#E6F7F6" },
-  appointment: { icon: Calendar, color: "#3B82F6", bg: "#EFF6FF" },
-  lab: { icon: FlaskConical, color: "#10B981", bg: "#ECFDF5" },
-  health: { icon: Heart, color: "#F59E0B", bg: "#FFFBEB" },
+const ICON_MAP: Record<string, { icon: React.ElementType; cls: string }> = {
+  medication: { icon: Pill, cls: "mh-icon-teal" },
+  appointment: { icon: Calendar, cls: "mh-icon-blue" },
+  lab: { icon: FlaskConical, cls: "mh-icon-blue" },
+  health: { icon: Heart, cls: "mh-icon-rose" },
 };
 
 function formatTime(dateStr?: string): string {
@@ -61,43 +53,46 @@ function PatientMessages() {
   if (error) return <ErrorState message={error} onRetry={refresh} />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-3xl mx-auto">
-      <h2 className="text-[11px] font-extrabold tracking-widest uppercase" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Messages & Reminders</h2>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <h1 className="text-[22px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+        Messages & Reminders
+      </h1>
 
-      <div
-        className="rounded-2xl p-4 flex items-start gap-3"
-        style={{
-          background: "linear-gradient(135deg, #E6F7F6 0%, #D0EEEA 100%)",
-          border: "1px solid rgba(15,125,122,0.14)",
-          boxShadow: "0 6px 18px rgba(15,125,122,0.10), 0 1px 4px rgba(13,27,42,0.05), inset 0 1px 0 rgba(255,255,255,0.7)",
-        }}
-      >
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#fff", boxShadow: "0 2px 8px rgba(15,125,122,0.12)", border: "1px solid rgba(15,125,122,0.10)" }}>
-          <Bell size={14} style={{ color: "#0F7D7A" }} />
+      {/* Enable push — a mint feature panel */}
+      <div className="mh-mint-card p-4 flex items-start gap-3">
+        <div className="mh-icon w-9 h-9 flex-shrink-0">
+          <Bell size={15} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-[#0D1B2A]">Enable Push Notifications</p>
-          <p className="text-xs font-medium mt-0.5" style={{ color: "#5F6B7A" }}>Get reminders for medications and appointments.</p>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="mt-2.5 text-xs font-bold px-4 py-2 rounded-xl text-white"
-            style={{ background: "linear-gradient(180deg, #0F7D7A 0%, #0A5E5C 100%)", boxShadow: "0 4px 12px rgba(15,125,122,0.30), inset 0 1px 0 rgba(255,255,255,0.18)" }}
+          <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Enable Push Notifications
+          </p>
+          <p className="text-[13px] mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+            Get reminders for medications and appointments.
+          </p>
+          <button
+            className="mh-btn-primary mt-3 px-4 py-2 text-[13px] font-semibold"
             onClick={handleEnableNotifications}
           >
             Enable Notifications
-          </motion.button>
+          </button>
         </div>
       </div>
 
       {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <MessageSquareText size={36} className="mb-3 opacity-40" />
-          <p className="text-sm">No notifications yet.</p>
+        <div className="mh-card flex flex-col items-center justify-center py-12 px-6">
+          <div className="mh-icon mh-icon-slate w-12 h-12">
+            <MessageSquareText size={20} />
+          </div>
+          <p className="text-[13px] mt-3" style={{ color: patientTheme.colors.textMuted }}>
+            No notifications yet.
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {notifications.map((n, i) => {
-            const iconConfig = ICON_MAP[n.type || ""] || { icon: Bell, color: "#0F7D7A", bg: "#E6F7F6" };
+            const cfg = ICON_MAP[n.type || ""] || { icon: Bell, cls: "" };
+            const Icon = cfg.icon;
             const isUnread = !n.isRead;
             return (
               <motion.div
@@ -105,31 +100,37 @@ function PatientMessages() {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-3 p-4 rounded-2xl transition-all"
-                style={{
-                  background: isUnread ? "#F8FFFF" : "var(--skeuo-card-gradient)",
-                  border: isUnread ? "1px solid rgba(15,125,122,0.12)" : "1px solid rgba(0,0,0,0.06)",
-                  boxShadow: "var(--skeuo-shadow-sm)",
-                }}
+                className="mh-card flex items-start gap-3 p-4"
               >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: iconConfig.bg }}>
-                  <iconConfig.icon size={15} style={{ color: iconConfig.color }} />
+                <div className={`mh-icon ${cfg.cls} w-10 h-10`}>
+                  <Icon size={17} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-foreground">{n.title}</p>
-                    <span className="text-[10px] font-bold text-muted-foreground flex-shrink-0">{formatTime(n.createdAt)}</span>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+                      {n.title}
+                    </p>
+                    {isUnread && (
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: patientTheme.colors.primaryGreen }} />
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                  <p className="text-[13px] mt-0.5 line-clamp-2" style={{ color: patientTheme.colors.textSecondary }}>
+                    {n.message}
+                  </p>
                 </div>
+                <span className="text-[11px] whitespace-nowrap mt-0.5" style={{ color: patientTheme.colors.textMuted }}>
+                  {formatTime(n.createdAt)}
+                </span>
                 {isUnread && (
                   <button
                     onClick={() => handleDismiss(n.id)}
                     disabled={dismissing === n.id}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: "#E6F7F6" }}
+                    aria-label="Dismiss notification"
+                    className="mh-btn-icon w-7 h-7 flex items-center justify-center flex-shrink-0"
                   >
-                    {dismissing === n.id ? <Loader2 size={12} className="animate-spin" style={{ color: "#0F7D7A" }} /> : <X size={12} style={{ color: "#0F7D7A" }} />}
+                    {dismissing === n.id
+                      ? <Loader2 size={12} className="animate-spin" />
+                      : <X size={12} />}
                   </button>
                 )}
               </motion.div>

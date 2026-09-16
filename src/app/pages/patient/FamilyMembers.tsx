@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Loader2, X, Users, UserPlus } from "lucide-react";
-import StatusPill from "../../components/shared/StatusPill";
+import { Plus, Loader2, X, UserPlus } from "lucide-react";
 import { familyService, type FamilyMember } from "../../services/family.service";
 import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { success, error as showError } from "../../components/shared/SweetAlert";
+import { patientTheme } from "../../patient/theme";
+import { StatusBadge } from "../../patient/components/StatusBadge";
 
 function FamilyMembers() {
   const { user } = useAuth();
@@ -15,8 +16,8 @@ function FamilyMembers() {
   const userPatientId = user?.profile?.id;
   const [members, setMembers] = useState<FamilyMember[]>(family || []);
   const [patientId, setPatientId] = useState<string | null>(userPatientId || null);
-  const [localLoading, setLocalLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [localLoading] = useState(false);
+  const [localError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRelation, setNewRelation] = useState("");
@@ -57,30 +58,34 @@ function FamilyMembers() {
   if (localError) return <ErrorState message={localError} />;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-3xl mx-auto">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-[11px] font-extrabold tracking-widest uppercase" style={{ color: "#8A97A8", letterSpacing: "0.08em" }}>Family Members</h2>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
+        <h1 className="text-[22px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+          Family Members
+        </h1>
+        <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl text-white"
-          style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)", boxShadow: "0 4px 10px rgba(15,125,122,0.3)" }}
+          className="mh-btn-primary flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold"
         >
-          <Plus size={12} />Add
-        </motion.button>
+          <Plus size={13} /> Add
+        </button>
       </div>
 
       {showForm && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
-          className="p-4 rounded-2xl space-y-3"
-          style={{ background: "#E6F7F6", border: "1px solid rgba(15,125,122,0.15)", boxShadow: "var(--skeuo-shadow)" }}
+          className="mh-mint-card p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold" style={{ color: "#0A5E5C" }}>Add Family Member</p>
-            <button onClick={() => setShowForm(false)}><X size={14} style={{ color: "#0F7D7A" }} /></button>
+            <p className="text-sm font-semibold" style={{ color: patientTheme.colors.primaryDark }}>
+              Add Family Member
+            </p>
+            <button onClick={() => setShowForm(false)} aria-label="Close">
+              <X size={15} style={{ color: patientTheme.colors.textSecondary }} />
+            </button>
           </div>
+
           {[
             { placeholder: "Full name", value: newName, setter: setNewName },
             { placeholder: "Relation (e.g. Spouse, Daughter)", value: newRelation, setter: setNewRelation },
@@ -89,29 +94,35 @@ function FamilyMembers() {
             <input
               key={i}
               type={field.type || "text"}
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-              style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "var(--skeuo-shadow-inset)" }}
+              className="mh-field w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
+              style={{ color: patientTheme.colors.textPrimary }}
               placeholder={field.placeholder}
               value={field.value}
               onChange={e => field.setter(e.target.value)}
             />
           ))}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
+
+          <button
             onClick={handleAdd}
             disabled={saving || !newName.trim() || !newRelation.trim()}
-            className="w-full py-2.5 text-xs font-bold rounded-xl text-white disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)" }}
+            className="mh-btn-primary w-full py-2.5 text-[13px] font-semibold"
           >
             {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Save Member"}
-          </motion.button>
+          </button>
         </motion.div>
       )}
 
       {members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <UserPlus size={36} className="mb-3 opacity-40" />
-          <p className="text-sm">No family members yet.</p>
+        <div className="mh-card flex flex-col items-center justify-center py-14 px-6">
+          <div className="mh-icon w-12 h-12">
+            <UserPlus size={20} />
+          </div>
+          <p className="text-sm font-semibold mt-3" style={{ color: patientTheme.colors.textPrimary }}>
+            No family members yet
+          </p>
+          <p className="text-[13px] mt-1" style={{ color: patientTheme.colors.textMuted }}>
+            Add a dependent to manage their care.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -121,28 +132,31 @@ function FamilyMembers() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="p-4 rounded-2xl"
-              style={{ background: "var(--skeuo-card-gradient)", boxShadow: "var(--skeuo-shadow)", border: "1px solid rgba(0,0,0,0.06)" }}
+              className="mh-card p-4"
             >
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                  style={{ background: "linear-gradient(135deg, #E6F7F6, #B2E8E6)", color: "#0A5E5C", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)" }}
+                  className="mh-avatar w-11 h-11 flex items-center justify-center text-sm font-semibold"
+                  style={{ color: patientTheme.colors.primaryDark }}
                 >
                   {m.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-foreground">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{m.relation} · {m.age}y</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+                    {m.name}
+                  </p>
+                  <p className="text-[13px]" style={{ color: patientTheme.colors.textSecondary }}>
+                    {m.relation}{m.age ? ` · ${m.age}y` : ""}
+                  </p>
                 </div>
-                <StatusPill status={m.status} />
+                <StatusBadge status={m.status} />
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex gap-2 mt-3.5">
                 {["View Record", "Book Visit", "Vitals"].map(label => (
                   <button
                     key={label}
-                    className="flex-1 py-2 text-xs font-bold rounded-xl transition-all"
-                    style={{ background: "#E6F7F6", color: "#0F7D7A", boxShadow: "var(--skeuo-shadow-sm)" }}
+                    className="mh-btn-secondary flex-1 py-2 text-[12.5px] font-semibold"
                   >
                     {label}
                   </button>

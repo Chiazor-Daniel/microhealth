@@ -8,8 +8,7 @@ import { staffService } from "../../services/staff.service";
 import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
 import { success, error as showError, confirmAction } from "../../components/shared/SweetAlert";
-
-const BTN_SHADOW = "0 6px 12px -2px rgba(15,125,122,0.35), inset 0 1px 0 rgba(255,255,255,0.2)";
+import { patientTheme } from "../../patient/theme";
 
 const services = ["General Practice", "Antenatal Care", "Lab Tests", "Cardiology", "Dental"];
 const units = ["MicroHealth Lekki", "MicroHealth Victoria Island", "MicroHealth Ikeja"];
@@ -98,14 +97,52 @@ function BookAppointment() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin" size={28} style={{ color: "#0F7D7A" }} />
+        <Loader2 className="animate-spin" size={28} style={{ color: patientTheme.colors.primaryGreen }} />
       </div>
     );
   }
 
+  /** A selectable option card — raised surface, mint + green when chosen. */
+  const OptionButton = ({ label, isSelected, onSelect }: { label: string; isSelected: boolean; onSelect: () => void }) => (
+    <motion.button
+      whileTap={{ scale: 0.985 }}
+      onClick={onSelect}
+      className="mh-card w-full flex items-center justify-between p-4 text-left"
+      style={
+        isSelected
+          ? {
+              background: patientTheme.gradients.mint,
+              borderColor: "rgba(134, 202, 158, 0.8)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(22,101,52,0.20)",
+            }
+          : undefined
+      }
+    >
+      <span className="text-sm font-semibold" style={{ color: patientTheme.colors.textPrimary }}>{label}</span>
+      {isSelected && <CheckCircle size={18} style={{ color: patientTheme.colors.primaryGreen }} />}
+    </motion.button>
+  );
+
+  /** A compact pick chip for dates and time slots. */
+  const ChipButton = ({ label, isSelected, onSelect }: { label: string; isSelected: boolean; onSelect: () => void }) => (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={onSelect}
+      className={isSelected ? "mh-btn-primary py-2.5 text-[13px] font-semibold" : "mh-btn-secondary py-2.5 text-[13px] font-semibold"}
+    >
+      {label}
+    </motion.button>
+  );
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-4 max-w-3xl mx-auto">
-      <div className="flex items-center mb-6 gap-0.5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <h1 className="text-[22px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+        Book Appointment
+      </h1>
+
+      {/* Stepper */}
+      <div className="flex items-center gap-1">
         {steps.map((s, i) => {
           const done = i + 1 < step;
           const current = i + 1 === step;
@@ -113,35 +150,31 @@ function BookAppointment() {
             <div key={s} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center gap-1.5 flex-1">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold transition-all flex-shrink-0"
-                  style={{
-                    background: done ? "#0F7D7A" : current ? "linear-gradient(145deg, #0F7D7A, #0A5E5C)" : "linear-gradient(180deg, #FFFFFF 0%, #F0F2F3 100%)",
-                    color: done || current ? "#fff" : "#8A97A8",
-                    border: done || current ? "none" : "1px solid rgba(13,27,42,0.08)",
-                    boxShadow: current
-                      ? "0 4px 12px rgba(15,125,122,0.35), inset 0 1px 0 rgba(255,255,255,0.22)"
-                      : done
-                        ? "0 2px 6px rgba(15,125,122,0.20)"
-                        : "0 1px 4px rgba(13,27,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
-                  }}
+                  className={done || current ? "mh-icon mh-icon-green w-8 h-8" : "mh-icon mh-icon-slate w-8 h-8"}
+                  style={{ fontSize: 11.5, fontWeight: 700 }}
                 >
-                  {done ? <CheckCircle size={14} strokeWidth={2.5} /> : i + 1}
+                  {done ? <CheckCircle size={14} strokeWidth={2.6} /> : i + 1}
                 </div>
                 <span
-                  className="text-center leading-none"
+                  className="text-center leading-none whitespace-nowrap"
                   style={{
-                    fontSize: 10,
-                    fontWeight: current ? 800 : 600,
-                    color: current ? "#0F7D7A" : done ? "#5F6B7A" : "#8A97A8",
-                    letterSpacing: "0.02em",
-                    whiteSpace: "nowrap",
+                    fontSize: 10.5,
+                    fontWeight: current ? 700 : 500,
+                    color: current
+                      ? patientTheme.colors.primaryDark
+                      : done
+                        ? patientTheme.colors.textSecondary
+                        : patientTheme.colors.textMuted,
                   }}
                 >
                   {s}
                 </span>
               </div>
               {i < steps.length - 1 && (
-                <div className="flex-1 h-0.5 mx-1 mb-5 rounded-full" style={{ background: done ? "#0F7D7A" : "rgba(13,27,42,0.10)" }} />
+                <div
+                  className="flex-1 h-[2px] mx-1 mb-5 rounded-full"
+                  style={{ background: done ? patientTheme.colors.green300 : patientTheme.colors.hairline }}
+                />
               )}
             </div>
           );
@@ -149,94 +182,71 @@ function BookAppointment() {
       </div>
 
       {error && (
-        <div className="rounded-xl p-3 mb-4 flex items-center gap-2" style={{ background: "#FFFBEB", border: "1px solid rgba(245,158,11,0.25)" }}>
-          <AlertTriangle size={14} style={{ color: "#F59E0B" }} />
-          <p className="text-xs" style={{ color: "#92400E" }}>{error}</p>
+        <div className="mh-pill mh-pill-amber px-3.5 py-2.5 flex items-center gap-2 w-full">
+          <AlertTriangle size={14} />
+          <p className="text-[12.5px]">{error}</p>
         </div>
       )}
 
       {step === 1 && (
         <div className="space-y-3">
-          <h3 className="text-base font-bold text-foreground">Select Service</h3>
+          <h3 className="text-[15px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Select Service
+          </h3>
           {services.map(s => (
-            <motion.button
+            <OptionButton
               key={s}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSelected(p => ({ ...p, service: s }))}
-              className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all"
-              style={{
-                border: selected.service === s ? "2px solid #0F7D7A" : "1px solid rgba(0,0,0,0.08)",
-                background: selected.service === s ? "#E6F7F6" : "var(--skeuo-card-gradient)",
-                boxShadow: selected.service === s ? "var(--skeuo-shadow)" : "var(--skeuo-shadow-sm)",
-              }}
-            >
-              <span className="text-sm font-bold text-foreground">{s}</span>
-              {selected.service === s && <CheckCircle size={18} style={{ color: "#0F7D7A" }} />}
-            </motion.button>
+              label={s}
+              isSelected={selected.service === s}
+              onSelect={() => setSelected(p => ({ ...p, service: s }))}
+            />
           ))}
         </div>
       )}
 
       {step === 2 && (
         <div className="space-y-3">
-          <h3 className="text-base font-bold text-foreground">Select Unit</h3>
+          <h3 className="text-[15px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Select Unit
+          </h3>
           {units.map(u => (
-            <motion.button
+            <OptionButton
               key={u}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSelected(p => ({ ...p, unit: u }))}
-              className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all"
-              style={{
-                border: selected.unit === u ? "2px solid #0F7D7A" : "1px solid rgba(0,0,0,0.08)",
-                background: selected.unit === u ? "#E6F7F6" : "var(--skeuo-card-gradient)",
-                boxShadow: selected.unit === u ? "var(--skeuo-shadow)" : "var(--skeuo-shadow-sm)",
-              }}
-            >
-              <span className="text-sm font-bold text-foreground">{u}</span>
-              {selected.unit === u && <CheckCircle size={18} style={{ color: "#0F7D7A" }} />}
-            </motion.button>
+              label={u}
+              isSelected={selected.unit === u}
+              onSelect={() => setSelected(p => ({ ...p, unit: u }))}
+            />
           ))}
         </div>
       )}
 
       {step === 3 && (
         <div className="space-y-4">
-          <h3 className="text-base font-bold text-foreground">Select Date & Time</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <h3 className="text-[15px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Select Date & Time
+          </h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {next7Days.map(d => (
-              <motion.button
+              <ChipButton
                 key={d.value}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSelected(p => ({ ...p, date: d.value }))}
-                className="py-3 rounded-xl text-sm font-bold transition-all"
-                style={{
-                  background: selected.date === d.value ? "linear-gradient(135deg, #0F7D7A, #0A5E5C)" : "var(--skeuo-card-gradient)",
-                  color: selected.date === d.value ? "#fff" : "#374151",
-                  boxShadow: selected.date === d.value ? "0 4px 10px rgba(15,125,122,0.3)" : "var(--skeuo-shadow-sm)",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                {d.label}
-              </motion.button>
+                label={d.label}
+                isSelected={selected.date === d.value}
+                onSelect={() => setSelected(p => ({ ...p, date: d.value }))}
+              />
             ))}
           </div>
-          <h4 className="text-sm font-bold text-foreground">Available Slots</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+
+          <h4 className="text-[13px] font-semibold pt-1" style={{ color: patientTheme.colors.textSecondary }}>
+            Available slots
+          </h4>
+          <div className="grid grid-cols-3 gap-2">
             {times.map(t => (
-              <motion.button
+              <ChipButton
                 key={t}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSelected(p => ({ ...p, time: t }))}
-                className="py-2.5 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: selected.time === t ? "linear-gradient(135deg, #0F7D7A, #0A5E5C)" : "var(--skeuo-card-gradient)",
-                  color: selected.time === t ? "#fff" : "#374151",
-                  boxShadow: selected.time === t ? "0 4px 10px rgba(15,125,122,0.3)" : "var(--skeuo-shadow-sm)",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                {t}
-              </motion.button>
+                label={t}
+                isSelected={selected.time === t}
+                onSelect={() => setSelected(p => ({ ...p, time: t }))}
+              />
             ))}
           </div>
         </div>
@@ -244,13 +254,20 @@ function BookAppointment() {
 
       {step === 4 && (
         <div className="space-y-4">
-          <h3 className="text-base font-bold text-foreground">Confirm Booking</h3>
-          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(15,125,122,0.2)", boxShadow: "var(--skeuo-shadow)" }}>
-            <div className="p-4" style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)" }}>
-              <p className="text-white font-bold">{selected.service || "General Practice"}</p>
-              <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.75)" }}>{selected.unit || "No unit selected"}</p>
+          <h3 className="text-[15px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Confirm Booking
+          </h3>
+
+          <div className="mh-card overflow-hidden">
+            <div className="mh-green-card p-4" style={{ borderRadius: 0, boxShadow: "none", border: "none" }}>
+              <p className="text-white font-semibold" style={{ letterSpacing: "-0.01em" }}>
+                {selected.service || "General Practice"}
+              </p>
+              <p className="text-[13px] mt-0.5" style={{ color: "rgba(255,255,255,0.8)" }}>
+                {selected.unit || "No unit selected"}
+              </p>
             </div>
-            <div className="p-4 space-y-3 bg-white">
+            <div className="p-4 space-y-3">
               {[
                 ["Date", selected.date ? new Date(selected.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"],
                 ["Time", selected.time || "—"],
@@ -258,45 +275,40 @@ function BookAppointment() {
                 ["Reference", "APT-" + Math.floor(1000 + Math.random() * 9000)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="font-bold text-foreground">{v}</span>
+                  <span style={{ color: patientTheme.colors.textSecondary }}>{k}</span>
+                  <span className="font-semibold" style={{ color: patientTheme.colors.textPrimary }}>{v}</span>
                 </div>
               ))}
             </div>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #0F7D7A 0%, #0A5E5C 100%)", boxShadow: BTN_SHADOW }}
+
+          <button
+            className="mh-btn-primary w-full py-3.5 text-sm font-semibold"
             onClick={handleConfirm}
             disabled={submitting}
           >
             {submitting ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Confirm Booking"}
-          </motion.button>
+          </button>
         </div>
       )}
 
-      <div className="flex gap-3 mt-6">
+      <div className="flex gap-3">
         {step > 1 && (
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="flex-1 py-3 rounded-xl text-sm font-bold border transition-all"
-            style={{ color: "#6B7280", borderColor: "rgba(0,0,0,0.1)", background: "var(--skeuo-card-gradient)" }}
+          <button
+            className="mh-btn-secondary flex-1 py-3 text-sm font-semibold"
             onClick={() => setStep(s => s - 1)}
           >
             ← Back
-          </motion.button>
+          </button>
         )}
         {step < 4 && (
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all"
-            style={{ background: "linear-gradient(135deg, #0F7D7A 0%, #0A5E5C 100%)", boxShadow: BTN_SHADOW }}
+          <button
+            className="mh-btn-primary flex-1 py-3 text-sm font-semibold"
             onClick={() => setStep(s => s + 1)}
             disabled={(step === 1 && !selected.service) || (step === 2 && !selected.unit) || (step === 3 && (!selected.date || !selected.time))}
           >
             Continue →
-          </motion.button>
+          </button>
         )}
       </div>
     </motion.div>
