@@ -122,12 +122,11 @@ export default function AI() {
 
       {/* Hero greeting */}
       <div
-        className="relative overflow-hidden"
+        className="mh-green-card"
         style={{
           background: "linear-gradient(135deg, #16A34A 0%, #15803D 60%, #14532D 100%)",
           borderRadius: 20,
           padding: 18,
-          boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)",
         }}
       >
         <div
@@ -151,13 +150,8 @@ export default function AI() {
               else if (s.label === "Analyze my vitals") send("Analyze my latest vitals and tell me what you see");
               else setInput(s.label);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap flex-shrink-0"
-            style={{
-              background: patientTheme.colors.surface,
-              border: `1px solid ${patientTheme.colors.border}`,
-              color: patientTheme.colors.textPrimary,
-              boxShadow: patientTheme.shadows.soft,
-            }}
+            className="mh-btn-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap flex-shrink-0"
+            style={{ color: patientTheme.colors.textPrimary }}
           >
             <span style={{ color: patientTheme.colors.primaryGreen }}>{s.icon}</span>
             {s.label}
@@ -193,15 +187,19 @@ export default function AI() {
               </div>
             )}
             <div
+              className={msg.role === "agent" ? "mh-card" : ""}
               style={{
                 maxWidth: "85%",
-                background: msg.role === "user" ? patientTheme.colors.primaryGreen : patientTheme.colors.surface,
+                background: msg.role === "user"
+                  ? "linear-gradient(180deg, #22C55E 0%, #16A34A 100%)"
+                  : undefined,
                 color: msg.role === "user" ? "#fff" : patientTheme.colors.textPrimary,
                 borderRadius: 16,
                 borderBottomRightRadius: msg.role === "user" ? 5 : 16,
                 borderBottomLeftRadius: msg.role === "user" ? 16 : 5,
-                border: msg.role === "agent" ? `1px solid ${patientTheme.colors.border}` : undefined,
-                boxShadow: patientTheme.shadows.soft,
+                boxShadow: msg.role === "user"
+                  ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(22,163,74,0.3)"
+                  : undefined,
                 padding: "12px 14px",
               }}
             >
@@ -243,20 +241,17 @@ export default function AI() {
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Ask your health assistant..."
           aria-label="Message your AI health assistant"
-          className="flex-1 px-4 py-3 rounded-full text-sm outline-none"
+          className="mh-field flex-1 px-4 py-3 rounded-full text-sm outline-none"
           style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
             color: patientTheme.colors.textPrimary,
-            boxShadow: patientTheme.shadows.soft,
           }}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || typing}
           aria-label="Send message"
-          className="w-11 h-11 rounded-full flex items-center justify-center text-white disabled:opacity-40 flex-shrink-0"
-          style={{ background: patientTheme.colors.primaryGreen }}
+          className="mh-btn-primary w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-40 flex-shrink-0"
+          style={{ color: "#fff" }}
         >
           <Send size={17} />
         </button>

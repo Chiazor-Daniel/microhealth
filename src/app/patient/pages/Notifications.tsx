@@ -51,17 +51,11 @@ export default function Notifications() {
           <div
             key={n.id}
             onClick={() => { if (unread) markRead(n.id); }}
-            className="flex items-start gap-3 p-4"
-            style={{
-              background: patientTheme.colors.surface,
-              borderRadius: patientTheme.radius.card,
-              border: `1px solid ${patientTheme.colors.border}`,
-              boxShadow: patientTheme.shadows.soft,
-            }}
+            className="mh-card flex items-start gap-3 p-4"
           >
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
+              className="mh-icon w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ color: patientTheme.colors.primaryGreen }}
             >
               {icon}
             </div>
@@ -72,7 +66,7 @@ export default function Notifications() {
                 </p>
                 {unread && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: patientTheme.colors.primaryGreen }} />}
               </div>
-              <p className="text-[13px] leading-snug mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+              <p className="text-[13px] leading-snug mt-0.5 line-clamp-2" style={{ color: patientTheme.colors.textSecondary }}>
                 {n.message}
               </p>
             </div>
@@ -102,8 +96,8 @@ export default function Notifications() {
         <button
           onClick={() => navigate("/patient/home")}
           aria-label="Back"
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: patientTheme.colors.surface, border: `1px solid ${patientTheme.colors.border}`, color: patientTheme.colors.textPrimary }}
+          className="mh-btn-icon w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ color: patientTheme.colors.textPrimary }}
         >
           <ChevronLeft size={18} />
         </button>

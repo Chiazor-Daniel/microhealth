@@ -6,7 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useWearable } from "../hooks/useWearable";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
-import { patientTheme } from "../theme";
+import { patientTheme, metricTint } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
 import { StatusBadge } from "../components/StatusBadge";
 import {
@@ -17,6 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceArea,
+  CartesianGrid,
 } from "recharts";
 
 const tabs = [
@@ -60,7 +61,7 @@ function interpretValue(metric: string, value: number) {
   }
 }
 
-/** Sparkline for compact vital cards — single green line, no axes. */
+/** Sparkline for compact vital cards — single luminous line, no axes. */
 function Sparkline({ data }: { data: number[] }) {
   if (data.length < 2) return null;
   const points = data.map((v, i) => ({ i, v }));
@@ -69,7 +70,8 @@ function Sparkline({ data }: { data: number[] }) {
       <AreaChart data={points} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="mhSparkGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.18} />
+            <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.20} />
+            <stop offset="70%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.03} />
             <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
           </linearGradient>
         </defs>
@@ -78,9 +80,12 @@ function Sparkline({ data }: { data: number[] }) {
           dataKey="v"
           stroke={patientTheme.colors.primaryGreen}
           strokeWidth={2}
+          strokeLinecap="round"
           fill="url(#mhSparkGradient)"
-          dot={false}
+          dot={{ r: 1.8, fill: patientTheme.colors.primaryGreen, stroke: "#fff", strokeWidth: 1 }}
+          activeDot={false}
           isAnimationActive={false}
+          className="mh-chart-line"
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -168,12 +173,8 @@ export default function Vitals() {
         <h1 className="text-[22px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>Vitals</h1>
         <button
           aria-label="Add reading"
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
-            color: patientTheme.colors.textSecondary,
-          }}
+          className="mh-btn-icon w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ color: patientTheme.colors.textSecondary }}
         >
           <Plus size={18} />
         </button>
@@ -183,20 +184,12 @@ export default function Vitals() {
       <SegmentedTabs options={tabs} value={tab} onChange={setTab} />
 
       {/* Hero chart card */}
-      <div
-        style={{
-          background: patientTheme.colors.surface,
-          borderRadius: patientTheme.radius.card,
-          border: `1px solid ${patientTheme.colors.border}`,
-          boxShadow: patientTheme.shadows.soft,
-          padding: 18,
-        }}
-      >
+      <div className="mh-card" style={{ padding: 18 }}>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
+              className="mh-icon w-11 h-11"
+              style={{ color: metricTint(selected).fg, background: metricTint(selected).tile }}
             >
               {MetricIcon[selected]}
             </div>
@@ -232,51 +225,76 @@ export default function Vitals() {
               <AreaChart data={chartData} margin={{ top: 10, right: 6, left: -22, bottom: 0 }}>
                 <defs>
                   <linearGradient id="mhVitalGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.18} />
-                    <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.01} />
+                    <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.22} />
+                    <stop offset="55%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.06} />
+                    <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
                   </linearGradient>
+                  {/* Soft glow beneath the active data point */}
+                  <filter id="mhPointGlow" x="-120%" y="-120%" width="340%" height="340%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke={patientTheme.colors.hairlineSoft}
+                  strokeDasharray="3 6"
+                />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                   interval="preserveStartEnd"
-                  minTickGap={28}
+                  minTickGap={30}
+                  dy={4}
                 />
                 <YAxis
                   tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
                   axisLine={false}
                   tickLine={false}
-                  width={44}
+                  width={40}
                   domain={["dataMin - 4", "dataMax + 4"]}
                 />
                 <Tooltip
-                  cursor={{ stroke: patientTheme.colors.border, strokeWidth: 1 }}
+                  cursor={{ stroke: "rgba(134,202,158,0.55)", strokeWidth: 1.5, strokeDasharray: "4 4" }}
                   contentStyle={{
-                    background: patientTheme.colors.surface,
-                    border: `1px solid ${patientTheme.colors.border}`,
-                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.97)",
+                    border: "1px solid rgba(226,236,231,0.95)",
+                    borderRadius: 14,
                     fontSize: 12,
                     color: patientTheme.colors.textPrimary,
-                    boxShadow: patientTheme.shadows.soft,
+                    boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.14)",
+                    padding: "8px 12px",
                   }}
                 />
-                {/* "Your Range" band */}
+                {/* "Your Range" band — a whisper, not a highlight */}
                 <ReferenceArea
                   y1={selectedMetric.baseline[0]}
                   y2={selectedMetric.baseline[1]}
                   fill={patientTheme.colors.primaryGreen}
-                  fillOpacity={0.05}
+                  fillOpacity={0.045}
                   ifOverflow="extendDomain"
                 />
                 <Area
                   type="monotone"
                   dataKey="value"
                   stroke={patientTheme.colors.primaryGreen}
-                  strokeWidth={2}
+                  strokeWidth={2.25}
+                  strokeLinecap="round"
                   fill="url(#mhVitalGradient)"
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: patientTheme.colors.primaryGreen }}
+                  className="mh-chart-line"
+                  dot={{ r: 2.2, fill: "#fff", stroke: patientTheme.colors.primaryGreen, strokeWidth: 1.6 }}
+                  activeDot={{
+                    r: 6,
+                    fill: patientTheme.colors.primaryGreen,
+                    stroke: "#fff",
+                    strokeWidth: 2.5,
+                    filter: "url(#mhPointGlow)",
+                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -304,19 +322,13 @@ export default function Vitals() {
               <button
                 key={m.key}
                 onClick={() => setSelected(m.key)}
-                className="text-left p-4"
-                style={{
-                  background: patientTheme.colors.surface,
-                  borderRadius: patientTheme.radius.card,
-                  border: `1px solid ${patientTheme.colors.border}`,
-                  boxShadow: patientTheme.shadows.soft,
-                }}
+                className="mh-card text-left p-4"
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>{m.label}</p>
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
+                    className="mh-icon w-9 h-9"
+                    style={{ color: metricTint(m.key).fg, background: metricTint(m.key).tile }}
                   >
                     {MetricIcon[m.key]}
                   </div>

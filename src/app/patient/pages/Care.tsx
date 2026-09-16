@@ -61,12 +61,8 @@ export default function Care() {
         </h1>
         <button
           aria-label="More options"
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
-            color: patientTheme.colors.textSecondary,
-          }}
+          className="mh-btn-icon w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ color: patientTheme.colors.textSecondary }}
         >
           <MoreVertical size={16} />
         </button>
@@ -108,8 +104,8 @@ export default function Care() {
               <p className="text-[13px]" style={{ color: patientTheme.colors.textMuted }}>No appointments in this view.</p>
               <button
                 onClick={() => navigate("/patient/book")}
-                className="mt-3 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
-                style={{ background: patientTheme.colors.primaryGreen }}
+                className="mh-btn-primary mt-3 px-4 py-2 rounded-xl text-[13px] font-semibold"
+                style={{ color: "#fff" }}
               >
                 Book an appointment
               </button>
@@ -162,17 +158,11 @@ export default function Care() {
         <SectionHeader title="Messages" actionLabel="View all" actionTo="/patient/care/messages" />
         <button
           onClick={() => navigate("/patient/care/messages")}
-          className="w-full flex items-center gap-3 p-4"
-          style={{
-            background: patientTheme.colors.surface,
-            borderRadius: patientTheme.radius.card,
-            border: `1px solid ${patientTheme.colors.border}`,
-            boxShadow: patientTheme.shadows.soft,
-          }}
+          className="mh-card w-full flex items-center gap-3 p-4"
         >
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: patientTheme.colors.infoSoft, color: patientTheme.colors.info }}
+            className="mh-icon mh-icon-blue w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ color: patientTheme.colors.info }}
           >
             <MessageSquare size={18} />
           </div>

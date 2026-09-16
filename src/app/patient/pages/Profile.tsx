@@ -49,11 +49,8 @@ function MenuRow({
       style={{ borderTop: last ? "none" : `1px solid ${patientTheme.colors.borderLight}` }}
     >
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-        style={{
-          background: danger ? patientTheme.colors.errorSoft : patientTheme.colors.surfaceSecondary,
-          color: danger ? patientTheme.colors.error : patientTheme.colors.textSecondary,
-        }}
+        className="mh-icon w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ color: danger ? patientTheme.colors.error : patientTheme.colors.textSecondary, ...(danger ? { background: "radial-gradient(circle at 32% 28%, #FEF2F2 0%, #FEE2E2 70%, #FCD5D5 100%)", borderColor: "#FECACA" } : {}) }}
       >
         <Icon size={15} />
       </div>
@@ -89,12 +86,8 @@ export default function Profile() {
         <button
           onClick={() => navigate("/patient/home")}
           aria-label="Back to home"
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
-            color: patientTheme.colors.textPrimary,
-          }}
+          className="mh-btn-icon w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ color: patientTheme.colors.textPrimary }}
         >
           <ChevronLeft size={18} />
         </button>
@@ -103,8 +96,8 @@ export default function Profile() {
       {/* Identity */}
       <div className="text-center">
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-semibold mx-auto"
-          style={{ background: patientTheme.colors.primarySoft, color: patientTheme.colors.primaryDark }}
+          className="mh-avatar mh-avatar-raised w-20 h-20 flex items-center justify-center text-2xl font-semibold mx-auto"
+          style={{ color: patientTheme.colors.primaryDark }}
         >
           {initials}
         </div>
@@ -115,12 +108,7 @@ export default function Profile() {
           Patient ID: {user?.profile?.id?.slice(0, 8) || user?.id?.slice(0, 8) || "—"}
         </p>
         <button
-          className="mt-4 px-5 py-2 rounded-full text-[13px] font-semibold"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.primaryGreen}`,
-            color: patientTheme.colors.primaryGreen,
-          }}
+          className="mh-btn-secondary mt-4 px-5 py-2 text-[13px] font-semibold"
         >
           Edit Profile
         </button>
@@ -129,14 +117,7 @@ export default function Profile() {
       {/* Personal information */}
       <section>
         <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Personal Information</p>
-        <div
-          style={{
-            background: patientTheme.colors.surface,
-            borderRadius: patientTheme.radius.card,
-            border: `1px solid ${patientTheme.colors.border}`,
-            boxShadow: patientTheme.shadows.soft,
-          }}
-        >
+        <div className="mh-card overflow-hidden">
           <div className="px-4 py-3.5">
             <span className="text-[13px]" style={{ color: patientTheme.colors.textSecondary }}>Full Name</span>
             <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textPrimary }}>{fullName || "—"}</p>
@@ -150,46 +131,33 @@ export default function Profile() {
       {/* Connected devices */}
       <section>
         <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Connected Devices</p>
-        <div
-          className="flex items-center gap-3 p-4"
-          style={{
-            background: patientTheme.colors.surface,
-            borderRadius: patientTheme.radius.card,
-            border: `1px solid ${patientTheme.colors.border}`,
-            boxShadow: patientTheme.shadows.soft,
-          }}
-        >
+        <div className="mh-card flex items-center gap-3 p-4">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: patientTheme.colors.surfaceSecondary, color: patientTheme.colors.textSecondary }}
+            className="mh-icon mh-icon-slate w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ color: patientTheme.colors.textSecondary }}
           >
             <Watch size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textPrimary }}>MicroHealth Band</p>
-            <p className="text-[11px] mt-0.5" style={{ color: patientTheme.colors.textMuted }}>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold whitespace-nowrap" style={{ color: patientTheme.colors.textPrimary }}>
+                MicroHealth Band
+              </p>
+              <StatusBadge status={connected ? "connected" : "pending"} />
+            </div>
+            <p className="text-[11px] mt-0.5 truncate" style={{ color: patientTheme.colors.textMuted }}>
               {batteryLevel != null ? `Battery ${Math.round(batteryLevel)}%` : "Battery —"}
               {lastSynced ? ` · Synced ${lastSynced}` : ""}
             </p>
           </div>
-          <StatusBadge status={connected ? "connected" : "pending"} />
-          <button className="text-[13px] font-medium" style={{ color: patientTheme.colors.primaryGreen }}>
-            Manage
-          </button>
+          <ChevronRight size={16} className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }} />
         </div>
       </section>
 
       {/* Settings */}
       <section>
         <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Settings</p>
-        <div
-          style={{
-            background: patientTheme.colors.surface,
-            borderRadius: patientTheme.radius.card,
-            border: `1px solid ${patientTheme.colors.border}`,
-            boxShadow: patientTheme.shadows.soft,
-          }}
-        >
+        <div className="mh-card overflow-hidden">
           <MenuRow icon={Bell} label="Notifications" onClick={() => navigate("/patient/notifications")} />
           <MenuRow icon={Shield} label="Privacy & Security" />
           <MenuRow icon={HelpCircle} label="Help & Support" />

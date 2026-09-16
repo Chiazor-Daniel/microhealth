@@ -15,12 +15,8 @@ export function MedicationCard({ name, dosage, duration, status, refills, onRefi
   const active = status !== "expired";
   return (
     <div
-      className="p-4"
+      className="mh-card p-4"
       style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        boxShadow: patientTheme.shadows.soft,
-        border: `1px solid ${patientTheme.colors.border}`,
         borderLeft: active ? `3px solid ${patientTheme.colors.primaryGreen}` : `3px solid ${patientTheme.colors.error}`,
       }}
     >
@@ -39,8 +35,8 @@ export function MedicationCard({ name, dosage, duration, status, refills, onRefi
         {active && (refills ?? 0) > 0 && onRefill && (
           <button
             onClick={onRefill}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
-            style={{ background: patientTheme.colors.primaryGreen }}
+            className="mh-btn-primary px-3 py-1.5 rounded-xl text-xs font-semibold"
+            style={{ color: "#fff" }}
           >
             Refill · {refills}
           </button>

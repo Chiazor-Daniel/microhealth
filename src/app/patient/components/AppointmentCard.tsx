@@ -24,18 +24,12 @@ export function AppointmentCard({ department, specialty, doctorName, date, time,
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 p-4"
-      style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        boxShadow: patientTheme.shadows.soft,
-        border: `1px solid ${patientTheme.colors.border}`,
-        cursor: onClick ? "pointer" : undefined,
-      }}
+      className="mh-card flex items-center gap-3 p-4"
+      style={{ cursor: onClick ? "pointer" : undefined }}
     >
       <div
-        className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold"
-        style={{ background: patientTheme.colors.primarySoft, color: patientTheme.colors.primaryDark }}
+        className="mh-avatar w-11 h-11 flex items-center justify-center flex-shrink-0 text-sm font-semibold"
+        style={{ color: patientTheme.colors.primaryDark }}
       >
         {initials}
       </div>

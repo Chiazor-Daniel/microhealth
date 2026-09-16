@@ -18,13 +18,7 @@ export function WearableStatusCard({
 }: WearableStatusCardProps) {
   return (
     <div
-      className="flex items-center gap-4 p-4"
-      style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        boxShadow: patientTheme.shadows.soft,
-        border: `1px solid ${patientTheme.colors.border}`,
-      }}
+      className="mh-card flex items-center gap-4 p-4"
     >
       <div
         className="w-11 h-11 rounded-2xl flex items-center justify-center"

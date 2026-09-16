@@ -14,67 +14,78 @@ export interface InsightCardProps {
 }
 
 const typeIcons: Record<string, ReactNode> = {
-  trend: <TrendingUp size={18} />,
-  medication: <Clock size={18} />,
-  appointment: <Clock size={18} />,
-  lab: <Activity size={18} />,
-  recovery: <Heart size={18} />,
-  wearable: <AlertCircle size={18} />,
-  system: <Sparkles size={18} />,
+  trend: <TrendingUp size={17} />,
+  medication: <Clock size={17} />,
+  appointment: <Clock size={17} />,
+  lab: <Activity size={17} />,
+  recovery: <Heart size={17} />,
+  wearable: <AlertCircle size={17} />,
+  system: <Sparkles size={17} />,
 };
 
+/** Tint for the dimensional icon container, by insight type. */
+function tileFor(type: string, priority: string) {
+  if (priority === "urgent") return "mh-icon-rose";
+  if (priority === "watch" || priority === "attention") return "mh-icon-amber";
+  switch (type) {
+    case "lab":
+      return "mh-icon-blue";
+    case "recovery":
+      return "mh-icon-rose";
+    case "medication":
+      return "mh-icon-teal";
+    default:
+      return "";
+  }
+}
+
+/**
+ * Medical intelligence card — an elevated white surface with a
+ * dimensional icon container. Not a chat bubble.
+ */
 export function InsightCard({ priority, title, message, time, type = "system", actions, onClick, chevron }: InsightCardProps) {
   const color = statusColor(priority);
-  const softBg =
-    priority === "info" ? patientTheme.colors.successSoft
-    : priority === "watch" ? patientTheme.colors.warningSoft
-    : priority === "attention" ? "#FFEDD5"
-    : patientTheme.colors.errorSoft;
 
   return (
     <div
       onClick={onClick}
-      style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        border: `1px solid ${patientTheme.colors.border}`,
-        boxShadow: patientTheme.shadows.soft,
-        padding: 14,
-        cursor: onClick ? "pointer" : undefined,
-      }}
+      className="mh-card"
+      style={{ padding: 16, cursor: onClick ? "pointer" : undefined }}
     >
       <div className="flex items-start gap-3">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: softBg, color }}
+          className={`mh-icon ${tileFor(type, priority)}`}
+          style={{ width: 40, height: 40, color: priority === "info" ? patientTheme.colors.primaryDark : undefined }}
         >
-          {typeIcons[type] || <Sparkles size={18} />}
+          {typeIcons[type] || <Sparkles size={17} />}
         </div>
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+          <div className="flex items-start justify-between gap-3">
+            <p
+              className="text-[14.5px] font-semibold leading-snug"
+              style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}
+            >
               {title}
             </p>
             {time && (
-              <span className="text-[11px] whitespace-nowrap" style={{ color: patientTheme.colors.textMuted }}>
+              <span className="text-[11px] whitespace-nowrap mt-0.5" style={{ color: patientTheme.colors.textMuted }}>
                 {time}
               </span>
             )}
           </div>
-          <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+
+          <p className="text-[13px] leading-relaxed mt-1" style={{ color: patientTheme.colors.textSecondary }}>
             {message}
           </p>
+
           {actions && actions.length > 0 && (
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3">
               {actions.map((a) => (
                 <button
                   key={a.label}
                   onClick={(e) => { e.stopPropagation(); a.onClick(); }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{
-                    background: patientTheme.colors.primaryPale,
-                    color: patientTheme.colors.primaryGreen,
-                  }}
+                  className="mh-btn-secondary px-3.5 py-1.5 text-[12.5px] font-semibold"
                 >
                   {a.label}
                 </button>
@@ -82,8 +93,9 @@ export function InsightCard({ priority, title, message, time, type = "system", a
             </div>
           )}
         </div>
-        {chevron && onClick && (
-          <ChevronRight size={16} className="flex-shrink-0 mt-1" style={{ color: patientTheme.colors.textMuted }} />
+
+        {chevron && onClick && !actions?.length && (
+          <ChevronRight size={16} className="flex-shrink-0 mt-1.5" style={{ color: patientTheme.colors.textMuted }} />
         )}
       </div>
     </div>

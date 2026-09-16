@@ -42,12 +42,7 @@ export function GenUI({ elements, onAction }: GenUIProps) {
             return (
               <div
                 key={i}
-                className="p-4 rounded-2xl"
-                style={{
-                  background: patientTheme.colors.surface,
-                  border: `1px solid ${patientTheme.colors.border}`,
-                  boxShadow: patientTheme.shadows.soft,
-                }}
+                className="mh-card p-4"
               >
                 <div className="flex items-center gap-2 mb-1">
                   {el.data?.label?.includes("Heart") ? <Heart size={16} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
@@ -166,8 +161,8 @@ export function GenUI({ elements, onAction }: GenUIProps) {
                     <button
                       key={a.label}
                       onClick={() => onAction?.(a.action, a.payload)}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                      style={{ background: patientTheme.colors.primaryGreen }}
+                      className="mh-btn-primary px-4 py-2 rounded-xl text-sm font-semibold"
+                      style={{ color: "#fff" }}
                     >
                       {a.label}
                     </button>
@@ -204,12 +199,7 @@ export function GenUI({ elements, onAction }: GenUIProps) {
             return (
               <div
                 key={i}
-                className="p-4 rounded-2xl"
-                style={{
-                  background: patientTheme.colors.surface,
-                  border: `1px solid ${patientTheme.colors.border}`,
-                  boxShadow: patientTheme.shadows.soft,
-                }}
+                className="mh-card p-4"
               >
                 <p className="text-xs font-medium mb-2" style={{ color: patientTheme.colors.textMuted }}>
                   {el.data?.title || "Trend"}

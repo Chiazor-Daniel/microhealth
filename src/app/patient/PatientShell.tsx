@@ -14,14 +14,14 @@ function PatientContent() {
 
 export function PatientShell() {
   return (
-    <div className="patient-shell relative flex flex-col min-h-dvh md:items-center md:justify-center">
+    <div className="patient-shell mh-atmosphere relative flex flex-col min-h-dvh md:items-center md:justify-center">
       <div className="mh-app-frame">
         {/* Scrollable content area */}
         <main
           className="flex-1 overflow-y-auto overscroll-contain"
           style={{
             paddingTop: "max(12px, env(safe-area-inset-top))",
-            paddingBottom: "calc(88px + env(safe-area-inset-bottom))",
+            paddingBottom: "calc(104px + env(safe-area-inset-bottom))",
             WebkitOverflowScrolling: "touch",
           }}
         >

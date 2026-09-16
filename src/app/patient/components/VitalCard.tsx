@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { patientTheme, vitalStatusColor } from "../theme";
+import { patientTheme, metricTint, vitalStatusColor } from "../theme";
 
 export interface VitalCardProps {
   label: string;
@@ -10,12 +10,19 @@ export interface VitalCardProps {
   /** Change indicator shown as a pill, e.g. "+2 this week" */
   delta?: string;
   deltaTone?: "up" | "down" | "flat";
+  /** Metric key driving the icon container's tint (heartRate, spo2, …) */
+  metric?: string;
   icon?: ReactNode;
   trend?: number[];
   large?: boolean;
   onClick?: () => void;
 }
 
+/**
+ * Metric card.
+ * Label + dimensional icon on top, the number as the visual anchor,
+ * unit muted beside it, and a soft status pill underneath.
+ */
 export function VitalCard({
   label,
   value,
@@ -24,65 +31,75 @@ export function VitalCard({
   subtext,
   delta,
   deltaTone = "flat",
+  metric,
   icon,
   large,
   onClick,
 }: VitalCardProps) {
-  const color = vitalStatusColor(status);
-  const deltaColor =
-    deltaTone === "up" ? patientTheme.colors.success : deltaTone === "down" ? patientTheme.colors.error : patientTheme.colors.textSecondary;
-  const deltaBg =
-    deltaTone === "up" ? patientTheme.colors.successSoft : deltaTone === "down" ? patientTheme.colors.errorSoft : patientTheme.colors.surfaceSecondary;
+  const tint = metricTint(metric ?? "");
+  const statusTone = vitalStatusColor(status);
 
   return (
     <div
       onClick={onClick}
+      className="mh-card"
       style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        padding: large ? 20 : 16,
-        boxShadow: patientTheme.shadows.soft,
-        border: `1px solid ${patientTheme.colors.border}`,
-        minHeight: large ? 170 : undefined,
+        padding: large ? 20 : 15,
         cursor: onClick ? "pointer" : undefined,
       }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>{label}</p>
+      <div className="flex items-start justify-between gap-1.5 mb-3">
+        <p
+          className="text-[12.5px] font-medium leading-tight"
+          style={{ color: patientTheme.colors.textSecondary, paddingTop: 3 }}
+        >
+          {label}
+        </p>
         {icon && (
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
-          >
+          <div className={`mh-icon ${large ? "w-11 h-11" : "w-9 h-9"}`} style={{ color: tint.fg, background: tint.tile }}>
             {icon}
           </div>
         )}
       </div>
+
+      {/* The number is the anchor; the unit stays quiet beside it */}
       <div className="flex items-baseline gap-1">
         <span
-          className="font-bold tracking-tight"
           style={{
-            fontSize: large ? 32 : 24,
-            lineHeight: 1.1,
+            fontSize: large ? 32 : 26,
+            fontWeight: 700,
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
             color: patientTheme.colors.textPrimary,
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {value}
         </span>
         {unit && (
-          <span className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>{unit}</span>
+          <span className="text-[13px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+            {unit}
+          </span>
         )}
       </div>
+
       {delta ? (
+        /* A delta pill reports direction within range, not a fault —
+           so it stays green unless the reading itself is out of range. */
         <span
-          className="inline-flex items-center mt-2.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-          style={{ background: deltaBg, color: deltaColor }}
+          className={`mh-pill ${status !== "normal" ? "mh-pill-amber" : ""} mt-3 px-2.5 py-1 text-[11px] font-semibold`}
+          style={status === "normal" ? { color: statusTone } : undefined}
         >
           {delta}
         </span>
       ) : (
         subtext && (
-          <p className="text-xs mt-2 font-medium" style={{ color }}>{subtext}</p>
+          <span
+            className={`mh-pill ${status !== "normal" ? "mh-pill-amber" : ""} mt-3 px-2.5 py-1 text-[11px] font-semibold`}
+            style={status === "normal" ? { color: statusTone } : undefined}
+          >
+            {subtext}
+          </span>
         )
       )}
     </div>

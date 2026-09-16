@@ -4,24 +4,36 @@ interface StatusBadgeProps {
   status: string;
 }
 
-const map: Record<string, { bg: string; color: string; label: string }> = {
-  active: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Active" },
-  confirmed: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Confirmed" },
-  connected: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Connected" },
-  pending: { bg: patientTheme.colors.warningSoft, color: "#B45309", label: "Pending" },
-  completed: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Completed" },
-  cancelled: { bg: patientTheme.colors.errorSoft, color: patientTheme.colors.error, label: "Cancelled" },
-  expired: { bg: patientTheme.colors.errorSoft, color: patientTheme.colors.error, label: "Expired" },
-  paid: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Paid" },
-  normal: { bg: patientTheme.colors.successSoft, color: patientTheme.colors.success, label: "Normal" },
+type Tone = "green" | "amber" | "rose" | "slate";
+
+const map: Record<string, { tone: Tone; label: string }> = {
+  active: { tone: "green", label: "Active" },
+  connected: { tone: "green", label: "Connected" },
+  confirmed: { tone: "green", label: "Confirmed" },
+  completed: { tone: "green", label: "Completed" },
+  paid: { tone: "green", label: "Paid" },
+  normal: { tone: "green", label: "Normal" },
+  inrange: { tone: "green", label: "In range" },
+  pending: { tone: "amber", label: "Pending" },
+  cancelled: { tone: "rose", label: "Cancelled" },
+  expired: { tone: "rose", label: "Expired" },
 };
 
+const toneClass: Record<Tone, string> = {
+  green: "",
+  amber: "mh-pill-amber",
+  rose: "mh-pill-rose",
+  slate: "mh-pill-slate",
+};
+
+/** Soft physical pill — embedded into the surface, never a harsh badge. */
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const c = map[status] || { bg: patientTheme.colors.surfaceSecondary, color: patientTheme.colors.textSecondary, label: status };
+  const key = (status || "").toLowerCase().replace(/[\s_-]/g, "");
+  const c = map[key] || { tone: "slate" as Tone, label: status };
   return (
     <span
-      className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
-      style={{ background: c.bg, color: c.color }}
+      className={`mh-pill ${toneClass[c.tone]} px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap`}
+      style={c.tone === "slate" ? { color: patientTheme.colors.textSecondary } : undefined}
     >
       {c.label}
     </span>

@@ -15,13 +15,7 @@ export function LabResultCard({ testName, date, status, result, notes }: LabResu
   const [open, setOpen] = useState(false);
   return (
     <div
-      className="overflow-hidden"
-      style={{
-        background: patientTheme.colors.surface,
-        borderRadius: patientTheme.radius.card,
-        boxShadow: patientTheme.shadows.soft,
-        border: `1px solid ${patientTheme.colors.border}`,
-      }}
+      className="mh-card overflow-hidden"
     >
       <button
         onClick={() => setOpen((v) => !v)}
@@ -34,8 +28,8 @@ export function LabResultCard({ testName, date, status, result, notes }: LabResu
             <StatusBadge status={status} />
           </div>
         </div>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: patientTheme.colors.surfaceSecondary }}>
-          <ChevronDown size={16} style={{ color: patientTheme.colors.textMuted, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />
+        <div className="mh-icon mh-icon-slate w-8 h-8">
+          <ChevronDown size={16} style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />
         </div>
       </button>
       {open && (

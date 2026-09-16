@@ -1,46 +1,87 @@
-/* MicroHealth Patient Experience — design-system CSS variables
-   Matches the approved mockup: slate neutrals, vibrant green, Inter, flat white cards. */
+/* ============================================================
+   MicroHealth Patient Experience
+   Visual language: SOFT + TACTILE + DIMENSIONAL + MINT + PREMIUM HEALTHCARE
+   ============================================================
+   Three surface levels:
+     L1  page atmosphere   — near-white revealing pale mint light
+     L2  elevated cards    — lit white surfaces, soft ambient shadow
+     L3  interactive       — mint/white raised controls, dimensional icons
+
+   Depth comes from elevation, shadow and tonal difference — never
+   from harsh borders. Shadows are always extremely soft and spread.
+   ============================================================ */
 
 .patient-shell {
-  --mh-bg: #F8FAFB;
-  --mh-surface: #FFFFFF;
-  --mh-surface-2: #F1F5F9;
-  --mh-border: #E5E7EB;
-  --mh-border-light: #F3F4F6;
-
+  /* ---- Green ramp ---- */
   --mh-green: #16A34A;
   --mh-green-dark: #15803D;
   --mh-green-deep: #14532D;
   --mh-green-soft: #DCFCE7;
   --mh-green-pale: #F0FDF4;
 
+  /* ---- Mint atmosphere ---- */
+  --mh-mint: #EAF7EE;
+  --mh-mint-deep: #DCF0E3;
+  --mh-mint-pale: #F3FAF5;
+
+  /* ---- Ink: navy, never black ---- */
   --mh-text: #0F172A;
   --mh-text-secondary: #64748B;
   --mh-text-muted: #94A3B8;
 
+  /* ---- Surfaces ---- */
+  --mh-bg: #F7FAF8;
+  --mh-surface: #FFFFFF;
+  --mh-surface-2: #F4F7F9;
+  --mh-hairline: #E8EEF2;
+  --mh-hairline-soft: #F1F5F7;
+  --mh-border: #E8EEF2;
+  --mh-border-light: #F1F5F7;
+
   --mh-success: #16A34A;
-  --mh-success-soft: #DCFCE7;
   --mh-warning: #F59E0B;
-  --mh-warning-soft: #FEF3C7;
   --mh-error: #EF4444;
-  --mh-error-soft: #FEE2E2;
   --mh-info: #3B82F6;
-  --mh-info-soft: #DBEAFE;
+  --mh-rose: #E11D48;
+  --mh-amber: #D97706;
+  --mh-blue: #2563EB;
+  --mh-teal: #0D9488;
   --mh-ai: #16A34A;
 
-  --mh-radius-card: 16px;
-  --mh-radius-button: 12px;
-  --mh-radius-control: 12px;
+  /* ---- Radii: 16 / 20 / 24. No excessive 30–40px rounding. ---- */
+  --mh-radius-small: 16px;
+  --mh-radius-card: 20px;
+  --mh-radius-feature: 24px;
+  --mh-radius-control: 14px;
+  --mh-radius-button: 999px;
 
-  --mh-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --mh-shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --mh-shadow-strong: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  /* ---- Elevation ladder: extremely soft, spread, low opacity ---- */
+  --mh-e1: 0 1px 2px rgba(16,24,40,0.04), 0 4px 12px -4px rgba(16,24,40,0.06);
+  --mh-e2: 0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.10);
+  --mh-e3: 0 2px 4px rgba(16,24,40,0.05), 0 20px 40px -12px rgba(16,24,40,0.14);
 
-  --mh-font: 'Inter', system-ui, sans-serif;
+  --mh-shadow-soft: var(--mh-e1);
+  --mh-shadow-medium: var(--mh-e2);
+  --mh-shadow-strong: var(--mh-e3);
+  --mh-shadow-green: 0 2px 6px rgba(16,24,40,0.06), 0 16px 32px -12px rgba(22,101,52,0.35);
+
+  --mh-font: 'Inter', system-ui, -apple-system, sans-serif;
 
   font-family: var(--mh-font);
   color: var(--mh-text);
   background: var(--mh-bg);
+}
+
+/* ---- L1: page atmosphere ----
+   Almost white at a glance; pale mint light blooms behind the content. */
+.mh-atmosphere {
+  position: relative;
+  background:
+    radial-gradient(120% 80% at 15% -10%, rgba(214,244,224,0.55) 0%, rgba(214,244,224,0) 55%),
+    radial-gradient(100% 70% at 95% 5%, rgba(219,234,254,0.32) 0%, rgba(219,234,254,0) 55%),
+    radial-gradient(90% 60% at 50% 108%, rgba(203,239,217,0.42) 0%, rgba(203,239,217,0) 60%),
+    linear-gradient(180deg, #F8FBF9 0%, #F5F9F6 55%, #F2F8F4 100%);
+  background-attachment: fixed;
 }
 
 /* Ensure mobile viewport stability */
@@ -49,78 +90,479 @@
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
 }
 
-/* Timeline dot pulse */
-@keyframes mh-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.25); }
-  50% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+/* ============================================================
+   L2 — The 3D card.
+   large radius · translucent light border · soft ambient shadow ·
+   secondary shadow · internal top highlight · lit white surface
+   ============================================================ */
+.mh-card {
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 62%, #FBFDFC 100%);
+  border: 1px solid rgba(226, 236, 231, 0.9);
+  border-radius: var(--mh-radius-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 10px 24px -8px rgba(16, 24, 40, 0.10);
 }
 
-.mh-pulse {
-  animation: mh-pulse 2.2s infinite;
+/* Feature card — the larger radius, a touch more lift */
+.mh-card-feature {
+  border-radius: var(--mh-radius-feature);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 16px 32px -10px rgba(16, 24, 40, 0.12);
 }
 
-/* AI orb subtle breathe */
+/* Small card / list row */
+.mh-card-small {
+  border-radius: var(--mh-radius-small);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 6px 16px -6px rgba(16, 24, 40, 0.08);
+}
+
+/* ============================================================
+   Green feature card — rich emerald with believable depth.
+   Tonal gradient + embedded light patterns + lit top edge +
+   soft outer shadow. Never flat `background: green`.
+   ============================================================ */
+.mh-green-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mh-radius-feature);
+  background: linear-gradient(158deg, #1CAE51 0%, #16A34A 32%, #15803D 72%, #14703A 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -20px 40px -24px rgba(6, 60, 30, 0.55),
+    0 2px 6px rgba(16, 24, 40, 0.06),
+    0 16px 32px -12px rgba(22, 101, 52, 0.35);
+}
+
+/* Soft internal lighting sweep */
+.mh-green-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 30%, transparent 52%);
+}
+
+/* Embedded decorative geometry — light patterns, not decoration */
+.mh-green-card::after {
+  content: "";
+  position: absolute;
+  right: -46px;
+  top: -56px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 34px rgba(255, 255, 255, 0.05);
+}
+
+/* Mint feature card — lighter, for AI/insight panels */
+.mh-mint-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mh-radius-feature);
+  background: linear-gradient(165deg, #F0FBF3 0%, #E6F6EC 60%, #DFF2E6 100%);
+  border: 1px solid rgba(190, 231, 205, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(16, 24, 40, 0.03),
+    0 10px 24px -10px rgba(22, 101, 52, 0.12);
+}
+
+/* ============================================================
+   L3 — Dimensional icon container.
+   Layered lighting: soft outer shadow, pale tinted surface, inner
+   highlight, thin light border. "Frosted medical plastic."
+   ============================================================ */
+.mh-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #F4FCF6 0%, #E8F8EE 55%, #DCF2E5 100%);
+  border: 1px solid rgba(198, 233, 211, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(20, 90, 50, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(22, 101, 52, 0.14);
+  color: var(--mh-green-dark);
+}
+
+.mh-icon-rose {
+  background: linear-gradient(160deg, #FFF5F7 0%, #FFE7EC 55%, #FFDCE3 100%);
+  border-color: rgba(253, 205, 216, 0.9);
+  color: var(--mh-rose);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(159, 18, 57, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(159, 18, 57, 0.14);
+}
+
+.mh-icon-amber {
+  background: linear-gradient(160deg, #FFFBF0 0%, #FEF3C7 55%, #FDE9B0 100%);
+  border-color: rgba(252, 230, 168, 0.9);
+  color: var(--mh-amber);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(146, 64, 14, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(146, 64, 14, 0.14);
+}
+
+.mh-icon-blue {
+  background: linear-gradient(160deg, #F4F8FF 0%, #E3EEFE 55%, #D8E8FD 100%);
+  border-color: rgba(196, 219, 252, 0.9);
+  color: var(--mh-blue);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(30, 64, 175, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(30, 64, 175, 0.14);
+}
+
+.mh-icon-teal {
+  background: linear-gradient(160deg, #F0FCFA 0%, #D9F7F1 55%, #CCF3EA 100%);
+  border-color: rgba(178, 235, 224, 0.9);
+  color: var(--mh-teal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(15, 118, 110, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(15, 118, 110, 0.14);
+}
+
+.mh-icon-slate {
+  background: linear-gradient(160deg, #FAFCFD 0%, #F0F4F8 55%, #E9EFF4 100%);
+  border-color: rgba(220, 230, 238, 0.9);
+  color: var(--mh-text-secondary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(16, 24, 40, 0.04),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(16, 24, 40, 0.10);
+}
+
+/* Solid green dimensional control — nav AI button, agent mark */
+.mh-icon-green {
+  background: linear-gradient(165deg, #29B85C 0%, #16A34A 45%, #15803D 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 6px rgba(6, 60, 30, 0.28),
+    0 2px 4px rgba(16, 24, 40, 0.08),
+    0 8px 18px -4px rgba(22, 101, 52, 0.42);
+}
+
+/* ============================================================
+   Status pills — soft physical pills, embedded not pasted on.
+   ============================================================ */
+.mh-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #F2FCF5 0%, #E4F8EA 100%);
+  border: 1px solid rgba(190, 231, 205, 0.8);
+  color: var(--mh-green-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.mh-pill-amber {
+  background: linear-gradient(180deg, #FFFCF3 0%, #FEF3C7 100%);
+  border-color: rgba(250, 227, 160, 0.85);
+  color: #B45309;
+}
+
+.mh-pill-rose {
+  background: linear-gradient(180deg, #FFF7F9 0%, #FFE4E9 100%);
+  border-color: rgba(253, 205, 216, 0.85);
+  color: #BE123C;
+}
+
+.mh-pill-slate {
+  background: linear-gradient(180deg, #FBFCFE 0%, #F0F4F8 100%);
+  border-color: rgba(222, 232, 240, 0.9);
+  color: var(--mh-text-secondary);
+}
+
+/* ============================================================
+   Buttons — tactile, pill-shaped.
+   Primary: emerald gradient + soft elevation + lit top.
+   Pressed: darker, reduced elevation, tiny scale reduction.
+   ============================================================ */
+.mh-btn-primary {
+  background: linear-gradient(180deg, #1FB055 0%, #16A34A 55%, #158840 100%);
+  border: 1px solid rgba(17, 122, 60, 0.85);
+  color: #FFFFFF;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -2px 5px rgba(6, 60, 30, 0.20),
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 6px 16px -4px rgba(22, 101, 52, 0.38);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.mh-btn-primary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  filter: brightness(0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 3px rgba(6, 60, 30, 0.16),
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 2px 6px -2px rgba(22, 101, 52, 0.30);
+}
+
+.mh-btn-primary:disabled {
+  filter: saturate(0.45) brightness(1.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+/* Secondary: white surface, green border, green text, subtle elevation */
+.mh-btn-secondary {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFDFB 100%);
+  border: 1px solid rgba(134, 202, 158, 0.65);
+  color: var(--mh-green-dark);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 10px -4px rgba(16, 24, 40, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.mh-btn-secondary:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: inset 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+/* Quiet icon button — raised circular control (back, bell, kebab) */
+.mh-btn-icon {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFDFB 100%);
+  border: 1px solid rgba(226, 236, 231, 0.95);
+  color: var(--mh-text-secondary);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 10px -4px rgba(16, 24, 40, 0.10);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mh-btn-icon:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: inset 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+/* ============================================================
+   Segmented switch — recessed track, raised white thumb
+   ============================================================ */
+.mh-track {
+  background: linear-gradient(180deg, #EDF3EF 0%, #F3F8F5 100%);
+  border: 1px solid rgba(220, 233, 226, 0.95);
+  box-shadow:
+    inset 0 2px 4px rgba(16, 24, 40, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.mh-track-thumb {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F9FCFA 100%);
+  border: 1px solid rgba(226, 236, 231, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 3px 8px -2px rgba(16, 24, 40, 0.10);
+}
+
+/* ============================================================
+   Recessed input field
+   ============================================================ */
+.mh-field {
+  background: linear-gradient(180deg, #F2F6F8 0%, #F8FBFC 100%);
+  border: 1px solid rgba(224, 234, 240, 0.95);
+  box-shadow:
+    inset 0 2px 4px rgba(16, 24, 40, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.mh-field:focus {
+  border-color: rgba(134, 202, 158, 0.8);
+  box-shadow:
+    inset 0 2px 4px rgba(16, 24, 40, 0.05),
+    0 0 0 3.5px rgba(22, 163, 74, 0.12);
+}
+
+/* ============================================================
+   Floating navigation — an elevated physical control that the
+   content scrolls beneath. Rounded top corners, soft shadow.
+   ============================================================ */
+.mh-nav {
+  background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(250,253,251,0.97) 100%);
+  border: 1px solid rgba(228, 238, 232, 0.9);
+  border-bottom: none;
+  border-radius: 26px 26px 0 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 -1px 3px rgba(16, 24, 40, 0.04),
+    0 -14px 34px -12px rgba(16, 24, 40, 0.16);
+}
+
+/* Active nav destination — a soft green capsule the item sits inside */
+.mh-nav-active {
+  background: linear-gradient(180deg, #EAF8EF 0%, #DDF2E6 100%);
+  border: 1px solid rgba(190, 231, 205, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px -1px rgba(22, 101, 52, 0.16);
+}
+
+/* Pale mint glow that seats the raised AI control into the bar */
+.mh-nav-ai-halo {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  width: 96px;
+  height: 66px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(134, 239, 172, 0.42) 0%, rgba(134, 239, 172, 0.16) 55%, rgba(134, 239, 172, 0) 100%);
+}
+
+/* ============================================================
+   Charts — the green line should read slightly luminous, and sit
+   inside the card rather than pasted on top of it.
+   ============================================================ */
+.mh-chart-line {
+  filter: drop-shadow(0 2px 5px rgba(22, 163, 74, 0.22));
+}
+
+.mh-chart-line .recharts-curve {
+  stroke-linejoin: round;
+}
+
+/* Data points read as part of the surface, not raw chart output */
+.recharts-dot {
+  transition: r 0.15s ease;
+}
+
+/* ============================================================
+   Timeline — thin elegant line, dimensional nodes
+   ============================================================ */
+.mh-timeline-line {
+  background: linear-gradient(180deg, rgba(134, 202, 158, 0.55) 0%, rgba(134, 202, 158, 0.28) 100%);
+  width: 1.5px;
+}
+
+/* ============================================================
+   Avatars — soft circular frames
+   ============================================================ */
+.mh-avatar {
+  border-radius: 50%;
+  background: linear-gradient(160deg, #F1FBF4 0%, #E1F5E8 100%);
+  border: 1px solid rgba(198, 233, 211, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 6px 14px -5px rgba(22, 101, 52, 0.18);
+}
+
+.mh-avatar-raised {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 10px 22px -8px rgba(22, 101, 52, 0.24);
+}
+
+/* ============================================================
+   Motion — quiet, responsive to action only
+   ============================================================ */
 @keyframes mh-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.05); opacity: 1; }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
 }
 
 .mh-breathe {
-  animation: mh-breathe 3s ease-in-out infinite;
+  animation: mh-breathe 3.4s ease-in-out infinite;
 }
 
-/* Card shimmer/skeleton */
 @keyframes mh-shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 .mh-shimmer {
-  background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
+  background: linear-gradient(90deg, #F6FAF7 25%, #EDF3EF 50%, #F6FAF7 75%);
   background-size: 200% 100%;
   animation: mh-shimmer 1.5s infinite;
 }
 
-/* Mobile: frame and nav wrappers disappear so layout is unchanged */
+@media (prefers-reduced-motion: reduce) {
+  .mh-btn-primary, .mh-btn-secondary, .mh-btn-icon { transition: none; }
+  .mh-breathe { animation: none; }
+}
+
+/* ============================================================
+   Desktop: the device rests in a pale mint environment.
+   No dark bezel — the atmosphere stays light.
+   (Mobile collapses the frame wrappers; this must come BEFORE the
+   media query so the desktop rules win at desktop widths.)
+   ============================================================ */
 .mh-app-frame,
 .mh-bottom-nav-wrap {
   display: contents;
 }
 
-/* Desktop: ambient backdrop + framed app column so the phone UI
-   looks intentional on wide screens instead of lost in whitespace */
 @media (min-width: 768px) {
   .patient-shell {
     background:
-      radial-gradient(900px 500px at 12% -10%, rgba(22, 163, 74, 0.14), transparent 60%),
-      radial-gradient(700px 500px at 92% 8%, rgba(59, 130, 246, 0.08), transparent 60%),
-      linear-gradient(160deg, #E2E8F0 0%, #EEF2F6 45%, #E8EDF2 100%);
+      radial-gradient(1000px 600px at 20% -8%, rgba(214, 244, 224, 0.6) 0%, transparent 62%),
+      radial-gradient(800px 520px at 88% 10%, rgba(219, 234, 254, 0.35) 0%, transparent 58%),
+      radial-gradient(900px 620px at 50% 112%, rgba(203, 239, 217, 0.45) 0%, transparent 62%),
+      linear-gradient(165deg, #F9FCFA 0%, #F4F9F6 50%, #EEF6F1 100%);
+    background-attachment: fixed;
   }
 
   .mh-app-frame {
     display: flex;
     flex-direction: column;
     width: min(430px, 100%);
-    margin: 28px auto;
-    border-radius: 44px;
+    margin: 26px auto;
+    border-radius: 40px;
     overflow: hidden;
     position: relative;
-    background: var(--mh-bg);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow:
-      0 0 0 10px rgba(255, 255, 255, 0.35),
-      0 32px 80px rgba(15, 23, 42, 0.28),
-      0 8px 24px rgba(15, 23, 42, 0.18);
-    height: calc(100dvh - 56px);
-    height: calc(100vh - 56px);
+      0 0 0 1px rgba(214, 231, 221, 0.9),
+      0 2px 6px rgba(16, 24, 40, 0.05),
+      0 32px 64px -20px rgba(16, 24, 40, 0.22),
+      0 80px 120px -40px rgba(22, 101, 52, 0.18);
+    height: calc(100dvh - 52px);
+    height: calc(100vh - 52px);
   }
 
   .mh-app-frame > main {
     flex: 1;
     min-height: 0;
+    border-radius: 39px;
   }
 
   .mh-bottom-nav-wrap {
@@ -130,14 +572,19 @@
     bottom: 0;
   }
 
-  /* Keep the nav pinned inside the framed column, not the viewport */
+  /* Nav stays inside the framed column and keeps its rounded top */
   .mh-bottom-nav-wrap nav {
     position: absolute;
-    border-radius: 0 0 43px 43px;
   }
 }
 
-/* Hide scrollbar for cleaner feel */
+/* Mobile: frame and nav wrappers disappear so layout is unchanged */
+.mh-app-frame,
+.mh-bottom-nav-wrap {
+  display: contents;
+}
+
+/* Hide scrollbar for a calmer surface */
 .patient-shell ::-webkit-scrollbar {
   width: 0;
   height: 0;

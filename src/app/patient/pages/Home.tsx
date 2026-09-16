@@ -123,12 +123,8 @@ export default function Home() {
         <button
           onClick={() => navigate("/patient/notifications")}
           aria-label="Notifications"
-          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
-            color: patientTheme.colors.textSecondary,
-          }}
+          className="mh-btn-icon w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ color: patientTheme.colors.textSecondary }}
         >
           <Bell size={18} />
         </button>
@@ -149,6 +145,7 @@ export default function Home() {
           {heartRate !== null && (
             <VitalCard
               label="Heart Rate"
+              metric="heartRate"
               value={String(heartRate)}
               unit="bpm"
               status={heartRate > 100 || heartRate < 55 ? "attention" : heartRate > 85 ? "high" : "normal"}
@@ -161,6 +158,7 @@ export default function Home() {
           {bpSys !== null && (
             <VitalCard
               label="Blood Pressure"
+              metric="bloodPressure"
               value={`${bpSys}/${bpDia ?? "—"}`}
               unit="mmHg"
               status={bpSys > 140 || (bpDia ?? 0) > 90 ? "attention" : bpSys > 125 ? "high" : "normal"}
@@ -173,6 +171,7 @@ export default function Home() {
           {spo2 !== null && (
             <VitalCard
               label="Blood Oxygen"
+              metric="spo2"
               value={String(spo2)}
               unit="%"
               status={spo2 < 95 ? "attention" : "normal"}
@@ -184,6 +183,7 @@ export default function Home() {
           {temp !== null && (
             <VitalCard
               label="Temperature"
+              metric="temperature"
               value={String(temp)}
               unit="°C"
               status={temp > 37.6 ? "attention" : temp > 37.2 ? "high" : "normal"}

@@ -10,87 +10,77 @@ interface HealthStatusCardProps {
 
 const config = {
   stable: {
-    gradient: "linear-gradient(135deg, #16A34A 0%, #15803D 60%, #14532D 100%)",
     text: "Your health looks stable",
   },
   watch: {
-    gradient: "linear-gradient(135deg, #F59E0B 0%, #D97706 60%, #B45309 100%)",
     text: "Something worth watching",
   },
   attention: {
-    gradient: "linear-gradient(135deg, #F97316 0%, #EA580C 60%, #C2410C 100%)",
     text: "Needs your attention",
   },
   urgent: {
-    gradient: "linear-gradient(135deg, #EF4444 0%, #DC2626 60%, #B91C1C 100%)",
     text: "Please address promptly",
   },
 };
 
+/** Tint the hero by status while keeping the same green material language. */
+const gradients = {
+  stable: "linear-gradient(158deg, #1CAE51 0%, #16A34A 32%, #15803D 72%, #14703A 100%)",
+  watch: "linear-gradient(158deg, #F5A524 0%, #F59E0B 35%, #D97706 75%, #B45309 100%)",
+  attention: "linear-gradient(158deg, #FB923C 0%, #F97316 35%, #EA580C 75%, #C2410C 100%)",
+  urgent: "linear-gradient(158deg, #F87171 0%, #EF4444 35%, #DC2626 75%, #B91C1C 100%)",
+};
+
+/**
+ * Health status hero — the strongest element on Home.
+ * Rich tonal gradient, embedded light geometry, lit top edge, soft depth.
+ */
 export function HealthStatusCard({ status, label, updatedAt, onViewReport }: HealthStatusCardProps) {
   const c = config[status];
   return (
-    <div
-      className="relative overflow-hidden"
-      style={{
-        background: c.gradient,
-        borderRadius: 20,
-        padding: 20,
-        boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)",
-      }}
-    >
-      {/* Decorative pulse rings */}
-      <div
-        aria-hidden
-        className="absolute rounded-full"
-        style={{
-          right: -24,
-          top: -24,
-          width: 130,
-          height: 130,
-          border: "1.5px solid rgba(255,255,255,0.18)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute rounded-full"
-        style={{
-          right: 12,
-          bottom: -34,
-          width: 90,
-          height: 90,
-          border: "1.5px solid rgba(255,255,255,0.14)",
-        }}
-      />
+    <div className="mh-green-card" style={{ background: gradients[status], padding: 20 }}>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-3.5">
+          <span
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{
+              background: "rgba(255,255,255,0.20)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.42), 0 1px 3px rgba(6,60,30,0.18)",
+            }}
+          >
+            <Heart size={15} color="#fff" fill="#fff" />
+          </span>
+          <span className="text-[12.5px] font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
+            Health Status
+          </span>
+        </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className="w-8 h-8 rounded-full flex items-center justify-center mh-pulse"
-          style={{ background: "rgba(255,255,255,0.2)" }}
+        <p
+          className="text-white"
+          style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.25, letterSpacing: "-0.02em", maxWidth: 250 }}
         >
-          <Heart size={16} color="#fff" fill="#fff" />
-        </span>
-        <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
-          Health Status
-        </span>
+          {c.text}
+        </p>
+        <p className="text-[13px] mt-1.5" style={{ color: "rgba(255,255,255,0.78)" }}>
+          {label} · {updatedAt || "Updated just now"}
+        </p>
+
+        {onViewReport && (
+          <button
+            onClick={onViewReport}
+            className="mt-4 px-4 py-2 text-[13px] font-semibold"
+            style={{
+              background: "linear-gradient(180deg, #FFFFFF 0%, #F4FBF6 100%)",
+              color: patientTheme.colors.primaryDark,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.9)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,1), 0 2px 6px rgba(6,60,30,0.22)",
+            }}
+          >
+            View Report
+          </button>
+        )}
       </div>
-
-      <p className="text-[22px] font-semibold leading-snug text-white" style={{ maxWidth: 240 }}>
-        {c.text}
-      </p>
-      <p className="text-[13px] mt-1.5" style={{ color: "rgba(255,255,255,0.75)" }}>
-        {label} · {updatedAt || "Updated just now"}
-      </p>
-
-      {onViewReport && (
-        <button
-          onClick={onViewReport}
-          className="mt-4 px-4 py-2 rounded-xl text-[13px] font-semibold"
-          style={{ background: "#FFFFFF", color: patientTheme.colors.primaryGreen }}
-        >
-          View Report
-        </button>
-      )}
     </div>
   );
 }
