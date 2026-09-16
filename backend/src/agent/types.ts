@@ -65,3 +65,16 @@ export interface AgentTool {
   parameters: Record<string, { type: string; description: string }>;
   execute: (args: Record<string, unknown>) => Promise<unknown>;
 }
+
+export interface GeneratedInsight {
+  id: string;
+  patientId: string;
+  type: InsightType;
+  priority: InsightPriority;
+  title: string;
+  message: string;
+  explanation?: string;
+  suggestedActions?: string[];
+  context?: Record<string, unknown>;
+  createdAt: Date;
+}

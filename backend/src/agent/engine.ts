@@ -1,25 +1,15 @@
 import { db } from "../config/database";
 import { aiInsights, staff } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
-import { type InsightType, type InsightPriority } from "./types";
+import { type InsightType, type InsightPriority, type GeneratedInsight } from "./types";
 import { buildPatientContext, formatPatientContext } from "./rag";
 import { retrieveKnowledge } from "./medicalRag";
 import { generateAgentResponse, systemPrompt } from "./ollama";
 import { detectTrend, checkVitalRanges } from "./rules";
 import { findAvailableAppointments, bookAppointment, prepareCareTeamMessage } from "./tools";
 
-export interface GeneratedInsight {
-  id: string;
-  patientId: string;
-  type: InsightType;
-  priority: InsightPriority;
-  title: string;
-  message: string;
-  explanation?: string;
-  suggestedActions?: string[];
-  context?: Record<string, unknown>;
-  createdAt: Date;
-}
+// Re-exported for backwards compatibility (canonical definition lives in ./types)
+export type { GeneratedInsight } from "./types";
 
 export async function processVitalEvent(patientUserId: string): Promise<GeneratedInsight | null> {
   const ctx = await buildPatientContext(patientUserId);

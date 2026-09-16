@@ -1,8 +1,6 @@
 import { db } from "../config/database";
 import { appointments, prescriptions, labTests, messages, staff } from "../db/schema";
 import { eq, asc } from "drizzle-orm";
-import { type GeneratedInsight } from "./engine";
-import { persistAndEmit } from "./insights";
 
 export async function findAvailableAppointments(patientId: string, doctorId?: string) {
   const today = new Date().toISOString().split("T")[0];

@@ -1,7 +1,7 @@
 import { db } from "../config/database";
 import { aiInsights } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
-import { type GeneratedInsight } from "./engine";
+import { type GeneratedInsight } from "./types";
 import { emitToPatient } from "../websocket/server";
 
 export async function persistAndEmit(insight: GeneratedInsight, userId: string) {
