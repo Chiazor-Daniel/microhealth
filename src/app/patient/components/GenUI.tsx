@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Heart, Activity, Wind, Thermometer, Calendar, Pill, FlaskConical, Check, AlertTriangle } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis } from "recharts";
 import { motion } from "motion/react";
 import { patientTheme, vitalStatusColor } from "../theme";
 import { AppointmentCard } from "./AppointmentCard";
@@ -196,6 +197,43 @@ export function GenUI({ elements, onAction }: GenUIProps) {
                     {a.label}
                   </button>
                 ))}
+              </div>
+            );
+
+          case "trend_chart":
+            return (
+              <div
+                key={i}
+                className="p-4 rounded-2xl"
+                style={{
+                  background: patientTheme.colors.surface,
+                  border: `1px solid ${patientTheme.colors.border}`,
+                  boxShadow: patientTheme.shadows.soft,
+                }}
+              >
+                <p className="text-xs font-medium mb-2" style={{ color: patientTheme.colors.textMuted }}>
+                  {el.data?.title || "Trend"}
+                </p>
+                <div className="h-32 -mx-2">
+                  {el.data?.values?.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={el.data.values} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <XAxis dataKey="label" tick={{ fontSize: 9, fill: patientTheme.colors.textMuted }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: patientTheme.colors.textMuted }} axisLine={false} tickLine={false} />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke={patientTheme.colors.primaryGreen}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, fill: patientTheme.colors.primaryGreen }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-xs" style={{ color: patientTheme.colors.textMuted }}>No trend data.</p>
+                  )}
+                </div>
               </div>
             );
 

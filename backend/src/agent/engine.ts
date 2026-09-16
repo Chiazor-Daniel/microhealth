@@ -317,13 +317,13 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
 }
 
 async function recentSimilarInsight(patientId: string, type: string, sourceId?: string): Promise<boolean> {
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const existing = await db.query.aiInsights.findFirst({
     where: eq(aiInsights.patientId, patientId),
     orderBy: [desc(aiInsights.createdAt)],
   });
   if (!existing) return false;
-  if (existing.createdAt < oneDayAgo) return false;
+  if (existing.createdAt < oneHourAgo) return false;
   if (existing.type === type) {
     const ctxSource = (existing.context as any)?.labId || (existing.context as any)?.appointmentId || (existing.context as any)?.prescriptionId;
     if (!sourceId || !ctxSource || ctxSource === sourceId) return true;

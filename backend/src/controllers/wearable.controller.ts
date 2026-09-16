@@ -3,6 +3,8 @@ import { db } from "../config/database";
 import { vitals } from "../db/schema";
 import { emitToPatient } from "../websocket/server";
 import { AppError } from "../middleware/errorHandler";
+import { processVitalEvent } from "../agent/engine";
+import { persistAndEmit } from "../agent/insights";
 
 export interface WearableReadingBody {
   patientId: string;
@@ -32,11 +34,20 @@ export async function receiveReading(req: Request, res: Response, next: NextFunc
       bloodSugar: body.bloodSugar,
       weight: body.weight,
       recordedAt: body.timestamp ? new Date(body.timestamp) : new Date(),
-      recordedBy: req.user!.userId,
     }).returning();
 
     // Notify the patient's connected devices in real time
     emitToPatient(req.user!.userId, "vital:updated", record);
+
+    // Run the agent on the new reading and emit any proactive insight
+    try {
+      const insight = await processVitalEvent(req.user!.userId);
+      if (insight) {
+        await persistAndEmit(insight, req.user!.userId);
+      }
+    } catch (err) {
+      console.error("[wearable] agent processing failed:", err);
+    }
 
     res.status(201).json(record);
   } catch (e) { next(e); }

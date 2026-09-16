@@ -39,7 +39,9 @@ export function BottomNavigation() {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex flex-col items-center justify-center gap-0.5 relative"
+              aria-label={label}
+              aria-current={isActive ? "page" : undefined}
+              className="flex flex-col items-center justify-center gap-0.5 relative outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
               style={{
                 minWidth: 54,
                 padding: "6px 8px",
@@ -51,6 +53,7 @@ export function BottomNavigation() {
                   : "transparent",
                 color: isActive ? (isAI ? "#fff" : patientTheme.colors.primaryGreen) : patientTheme.colors.textMuted,
                 transition: "all 0.2s ease",
+                focusVisibleRingColor: patientTheme.colors.primaryGreen,
               }}
             >
               <Icon size={isAI ? 22 : 20} strokeWidth={isActive ? 2.4 : 2} />
