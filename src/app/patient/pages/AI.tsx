@@ -7,6 +7,7 @@ import { GlassCard } from "../components/GlassCard";
 import { InsightCard } from "../components/InsightCard";
 import { AIIndicator } from "../components/AIIndicator";
 import { QuickActionButton } from "../components/QuickActionButton";
+import { GenUI, type GenUIElement } from "../components/GenUI";
 import { useInsights } from "../hooks/useInsights";
 import { aiService, type Insight } from "../../services/ai.service";
 
@@ -43,9 +44,8 @@ export default function AI() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text: input };
+  const send = async (text: string) => {
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text };
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setTyping(true);
@@ -57,7 +57,7 @@ export default function AI() {
       .join("\n");
 
     try {
-      const reply = await aiService.chat(input, history);
+      const reply = await aiService.chat(text, history);
       setMessages((m) => [...m, { id: crypto.randomUUID(), role: "agent", text: reply.message, insight: reply }]);
       refresh();
     } catch (err: any) {
@@ -74,6 +74,25 @@ export default function AI() {
     }
   };
 
+  const handleSend = () => {
+    if (!input.trim() || typing) return;
+    send(input.trim());
+  };
+
+  const handleGenUIAction = (action: string, payload?: any) => {
+    if (action === "select_appointment" && payload?.metadata) {
+      send(`slot:${JSON.stringify(payload.metadata)}`);
+    } else if (action === "triage_answer") {
+      send(`Severity: ${payload?.value}`);
+    } else if (action === "message_team") {
+      navigate("/patient/care/messages");
+    } else if (action === "book_appointment") {
+      navigate("/patient/book");
+    } else if (action === "call_emergency") {
+      window.location.href = "tel:112";
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -81,7 +100,6 @@ export default function AI() {
       transition={{ duration: 0.35 }}
       className="flex flex-col h-[calc(100dvh-180px)] space-y-4"
     >
-      {/* Header */}
       <div className="flex items-center gap-3">
         <AIIndicator size={36} active={typing} />
         <div>
@@ -90,7 +108,6 @@ export default function AI() {
         </div>
       </div>
 
-      {/* Active insights */}
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: patientTheme.colors.textMuted }}>Active insights</p>
         {insightsLoading ? (
@@ -113,7 +130,6 @@ export default function AI() {
         )}
       </div>
 
-      {/* Quick actions */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {quickActions.map((a) => (
           <QuickActionButton
@@ -121,20 +137,19 @@ export default function AI() {
             icon={a.icon}
             label={a.label}
             onClick={() => {
-              if (a.label.includes("appointment")) navigate("/patient/book");
+              if (a.label.includes("appointment")) send("Book me an appointment");
               else setInput(a.label);
             }}
           />
         ))}
       </div>
 
-      {/* Conversation */}
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <GlassCard
               style={{
-                maxWidth: "85%",
+                maxWidth: "90%",
                 background: msg.role === "user" ? patientTheme.colors.primaryGreen : patientTheme.colors.surface,
                 color: msg.role === "user" ? "#fff" : patientTheme.colors.textPrimary,
                 borderRadius: msg.role === "user" ? 20 : patientTheme.radius.card,
@@ -145,20 +160,24 @@ export default function AI() {
               }}
             >
               <p className="text-sm leading-relaxed">{msg.text}</p>
-              {msg.insight?.suggestedActions && (
+              {msg.role === "agent" && msg.insight?.context?.elements && (
+                <GenUI elements={msg.insight.context.elements as GenUIElement[]} onAction={handleGenUIAction} />
+              )}
+              {msg.role === "agent" && msg.insight?.suggestedActions && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {Array.isArray(msg.insight.suggestedActions)
-                    ? msg.insight.suggestedActions.map((action: string) => (
-                        <button
-                          key={action}
-                          onClick={() => setInput(action)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-medium"
-                          style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
-                        >
-                          {action}
-                        </button>
-                      ))
-                    : null}
+                  {(Array.isArray(msg.insight.suggestedActions)
+                    ? msg.insight.suggestedActions
+                    : []
+                  ).map((action: string) => (
+                    <button
+                      key={action}
+                      onClick={() => send(action)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium"
+                      style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
+                    >
+                      {action}
+                    </button>
+                  ))}
                 </div>
               )}
             </GlassCard>
@@ -173,7 +192,6 @@ export default function AI() {
         <div ref={scrollRef} />
       </div>
 
-      {/* Input */}
       <div className="flex items-center gap-2 pt-2">
         <input
           value={input}

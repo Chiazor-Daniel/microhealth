@@ -1,11 +1,12 @@
 import { db } from "../config/database";
-import { aiInsights } from "../db/schema";
+import { aiInsights, staff } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
-import { type HealthEvent, type PatientContext, type InsightType, type InsightPriority } from "./types";
+import { type InsightType, type InsightPriority } from "./types";
 import { buildPatientContext, formatPatientContext } from "./rag";
 import { retrieveKnowledge } from "./medicalRag";
 import { generateAgentResponse, systemPrompt } from "./ollama";
 import { detectTrend, checkVitalRanges } from "./rules";
+import { findAvailableAppointments, bookAppointment, prepareCareTeamMessage } from "./tools";
 
 export interface GeneratedInsight {
   id: string;
@@ -24,7 +25,6 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
   const ctx = await buildPatientContext(patientUserId);
   if (!ctx) return null;
 
-  // Look for an urgent/abnormal reading first
   const latest = ctx.recentVitals[0];
   if (latest) {
     const checks = checkVitalRanges(latest);
@@ -40,7 +40,6 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
     }
   }
 
-  // Then look for sustained trends
   const hrTrend = detectTrend(ctx.recentVitals, "heartRate");
   if (hrTrend.direction === "rising" && hrTrend.change >= 5) {
     return await generateInsight(ctx, {
@@ -117,7 +116,6 @@ export async function processMedicationDue(patientUserId: string): Promise<Gener
   const active = ctx.prescriptions.filter((p) => p.status !== "expired");
   if (active.length === 0) return null;
 
-  // Avoid duplicate med reminders per day per patient
   const existing = await recentSimilarInsight(ctx.patientId, "medication_due", active[0].id);
   if (existing) return null;
 
@@ -141,6 +139,130 @@ export async function respondToChat(
   const patientContext = formatPatientContext(ctx);
   const medicalKnowledge = retrieveKnowledge(userMessage, 2);
 
+  const lower = userMessage.toLowerCase();
+
+  // Booking flow: agent shows available slots
+  if (lower.includes("book") && lower.includes("appointment")) {
+    const slots = await findAvailableAppointments(ctx.patientId);
+    return await generateInsight(ctx, {
+      type: "system",
+      priority: "info",
+      title: "Available appointments",
+      message: "Here are available appointments. Pick one and I'll confirm it with you.",
+      context: {
+        elements: [
+          {
+            type: "appointment_selector",
+            options: slots.map((s) => ({
+              label: `${s.date} · ${s.time} · ${s.doctorName}`,
+              value: JSON.stringify({ doctorId: s.doctorId, date: s.date, time: s.time }),
+              metadata: { doctorId: s.doctorId, date: s.date, time: s.time },
+            })),
+          },
+        ],
+      },
+    });
+  }
+
+  // If user selected an appointment slot
+  if (lower.startsWith("slot:") || lower.includes("the second") || lower.includes("the first") || lower.includes("the third")) {
+    let selected: { doctorId: string; date: string; time: string } | null = null;
+    if (lower.startsWith("slot:")) {
+      try {
+        selected = JSON.parse(userMessage.replace("slot:", "").trim());
+      } catch {
+        selected = null;
+      }
+    }
+    if (!selected) {
+      const slots = await findAvailableAppointments(ctx.patientId);
+      const idx = lower.includes("second") ? 1 : lower.includes("third") ? 2 : 0;
+      const s = slots[idx];
+      if (s) selected = { doctorId: s.doctorId, date: s.date, time: s.time };
+    }
+    if (selected) {
+      const appt = await bookAppointment(ctx.patientId, selected);
+      const doctorName = await getDoctorName(selected.doctorId);
+      return await generateInsight(ctx, {
+        type: "appointment_reminder",
+        priority: "info",
+        title: "Appointment confirmed",
+        message: `Your appointment is booked with ${doctorName} on ${selected.date} at ${selected.time}.`,
+        context: {
+          appointmentId: appt.id,
+          elements: [
+            {
+              type: "appointment_card",
+              data: {
+                department: appt.department,
+                doctorName,
+                date: appt.scheduledDate,
+                time: appt.scheduledTime?.slice(0, 5),
+                status: appt.status,
+              },
+            },
+          ],
+        },
+      });
+    }
+  }
+
+  // "I can't see a doctor yet" triage flow
+  if ((lower.includes("can't") || lower.includes("cannot") || lower.includes("unable")) && lower.includes("doctor")) {
+    return await generateInsight(ctx, {
+      type: "system",
+      priority: "watch",
+      title: "Let's figure out next steps",
+      message: "I understand you can't get to a clinician right now. Let's quickly check how urgent this feels so I can guide you safely.",
+      context: {
+        elements: [
+          {
+            type: "triage_question",
+            content: "How are you feeling right now?",
+            options: [
+              { label: "Mild", value: "mild" },
+              { label: "Moderate", value: "moderate" },
+              { label: "Severe", value: "severe" },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  if (["mild", "moderate", "severe"].some((s) => lower.includes(s))) {
+    const severity = ["mild", "moderate", "severe"].find((s) => lower.includes(s));
+    const urgentSymptoms = ["chest", "breathing", "faint", "unconscious", "severe", "stroke", "bleeding"];
+    const hasUrgent = urgentSymptoms.some((sym) => lower.includes(sym));
+
+    if (severity === "severe" || hasUrgent) {
+      return await generateInsight(ctx, {
+        type: "system",
+        priority: "urgent",
+        title: "Please seek care now",
+        message: "Based on what you've shared, this may need prompt in-person care. If you cannot reach your doctor quickly, consider an urgent care facility or emergency services.",
+        context: {
+          elements: [
+            { type: "quick_actions", actions: [{ label: "Call emergency", action: "call_emergency" }, { label: "Message care team", action: "message_team" }] },
+          ],
+        },
+      });
+    }
+
+    return await generateInsight(ctx, {
+      type: "system",
+      priority: "watch",
+      title: "Self-care while you arrange follow-up",
+      message: "I'm sorry you're not feeling well. Rest, hydrate, and monitor your symptoms. If anything worsens — trouble breathing, chest discomfort, fainting, confusion, or severe pain — please seek urgent care.",
+      context: {
+        elements: [
+          { type: "quick_actions", actions: [{ label: "Message care team", action: "message_team" }, { label: "Book appointment", action: "book_appointment" }] },
+        ],
+      },
+    });
+  }
+
+  // Default LLM response
   const response = await generateAgentResponse({
     system: systemPrompt,
     patientContext,
@@ -154,16 +276,17 @@ export async function respondToChat(
     id: crypto.randomUUID(),
     patientId: ctx.patientId,
     type: "system",
-    priority: "info",
+    priority: response.priority || "info",
     title: "Health Agent",
     message: response.text,
     explanation: response.text,
     suggestedActions: response.suggestedActions,
+    context: { elements: response.elements },
     createdAt: new Date(),
   };
 }
 
-async function generateInsight(ctx: PatientContext, event: Omit<HealthEvent, "id" | "patientId" | "createdAt">): Promise<GeneratedInsight> {
+async function generateInsight(ctx: any, event: { type: InsightType; priority: InsightPriority; title: string; message: string; context?: Record<string, unknown> }): Promise<GeneratedInsight> {
   const patientContext = formatPatientContext(ctx);
   const medicalKnowledge = retrieveKnowledge(event.type, 2);
 
@@ -174,16 +297,21 @@ async function generateInsight(ctx: PatientContext, event: Omit<HealthEvent, "id
     event,
   });
 
+  const elements = response.elements || [];
+  if (event.context?.elements) {
+    elements.unshift(...(event.context.elements as any[]));
+  }
+
   return {
     id: crypto.randomUUID(),
     patientId: ctx.patientId,
     type: event.type,
-    priority: event.priority,
+    priority: response.priority || event.priority,
     title: event.title,
     message: response.text || event.message,
     explanation: response.text,
     suggestedActions: response.suggestedActions,
-    context: event.context,
+    context: { ...event.context, elements },
     createdAt: new Date(),
   };
 }
@@ -205,8 +333,9 @@ async function recentSimilarInsight(patientId: string, type: string, sourceId?: 
 
 async function getDoctorName(staffId?: string | null): Promise<string> {
   if (!staffId) return "your doctor";
+  const { staff } = await import("../db/schema");
   const s = await db.query.staff.findFirst({
-    where: eq(require("../db/schema").staff.id, staffId),
+    where: eq(staff.id, staffId),
     with: { user: true },
   });
   if (!s?.user) return "your doctor";

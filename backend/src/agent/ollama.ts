@@ -1,5 +1,5 @@
-import { config } from "../config/env";
 import { type InsightPriority } from "./types";
+import { parseAgentOutput, type AgentStructuredResponse, buildStructuredPrompt } from "./response";
 
 export interface LlmMessage {
   role: "system" | "user" | "assistant";
@@ -24,7 +24,7 @@ export interface AgentPromptInput {
 const DEFAULT_MODEL = "gemma3:4b";
 const OLLAMA_URL = process.env.OLLAMA_HOST || "http://localhost:11434";
 
-export async function generateAgentResponse(input: AgentPromptInput): Promise<{ text: string; suggestedActions?: string[] }> {
+export async function generateAgentResponse(input: AgentPromptInput): Promise<AgentStructuredResponse> {
   const conversationBlock = input.conversationHistory
     ? `## Conversation so far\n${input.conversationHistory}\n\n`
     : "";
@@ -32,7 +32,10 @@ export async function generateAgentResponse(input: AgentPromptInput): Promise<{ 
     ? `## Patient question\n${input.userMessage}\n\n`
     : `## Health event to explain\nType: ${input.event.type}\nPriority: ${input.event.priority}\nTitle: ${input.event.title}\nMessage: ${input.event.message}\nContext: ${JSON.stringify(input.event.context ?? {})}\n\n`;
 
-  const prompt = `${input.system}\n\n${input.patientContext}\n\n${input.medicalKnowledge}\n\n${conversationBlock}${userBlock}\n## Instructions\nRespond as the calm, concise MicroHealth Health Agent. Use one short explanation plus clear next actions. Do not diagnose. Keep paragraphs short. If a vital is abnormal for the patient, mention it gently and suggest monitoring or contacting the care team. You may end with up to 3 one-line suggested patient actions prefixed with ACTION:.`;
+  const prompt = buildStructuredPrompt(
+    input.system,
+    `${input.patientContext}\n\n${input.medicalKnowledge}\n\n${conversationBlock}${userBlock}`
+  );
 
   try {
     const res = await fetch(`${OLLAMA_URL}/api/generate`, {
@@ -42,7 +45,7 @@ export async function generateAgentResponse(input: AgentPromptInput): Promise<{ 
         model: DEFAULT_MODEL,
         prompt,
         stream: false,
-        options: { temperature: 0.4, num_predict: 400 },
+        options: { temperature: 0.4, num_predict: 600 },
       }),
     });
 
@@ -52,23 +55,9 @@ export async function generateAgentResponse(input: AgentPromptInput): Promise<{ 
 
     const data = (await res.json()) as { response?: string };
     const text = data.response || "";
-
-    const lines = text.split("\n");
-    const bodyLines: string[] = [];
-    const actions: string[] = [];
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("ACTION:")) {
-        actions.push(trimmed.replace("ACTION:", "").trim());
-      } else if (trimmed) {
-        bodyLines.push(trimmed);
-      }
-    }
-
-    return { text: bodyLines.join("\n"), suggestedActions: actions.length ? actions : undefined };
+    return parseAgentOutput(text);
   } catch (err) {
     console.error("[agent] Ollama call failed:", err);
-    // Graceful fallback so the app keeps working without the LLM
     return {
       text: input.userMessage
         ? "I'm here to help. I couldn't reach my reasoning engine right now, but I can still show your information and help you take action."
@@ -92,4 +81,14 @@ Tone rules:
 - Use plain language.
 - One short explanation is better than a long paragraph.
 - Avoid alarmist phrasing. Use "I'm keeping an eye on this" rather than "ALERT".
-- If something may need prompt clinical attention, say so clearly and suggest how to reach care.`;
+- If something may need prompt clinical attention, say so clearly and suggest how to reach care.
+
+UI guidance:
+- When showing vitals, use UI: {"type":"vital_card","data":{"label":"...","value":"...","unit":"...","status":"normal|high|low|attention","subtext":"..."}}
+- When showing an appointment, use UI: {"type":"appointment_card","data":{"department":"...","doctorName":"...","date":"...","time":"...","status":"..."}}
+- When the patient wants to book, use UI: {"type":"appointment_selector","options":[{"label":"Tue · 10:30 AM","value":"...","metadata":{"doctorId":"...","date":"...","time":"..."}}]}
+- For medication, use UI: {"type":"medication_card","data":{"name":"...","dosage":"...","status":"..."}}
+- For labs, use UI: {"type":"lab_card","data":{"testName":"...","status":"...","result":"..."}}
+- For triage, use UI: {"type":"triage_question","content":"How severe is it?","options":[{"label":"Mild","value":"mild"},{"label":"Moderate","value":"moderate"},{"label":"Severe","value":"severe"}]}
+- For confirmation, use UI: {"type":"confirmation","content":"Confirm action?","actions":[{"label":"Confirm","action":"confirm","payload":{}}]}
+- Do not include more than one UI block unless necessary.`;

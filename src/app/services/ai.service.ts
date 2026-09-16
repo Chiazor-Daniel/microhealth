@@ -8,7 +8,7 @@ export interface Insight {
   title: string;
   message: string;
   explanation?: string;
-  suggestedActions?: string;
+  suggestedActions?: any;
   context?: any;
   isRead?: boolean;
   createdAt: string;
