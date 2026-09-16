@@ -156,7 +156,7 @@ function FamilyMembers() {
                 {["View Record", "Book Visit", "Vitals"].map(label => (
                   <button
                     key={label}
-                    className="mh-btn-secondary flex-1 py-2 text-[12.5px] font-semibold"
+                    className="mh-btn-secondary flex-1 px-2 py-2 text-[12px] font-semibold whitespace-nowrap"
                   >
                     {label}
                   </button>

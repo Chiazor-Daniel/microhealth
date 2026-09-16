@@ -11,7 +11,9 @@
    from harsh borders. Shadows are always extremely soft and spread.
    ============================================================ */
 
-.patient-shell {
+/* Tokens live at the root so overlays (rendered in a portal outside the
+   shell) and any host surface can use them. */
+:root {
   /* ---- Green ramp ---- */
   --mh-green: #16A34A;
   --mh-green-dark: #15803D;
@@ -66,7 +68,9 @@
   --mh-shadow-green: 0 2px 6px rgba(16,24,40,0.06), 0 16px 32px -12px rgba(22,101,52,0.35);
 
   --mh-font: 'Inter', system-ui, -apple-system, sans-serif;
+}
 
+.patient-shell {
   font-family: var(--mh-font);
   color: var(--mh-text);
   background: var(--mh-bg);
