@@ -34,7 +34,7 @@ export function LabResultCard({ testName, date, status, result, notes }: LabResu
             <StatusBadge status={status} />
           </div>
         </div>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(16,24,40,0.05)" }}>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: patientTheme.colors.surfaceSecondary }}>
           <ChevronDown size={16} style={{ color: patientTheme.colors.textMuted, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />
         </div>
       </button>
@@ -42,14 +42,14 @@ export function LabResultCard({ testName, date, status, result, notes }: LabResu
         <div className="px-4 pb-4 space-y-2">
           <div
             className="p-3 rounded-xl"
-            style={{ background: "rgba(16,24,40,0.03)", border: `1px solid ${patientTheme.colors.border}` }}
+            style={{ background: patientTheme.colors.surfaceSecondary, border: `1px solid ${patientTheme.colors.borderLight}` }}
           >
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: patientTheme.colors.textMuted }}>Result</p>
             <p className="text-sm mt-1" style={{ color: patientTheme.colors.textPrimary }}>{result || "—"}</p>
           </div>
           {notes && <div
             className="p-3 rounded-xl"
-            style={{ background: "rgba(16,24,40,0.03)", border: `1px solid ${patientTheme.colors.border}` }}
+            style={{ background: patientTheme.colors.surfaceSecondary, border: `1px solid ${patientTheme.colors.borderLight}` }}
           >
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: patientTheme.colors.textMuted }}>Clinician note</p>
             <p className="text-sm mt-1" style={{ color: patientTheme.colors.textPrimary }}>{notes}</p>

@@ -46,6 +46,7 @@ import Vitals from "./patient/pages/Vitals";
 import AI from "./patient/pages/AI";
 import Care from "./patient/pages/Care";
 import Profile from "./patient/pages/Profile";
+import Notifications from "./patient/pages/Notifications";
 
 // Legacy patient sub-pages reused under /patient/care/* and /patient/book, /patient/family
 import BookAppointment from "./pages/patient/BookAppointment";
@@ -103,6 +104,7 @@ export default function App() {
         <Route path="ai" element={<AI />} />
         <Route path="care" element={<Care />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="notifications" element={<Notifications />} />
 
         {/* Care sub-pages (legacy pages reused) */}
         <Route path="care/appointments" element={<PatientAppointments />} />

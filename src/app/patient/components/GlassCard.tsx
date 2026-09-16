@@ -8,18 +8,17 @@ interface GlassCardProps {
   onClick?: () => void;
 }
 
+/** Base surface card — flat white, 16px radius, hairline border, soft shadow (mockup spec). */
 export function GlassCard({ children, className = "", style, onClick }: GlassCardProps) {
   return (
     <div
       onClick={onClick}
       className={className}
       style={{
-        background: patientTheme.colors.glassSurface,
-        backdropFilter: "blur(20px) saturate(1.2)",
-        WebkitBackdropFilter: "blur(20px) saturate(1.2)",
-        border: `1px solid rgba(255,255,255,0.75)`,
+        background: patientTheme.colors.surface,
+        border: `1px solid ${patientTheme.colors.border}`,
         borderRadius: patientTheme.radius.card,
-        boxShadow: patientTheme.shadows.medium,
+        boxShadow: patientTheme.shadows.soft,
         ...style,
       }}
     >

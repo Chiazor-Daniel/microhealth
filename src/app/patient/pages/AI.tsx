@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Sparkles, Send, Heart, Calendar, Pill, FlaskConical, MessageSquare } from "lucide-react";
+import { Sparkles, Send, Heart, Calendar, Pill, FlaskConical, Settings } from "lucide-react";
 import { patientTheme } from "../theme";
-import { GlassCard } from "../components/GlassCard";
 import { InsightCard } from "../components/InsightCard";
 import { AIIndicator } from "../components/AIIndicator";
-import { QuickActionButton } from "../components/QuickActionButton";
 import { GenUI, type GenUIElement } from "../components/GenUI";
 import { useInsights } from "../hooks/useInsights";
 import { aiService, type Insight } from "../../services/ai.service";
@@ -18,25 +16,18 @@ interface Message {
   insight?: Insight;
 }
 
-const quickActions = [
-  { icon: <Heart size={14} />, label: "Check my health" },
-  { icon: <Calendar size={14} />, label: "Book appointment" },
-  { icon: <Pill size={14} />, label: "My medications" },
-  { icon: <FlaskConical size={14} />, label: "My latest labs" },
-  { icon: <MessageSquare size={14} />, label: "Care team" },
+const suggestions = [
+  { icon: <Heart size={13} />, label: "Analyze my vitals" },
+  { icon: <Calendar size={13} />, label: "Book appointment" },
+  { icon: <Pill size={13} />, label: "My medications" },
+  { icon: <FlaskConical size={13} />, label: "My latest labs" },
 ];
 
 export default function AI() {
   const navigate = useNavigate();
-  const { insights, loading: insightsLoading, refresh } = useInsights();
+  const { insights, refresh } = useInsights();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "agent",
-      text: "Hi. I'm your Health Agent. I watch your health trends and care events so I can help you understand what's happening and what to do next.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -93,70 +84,125 @@ export default function AI() {
     }
   };
 
+  const topUnread = insights.find((i) => !i.isRead);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       className="flex flex-col space-y-4"
     >
-      <div className="flex items-center gap-3">
-        <AIIndicator size={36} active={typing} />
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: patientTheme.colors.textPrimary }}>Your Health Agent</h1>
-          <p className="text-xs" style={{ color: patientTheme.colors.textMuted }}>Watching your health</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <AIIndicator size={36} active={typing} />
+          <div>
+            <h1 className="text-[18px] font-semibold leading-tight" style={{ color: patientTheme.colors.textPrimary }}>
+              AI Health Assistant
+            </h1>
+            <p className="text-xs flex items-center gap-1.5" style={{ color: patientTheme.colors.textSecondary }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: patientTheme.colors.success }} />
+              {typing ? "Thinking..." : "Online"}
+            </p>
+          </div>
         </div>
+        <button
+          aria-label="Assistant settings"
+          className="w-9 h-9 rounded-full flex items-center justify-center"
+          style={{
+            background: patientTheme.colors.surface,
+            border: `1px solid ${patientTheme.colors.border}`,
+            color: patientTheme.colors.textSecondary,
+          }}
+        >
+          <Settings size={16} />
+        </button>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: patientTheme.colors.textMuted }}>Active insights</p>
-        {insightsLoading ? (
-          <p className="text-sm" style={{ color: patientTheme.colors.textMuted }}>Loading insights...</p>
-        ) : insights.length === 0 ? (
-          <p className="text-sm" style={{ color: patientTheme.colors.textMuted }}>Nothing active right now. I'll let you know when I notice something.</p>
-        ) : (
-          insights.slice(0, 3).map((insight) => (
-            <InsightCard
-              key={insight.id}
-              priority={insight.priority}
-              title={insight.title}
-              message={insight.message}
-              type={insight.type as any}
-              actions={[
-                { label: "Ask about this", onClick: () => setInput(`Tell me about my ${insight.title.toLowerCase()}`) },
-              ]}
-            />
-          ))
-        )}
+      {/* Hero greeting */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, #16A34A 0%, #15803D 60%, #14532D 100%)",
+          borderRadius: 20,
+          padding: 18,
+          boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)",
+        }}
+      >
+        <div
+          aria-hidden
+          className="absolute rounded-full"
+          style={{ right: -20, top: -20, width: 110, height: 110, border: "1.5px solid rgba(255,255,255,0.18)" }}
+        />
+        <p className="text-lg font-semibold text-white">How can I help you today?</p>
+        <p className="text-[13px] mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>
+          Ask about your vitals, trends, medications or care.
+        </p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {quickActions.map((a) => (
-          <QuickActionButton
-            key={a.label}
-            icon={a.icon}
-            label={a.label}
+      {/* Suggestion chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {suggestions.map((s) => (
+          <button
+            key={s.label}
             onClick={() => {
-              if (a.label.includes("appointment")) send("Book me an appointment");
-              else setInput(a.label);
+              if (s.label === "Book appointment") send("Book me an appointment");
+              else if (s.label === "Analyze my vitals") send("Analyze my latest vitals and tell me what you see");
+              else setInput(s.label);
             }}
-          />
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap flex-shrink-0"
+            style={{
+              background: patientTheme.colors.surface,
+              border: `1px solid ${patientTheme.colors.border}`,
+              color: patientTheme.colors.textPrimary,
+              boxShadow: patientTheme.shadows.soft,
+            }}
+          >
+            <span style={{ color: patientTheme.colors.primaryGreen }}>{s.icon}</span>
+            {s.label}
+          </button>
         ))}
       </div>
 
-      <div className="space-y-3 pb-4">
+      {/* Pinned unread insight */}
+      {topUnread && messages.length === 0 && (
+        <InsightCard
+          priority={topUnread.priority}
+          title={topUnread.title}
+          message={topUnread.message}
+          type={topUnread.type as any}
+          actions={[
+            { label: "Ask about this", onClick: () => send(`Tell me about my ${topUnread.title.toLowerCase()}`) },
+          ]}
+        />
+      )}
+
+      {/* Conversation */}
+      <div className="space-y-3 pb-2">
+        {messages.length === 0 && !topUnread && (
+          <p className="text-[13px] text-center py-6" style={{ color: patientTheme.colors.textMuted }}>
+            Start a conversation, or tap a suggestion above.
+          </p>
+        )}
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <GlassCard
+          <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "agent" && (
+              <div className="flex-shrink-0 mt-1">
+                <AIIndicator size={26} active={typing} />
+              </div>
+            )}
+            <div
               style={{
-                maxWidth: "90%",
+                maxWidth: "85%",
                 background: msg.role === "user" ? patientTheme.colors.primaryGreen : patientTheme.colors.surface,
                 color: msg.role === "user" ? "#fff" : patientTheme.colors.textPrimary,
-                borderRadius: msg.role === "user" ? 20 : patientTheme.radius.card,
-                borderBottomRightRadius: msg.role === "user" ? 6 : undefined,
-                borderBottomLeftRadius: msg.role === "user" ? undefined : 6,
-                padding: 14,
+                borderRadius: 16,
+                borderBottomRightRadius: msg.role === "user" ? 5 : 16,
+                borderBottomLeftRadius: msg.role === "user" ? 16 : 5,
+                border: msg.role === "agent" ? `1px solid ${patientTheme.colors.border}` : undefined,
                 boxShadow: patientTheme.shadows.soft,
+                padding: "12px 14px",
               }}
             >
               <p className="text-sm leading-relaxed">{msg.text}</p>
@@ -165,14 +211,11 @@ export default function AI() {
               )}
               {msg.role === "agent" && msg.insight?.suggestedActions && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {(Array.isArray(msg.insight.suggestedActions)
-                    ? msg.insight.suggestedActions
-                    : []
-                  ).map((action: string) => (
+                  {(Array.isArray(msg.insight.suggestedActions) ? msg.insight.suggestedActions : []).map((action: string) => (
                     <button
                       key={action}
                       onClick={() => send(action)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium"
+                      className="px-2.5 py-1 rounded-full text-xs font-medium"
                       style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
                     >
                       {action}
@@ -180,38 +223,42 @@ export default function AI() {
                   ))}
                 </div>
               )}
-            </GlassCard>
+            </div>
           </div>
         ))}
         {typing && (
           <div className="flex items-center gap-2">
-            <AIIndicator size={20} active />
-            <span className="text-xs" style={{ color: patientTheme.colors.textMuted }}>Agent is thinking...</span>
+            <AIIndicator size={26} active />
+            <span className="text-xs" style={{ color: patientTheme.colors.textMuted }}>Typing...</span>
           </div>
         )}
         <div ref={scrollRef} />
       </div>
 
-      <div className="flex items-center gap-2 pt-4">
+      {/* Input bar */}
+      <div className="flex items-center gap-2 pt-1 pb-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask your Health Agent..."
-          className="flex-1 px-4 py-3 rounded-2xl text-sm outline-none"
+          placeholder="Ask your health assistant..."
+          aria-label="Message your AI health assistant"
+          className="flex-1 px-4 py-3 rounded-full text-sm outline-none"
           style={{
             background: patientTheme.colors.surface,
             border: `1px solid ${patientTheme.colors.border}`,
             color: patientTheme.colors.textPrimary,
+            boxShadow: patientTheme.shadows.soft,
           }}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || typing}
-          className="w-11 h-11 rounded-2xl flex items-center justify-center text-white disabled:opacity-50"
+          aria-label="Send message"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white disabled:opacity-40 flex-shrink-0"
           style={{ background: patientTheme.colors.primaryGreen }}
         >
-          <Send size={18} />
+          <Send size={17} />
         </button>
       </div>
     </motion.div>

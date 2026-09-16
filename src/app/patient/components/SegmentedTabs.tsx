@@ -9,8 +9,8 @@ interface SegmentedTabsProps<T extends string> {
 export function SegmentedTabs<T extends string>({ options, value, onChange }: SegmentedTabsProps<T>) {
   return (
     <div
-      className="flex p-1 rounded-2xl"
-      style={{ background: "rgba(16,24,40,0.05)" }}
+      className="flex p-1 rounded-full"
+      style={{ background: patientTheme.colors.surfaceSecondary }}
     >
       {options.map((opt) => {
         const active = value === opt.value;
@@ -18,10 +18,10 @@ export function SegmentedTabs<T extends string>({ options, value, onChange }: Se
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className="flex-1 py-2 text-sm font-semibold rounded-xl transition-all"
+            className="flex-1 py-2 text-[13px] font-medium rounded-full transition-all"
             style={{
               background: active ? patientTheme.colors.surface : "transparent",
-              color: active ? patientTheme.colors.primaryGreen : patientTheme.colors.textMuted,
+              color: active ? patientTheme.colors.textPrimary : patientTheme.colors.textSecondary,
               boxShadow: active ? patientTheme.shadows.soft : "none",
             }}
           >

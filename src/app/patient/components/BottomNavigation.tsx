@@ -17,53 +17,50 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
-      style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
+      style={{
+        background: "#FFFFFF",
+        borderTop: `1px solid ${patientTheme.colors.border}`,
+        boxShadow: "0 -1px 2px rgba(0, 0, 0, 0.03)",
+        paddingBottom: "max(6px, env(safe-area-inset-bottom))",
+      }}
     >
       <div
-        className="pointer-events-auto flex items-center justify-between gap-1 px-2 py-2 mx-3"
-        style={{
-          width: "min(420px, 100%)",
-          background: "rgba(255,255,255,0.82)",
-          backdropFilter: "blur(20px) saturate(1.3)",
-          WebkitBackdropFilter: "blur(20px) saturate(1.3)",
-          borderRadius: 26,
-          border: "1px solid rgba(255,255,255,0.7)",
-          boxShadow: "0 12px 32px rgba(16,24,40,0.12), 0 4px 12px rgba(16,24,40,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
-        }}
+        className="flex items-center justify-between"
+        style={{ width: "min(430px, 100%)", padding: "6px 8px 2px" }}
       >
         {NAV.map(({ path, icon: Icon, label }) => {
           const isActive = active === path || active.startsWith(path + "/");
-          const isAI = path === "/patient/ai";
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
               aria-label={label}
               aria-current={isActive ? "page" : undefined}
-              className="flex flex-col items-center justify-center gap-0.5 relative outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+              className="flex flex-col items-center justify-center gap-0.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 rounded-lg"
               style={{
-                minWidth: 54,
-                padding: "6px 8px",
-                borderRadius: isAI ? 20 : 16,
-                background: isActive
-                  ? isAI
-                    ? `linear-gradient(135deg, ${patientTheme.colors.aiAccent}, ${patientTheme.colors.primaryGreen})`
-                    : patientTheme.colors.primaryPale
-                  : "transparent",
-                color: isActive ? (isAI ? "#fff" : patientTheme.colors.primaryGreen) : patientTheme.colors.textMuted,
-                transition: "all 0.2s ease",
-                focusVisibleRingColor: patientTheme.colors.primaryGreen,
+                flex: 1,
+                paddingTop: 6,
+                paddingBottom: 4,
+                color: isActive ? patientTheme.colors.primaryGreen : patientTheme.colors.textMuted,
+                transition: "color 0.15s ease",
               }}
             >
-              <Icon size={isAI ? 22 : 20} strokeWidth={isActive ? 2.4 : 2} />
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: isActive ? 700 : 500,
-                  letterSpacing: "0.02em",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 26,
+                  borderRadius: 999,
+                  background: isActive ? patientTheme.colors.primarySoft : "transparent",
+                  transition: "background 0.15s ease",
                 }}
               >
+                <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+              </span>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500 }}>
                 {label}
               </span>
             </button>

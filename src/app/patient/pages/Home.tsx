@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Heart, Activity, Wind, Thermometer, Calendar, ChevronRight, Sparkles } from "lucide-react";
+import { Heart, Activity, Wind, Thermometer, Bell } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
 import { useInsights } from "../hooks/useInsights";
@@ -11,10 +11,9 @@ import { ErrorState } from "../../components/shared/ErrorState";
 import { patientTheme } from "../theme";
 import { VitalCard } from "../components/VitalCard";
 import { HealthStatusCard } from "../components/HealthStatusCard";
-import { GlassCard } from "../components/GlassCard";
-import { Timeline } from "../components/Timeline";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { InsightCard } from "../components/InsightCard";
+import { SectionHeader } from "../components/SectionHeader";
 import { useWearable } from "../hooks/useWearable";
 
 function getGreeting() {
@@ -26,7 +25,7 @@ function getGreeting() {
 
 function formatApptDate(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function relativeTime(iso?: string) {
@@ -36,18 +35,24 @@ function relativeTime(iso?: string) {
   if (mins < 2) return "just now";
   if (mins < 60) return `${mins} min ago`;
   const hours = Math.floor(mins / 60);
-  return `${hours}h ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** Build a "+N/-N" delta string comparing the two most recent numeric readings. */
+function deltaLabel(latest?: number | null, prev?: number | null, unit = "bpm") {
+  if (latest == null || prev == null || latest === prev) return undefined;
+  const d = latest - prev;
+  return `${d > 0 ? "+" : ""}${Math.round(d * 10) / 10} ${unit} · recently`;
 }
 
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { vitals: existingVitals, prescriptions, appointments, loading: dataLoading, error: dataError } = usePatientData();
+  const { vitals: existingVitals, appointments, loading: dataLoading, error: dataError } = usePatientData();
   const patientId = user?.profile?.id;
-  const { latest: wearableLatest, connected: wearableConnected, lastSynced } = useWearable(patientId, true);
-
+  const { latest: wearableLatest, connected: wearableConnected } = useWearable(patientId, true);
   const { insights } = useInsights();
-  const topInsight = insights.find((i) => !i.isRead) || insights[0];
 
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +73,7 @@ export default function Home() {
     : existingVitals;
 
   const latest = sourceVitals[0];
+  const prev = sourceVitals[1] ?? existingVitals[0];
 
   const heartRate = latest?.heartRate ?? null;
   const bpSys = latest?.systolic ?? latest?.bloodPressureSystolic ?? null;
@@ -83,186 +89,166 @@ export default function Home() {
   }, [latest, bpSys, spo2, heartRate]);
 
   const greeting = `${getGreeting()}, ${user?.firstName || "there"}`;
+  const statusSubtext =
+    status === "stable" ? "Your health looks stable today"
+    : status === "watch" ? "Some vitals are trending up"
+    : "A few vitals need attention";
 
-  const timelineEvents = useMemo(() => {
-    const events: any[] = [];
-    if (wearableLatest) {
-      events.push({
-        id: "wearable-hr",
-        time: new Date(wearableLatest.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        title: "Heart rate",
-        value: `${wearableLatest.heartRate} BPM`,
-        type: "vital",
-      });
-    }
-    if (latest?.systolic) {
-      events.push({
-        id: "wearable-bp",
-        time: new Date(latest.recordedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        title: "Blood pressure",
-        value: `${latest.systolic}/${latest.diastolic}`,
-        type: "vital",
-      });
-    }
-    if (prescriptions[0]) {
-      events.push({
-        id: "med-1",
-        time: "Scheduled",
-        title: `Medication · ${prescriptions[0].medicine}`,
-        value: prescriptions[0].dosage,
-        type: "medication",
-      });
-    }
-    return events;
-  }, [wearableLatest, latest, prescriptions]);
+  const hrDelta = deltaLabel(heartRate, prev?.heartRate ?? null, "bpm");
+  const bpDelta = deltaLabel(bpSys, prev?.systolic ?? prev?.bloodPressureSystolic ?? null, "mmHg");
+
+  const homeInsights = insights.slice(0, 2);
+  const nextAppt = dashboard?.nextAppointment || appointments[0];
 
   if (loading || dataLoading) return <Loading />;
   if (error || dataError) return <ErrorState message={error || dataError || "Failed to load"} />;
-
-  const nextAppt = dashboard?.nextAppointment || appointments[0];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="space-y-5"
+      className="space-y-6"
     >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-2xl font-bold" style={{ color: patientTheme.colors.textPrimary }}>{greeting}</p>
-          <HealthStatusCard
-            status={status}
-            label={wearableConnected ? "MicroHealth Band connected" : "Wearable disconnected"}
-            updatedAt={wearableLatest ? `Updated ${relativeTime(wearableLatest.timestamp)}` : "Updated recently"}
-          />
+          <p className="text-[22px] font-semibold leading-tight" style={{ color: patientTheme.colors.textPrimary }}>
+            {greeting}
+          </p>
+          <p className="text-[13px] mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+            {statusSubtext}
+          </p>
         </div>
-      </div>
-
-      {/* Primary vital */}
-      {heartRate !== null && (
-        <VitalCard
-          large
-          label="Heart rate"
-          value={String(heartRate)}
-          unit="BPM"
-          status={heartRate > 100 || heartRate < 55 ? "attention" : heartRate > 85 ? "high" : "normal"}
-          subtext={heartRate > 85 ? "Slightly above your usual range" : "Within your usual range"}
-          icon={<Heart size={20} style={{ color: patientTheme.colors.success }} />}
-          onClick={() => navigate("/patient/vitals")}
-        />
-      )}
-
-      {/* Secondary vitals */}
-      <div className="grid grid-cols-2 gap-3">
-        {bpSys !== null && (
-          <VitalCard
-            label="Blood pressure"
-            value={`${bpSys}/${bpDia ?? "—"}`}
-            unit="mmHg"
-            status={bpSys > 140 || (bpDia ?? 0) > 90 ? "attention" : bpSys > 125 ? "high" : "normal"}
-            subtext={bpSys > 125 ? "Elevated for you" : "Normal"}
-            icon={<Activity size={18} style={{ color: patientTheme.colors.success }} />}
-            onClick={() => navigate("/patient/vitals")}
-          />
-        )}
-        {spo2 !== null && (
-          <VitalCard
-            label="SpO₂"
-            value={String(spo2)}
-            unit="%"
-            status={spo2 < 95 ? "attention" : "normal"}
-            subtext={spo2 < 95 ? "Below 95%" : "Normal"}
-            icon={<Wind size={18} style={{ color: patientTheme.colors.success }} />}
-            onClick={() => navigate("/patient/vitals")}
-          />
-        )}
-        {temp !== null && (
-          <VitalCard
-            label="Temperature"
-            value={String(temp)}
-            unit="°C"
-            status={temp > 37.6 ? "attention" : temp > 37.2 ? "high" : "normal"}
-            subtext={temp > 37.2 ? "Slightly elevated" : "Normal"}
-            icon={<Thermometer size={18} style={{ color: patientTheme.colors.success }} />}
-            onClick={() => navigate("/patient/vitals")}
-          />
-        )}
-      </div>
-
-      {/* AI Insight */}
-      {topInsight ? (
-        <InsightCard
-          priority={topInsight.priority}
-          title={topInsight.title}
-          message={topInsight.message}
-          type={topInsight.type as any}
-          actions={[
-            { label: "Ask me", onClick: () => navigate("/patient/ai") },
-          ]}
-          onClick={() => navigate("/patient/ai")}
-        />
-      ) : (
-        <GlassCard
+        <button
+          onClick={() => navigate("/patient/notifications")}
+          aria-label="Notifications"
+          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
           style={{
-            background: `linear-gradient(135deg, rgba(240,253,244,0.8), rgba(255,255,255,0.7))`,
-            border: `1px solid ${patientTheme.colors.aiAccent}30`,
+            background: patientTheme.colors.surface,
+            border: `1px solid ${patientTheme.colors.border}`,
+            color: patientTheme.colors.textSecondary,
           }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className="w-6 h-6 rounded-lg flex items-center justify-center"
-              style={{ background: `${patientTheme.colors.aiAccent}20`, color: patientTheme.colors.aiAccent }}
-            >
-              <Sparkles size={14} />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: patientTheme.colors.aiAccent }}>Health Agent</span>
-          </div>
-          <p className="text-sm leading-relaxed" style={{ color: patientTheme.colors.textPrimary }}>
-            Your vitals look steady today. I’ll keep watching your trends and let you know if anything changes.
-          </p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => navigate("/patient/ai")}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-              style={{ background: patientTheme.colors.surface, color: patientTheme.colors.primaryGreen, border: `1px solid ${patientTheme.colors.border}` }}
-            >
-              Ask me
-            </button>
-          </div>
-        </GlassCard>
-      )}
+          <Bell size={18} />
+        </button>
+      </div>
 
-      {/* Upcoming care */}
+      {/* Health status hero */}
+      <HealthStatusCard
+        status={status}
+        label={wearableConnected ? "MicroHealth Band connected" : "Wearable disconnected"}
+        updatedAt={wearableLatest ? `Updated ${relativeTime(wearableLatest.timestamp)}` : "Updated recently"}
+        onViewReport={() => navigate("/patient/vitals")}
+      />
+
+      {/* Today's vitals */}
+      <section>
+        <SectionHeader title="Today's Vitals" actionLabel="View All" onAction={() => navigate("/patient/vitals")} />
+        <div className="grid grid-cols-2 gap-3">
+          {heartRate !== null && (
+            <VitalCard
+              label="Heart Rate"
+              value={String(heartRate)}
+              unit="bpm"
+              status={heartRate > 100 || heartRate < 55 ? "attention" : heartRate > 85 ? "high" : "normal"}
+              delta={hrDelta ?? (heartRate > 85 ? "Slightly above range" : "Normal range")}
+              deltaTone={hrDelta ? (heartRate >= (prev?.heartRate ?? heartRate) ? "up" : "down") : "up"}
+              icon={<Heart size={18} />}
+              onClick={() => navigate("/patient/vitals")}
+            />
+          )}
+          {bpSys !== null && (
+            <VitalCard
+              label="Blood Pressure"
+              value={`${bpSys}/${bpDia ?? "—"}`}
+              unit="mmHg"
+              status={bpSys > 140 || (bpDia ?? 0) > 90 ? "attention" : bpSys > 125 ? "high" : "normal"}
+              delta={bpDelta ?? (bpSys > 125 ? "Elevated" : "Normal")}
+              deltaTone={bpDelta ? (bpSys >= (prev?.systolic ?? bpSys) ? "up" : "down") : "up"}
+              icon={<Activity size={18} />}
+              onClick={() => navigate("/patient/vitals")}
+            />
+          )}
+          {spo2 !== null && (
+            <VitalCard
+              label="Blood Oxygen"
+              value={String(spo2)}
+              unit="%"
+              status={spo2 < 95 ? "attention" : "normal"}
+              subtext={spo2 < 95 ? "Below 95%" : "Normal"}
+              icon={<Wind size={18} />}
+              onClick={() => navigate("/patient/vitals")}
+            />
+          )}
+          {temp !== null && (
+            <VitalCard
+              label="Temperature"
+              value={String(temp)}
+              unit="°C"
+              status={temp > 37.6 ? "attention" : temp > 37.2 ? "high" : "normal"}
+              subtext={temp > 37.2 ? "Slightly elevated" : "Normal"}
+              icon={<Thermometer size={18} />}
+              onClick={() => navigate("/patient/vitals")}
+            />
+          )}
+          {heartRate === null && bpSys === null && spo2 === null && temp === null && (
+            <>
+              <VitalCard label="Heart Rate" value="—" unit="bpm" status="normal" icon={<Heart size={18} />} />
+              <VitalCard label="Blood Pressure" value="—" unit="mmHg" status="normal" icon={<Activity size={18} />} />
+              <VitalCard label="Blood Oxygen" value="—" unit="%" status="normal" icon={<Wind size={18} />} />
+              <VitalCard label="Temperature" value="—" unit="°C" status="normal" icon={<Thermometer size={18} />} />
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* AI insights */}
+      <section>
+        <SectionHeader title="AI Insights" actionLabel="View All" onAction={() => navigate("/patient/ai")} />
+        <div className="space-y-3">
+          {homeInsights.length > 0 ? (
+            homeInsights.map((insight) => (
+              <InsightCard
+                key={insight.id}
+                priority={insight.priority}
+                title={insight.title}
+                message={insight.message}
+                type={insight.type as any}
+                time={relativeTime(insight.createdAt)}
+                chevron
+                onClick={() => navigate("/patient/ai")}
+              />
+            ))
+          ) : (
+            <InsightCard
+              priority="info"
+              title="All clear"
+              message="Your vitals look steady today. I'll keep watching your trends and let you know if anything changes."
+              type="system"
+              time="now"
+              chevron
+              onClick={() => navigate("/patient/ai")}
+            />
+          )}
+        </div>
+      </section>
+
+      {/* Today's appointment */}
       {nextAppt && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textSecondary }}>Upcoming care</p>
-            <button
-              onClick={() => navigate("/patient/care/appointments")}
-              className="flex items-center text-xs font-semibold"
-              style={{ color: patientTheme.colors.primaryGreen }}
-            >
-              See all <ChevronRight size={14} />
-            </button>
-          </div>
+        <section>
+          <SectionHeader title="Today's Appointment" actionLabel="View All" onAction={() => navigate("/patient/care/appointments")} />
           <AppointmentCard
             department={nextAppt.department || "General Practice"}
+            specialty={nextAppt.department}
             doctorName={nextAppt.doctor?.user ? `${nextAppt.doctor.user.firstName} ${nextAppt.doctor.user.lastName}` : undefined}
             date={formatApptDate(nextAppt.scheduledDate)}
             time={nextAppt.scheduledTime?.slice(0, 5)}
             status={nextAppt.status}
             onClick={() => navigate("/patient/care/appointments")}
           />
-        </div>
+        </section>
       )}
-
-      {/* Today timeline */}
-      <div className="space-y-3">
-        <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textSecondary }}>Today</p>
-        {timelineEvents.length > 0 ? <Timeline events={timelineEvents} /> : <p className="text-sm" style={{ color: patientTheme.colors.textMuted }}>No events yet today.</p>}
-      </div>
     </motion.div>
   );
 }

@@ -1,7 +1,5 @@
-import { type ReactNode } from "react";
 import { Outlet } from "react-router";
 import { BottomNavigation } from "./components/BottomNavigation";
-import { patientTheme } from "./theme";
 import { useLiveVitals } from "./hooks/useLiveVitals";
 import { useLiveInsights } from "./hooks/useLiveInsights";
 import { usePatientData } from "../hooks/usePatientData";
@@ -16,26 +14,27 @@ function PatientContent() {
 
 export function PatientShell() {
   return (
-    <div
-      className="patient-shell relative flex flex-col min-h-dvh"
-      style={{ background: patientTheme.colors.background }}
-    >
-      {/* Scrollable content area */}
-      <main
-        className="flex-1 overflow-y-auto overscroll-contain"
-        style={{
-          paddingTop: "max(12px, env(safe-area-inset-top))",
-          paddingBottom: "calc(110px + env(safe-area-inset-bottom))",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        <div className="mx-auto w-full max-w-md px-5 py-6">
-          <PatientContent />
-        </div>
-      </main>
+    <div className="patient-shell relative flex flex-col min-h-dvh md:items-center md:justify-center">
+      <div className="mh-app-frame">
+        {/* Scrollable content area */}
+        <main
+          className="flex-1 overflow-y-auto overscroll-contain"
+          style={{
+            paddingTop: "max(12px, env(safe-area-inset-top))",
+            paddingBottom: "calc(88px + env(safe-area-inset-bottom))",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <div className="mx-auto w-full max-w-md px-5 py-5">
+            <PatientContent />
+          </div>
+        </main>
 
-      {/* Fixed bottom navigation sits above content */}
-      <BottomNavigation />
+        {/* Fixed bottom navigation sits above content */}
+        <div className="mh-bottom-nav-wrap">
+          <BottomNavigation />
+        </div>
+      </div>
     </div>
   );
 }

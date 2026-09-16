@@ -1,9 +1,10 @@
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, ChevronRight } from "lucide-react";
 import { patientTheme } from "../theme";
 import { StatusBadge } from "./StatusBadge";
 
 interface AppointmentCardProps {
-  department: string;
+  department?: string;
+  specialty?: string;
   doctorName?: string;
   date: string;
   time: string;
@@ -11,37 +12,47 @@ interface AppointmentCardProps {
   onClick?: () => void;
 }
 
-export function AppointmentCard({ department, doctorName, date, time, status, onClick }: AppointmentCardProps) {
+export function AppointmentCard({ department, specialty, doctorName, date, time, status, onClick }: AppointmentCardProps) {
+  const initials = (doctorName || department || "Dr")
+    .replace(/^Dr\.?\s+/i, "")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <div
       onClick={onClick}
-      className="p-4"
+      className="flex items-center gap-3 p-4"
       style={{
         background: patientTheme.colors.surface,
         borderRadius: patientTheme.radius.card,
         boxShadow: patientTheme.shadows.soft,
         border: `1px solid ${patientTheme.colors.border}`,
-        borderLeft: `3px solid ${patientTheme.colors.primaryGreen}`,
+        cursor: onClick ? "pointer" : undefined,
       }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textPrimary }}>{department}</p>
-        <StatusBadge status={status} />
+      <div
+        className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold"
+        style={{ background: patientTheme.colors.primarySoft, color: patientTheme.colors.primaryDark }}
+      >
+        {initials}
       </div>
-      {doctorName && <p className="text-xs mb-2" style={{ color: patientTheme.colors.textSecondary }}>Dr. {doctorName}</p>}
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-          style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
-        >
-          <Calendar size={12} /> {date}
-        </span>
-        <span
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-          style={{ background: "rgba(16,24,40,0.05)", color: patientTheme.colors.textSecondary }}
-        >
-          <Clock size={12} /> {time}
-        </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+          {doctorName ? `Dr. ${doctorName}` : department}
+        </p>
+        <p className="text-xs truncate" style={{ color: patientTheme.colors.textSecondary }}>
+          {specialty || department}
+        </p>
+        <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: patientTheme.colors.textMuted }}>
+          <Calendar size={11} /> {date} · {time}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <StatusBadge status={status} />
+        {onClick && <ChevronRight size={16} style={{ color: patientTheme.colors.textMuted }} />}
       </div>
     </div>
   );
