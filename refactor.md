@@ -845,9 +845,68 @@ Implemented on branch `patient-redesign`:
 - AI page and Home page now use real backend insights/chat
 - Frontend and backend builds pass
 
-### Next
+### 2025-01-12 — Phase 4 complete
 
-Phase 4: interactive GenUI response rendering, appointment booking through agent, medication/lab workflows, "can't see doctor yet" guided triage, final polish.
+Implemented on branch `patient-redesign`:
+- Structured response format (`backend/src/agent/response.ts`) so LLM can return GenUI elements
+- Agent tools (`backend/src/agent/tools.ts`) for finding slots and booking appointments
+- GenUI renderer (`src/app/patient/components/GenUI.tsx`) supports: text, vital_card, appointment_card, appointment_selector, medication_card, lab_card, triage_question, confirmation, quick_actions, trend_chart
+- Appointment booking through AI chat with explicit selection + confirmation
+- "Can't see a doctor yet" guided triage flow with severity questions and escalation
+- Insight deduplication within 1 hour to prevent spam
+- Frontend parses `suggestedActions` and `context` from backend JSON strings
+- Bottom navigation accessibility labels + focus rings
+- Verified end-to-end: mock wearable → backend → agent → ai_insight → Socket.io → patient UI
+- Frontend and backend builds pass
+
+### MVP Status
+
+All MVP success criteria are now addressable:
+1. Patient login works
+2. Mobile-first Home screen is polished
+3. Mock wearable vitals are visible
+4. Vitals update live via Socket.io
+5. Baseline/trend interpretation is displayed
+6. System detects meaningful simulated changes
+7. Proactive AI agent generates insights
+8. Insights appear in real time via Socket.io
+9. AI page explains why insights were raised
+10. Patient can ask follow-up questions
+11. Responses are patient-specific and context-aware
+12. Vitals history and trends are viewable
+13. Appointments, prescriptions, labs accessible in Care section
+14. Wearable connection status shown in Profile
+15. Patient interface feels like one coherent product
+
+### Known Limitations
+
+- The agent relies on local Ollama (`gemma3:4b`). If Ollama is not running, the agent falls back to deterministic messages.
+- LLM output parsing (UI blocks, suggested actions) depends on model compliance; some responses may be plain text.
+- Agent memory is conversation text only; no long-term preference store yet.
+- The mock wearable generates smooth random data; more dramatic demo scenarios require sending many readings quickly.
+
+### How to Run
+
+```bash
+# Terminal 1 — start Ollama (optional, enables LLM explanations)
+ollama run gemma3:4b
+
+# Terminal 2 — start backend
+cd backend
+npm start
+
+# Terminal 3 — start frontend
+npm run dev
+
+# Log in as patient with +234 803 456 7890 and tap Sign In
+```
+
+### What Was Preserved
+
+- Admin/staff dashboard unchanged
+- Existing authentication and database behavior
+- Existing backend routes and controllers for admin use
+- Existing Socket.io infrastructure
 
 ## 15. FILES CREATED / MODIFIED SO FAR
 
