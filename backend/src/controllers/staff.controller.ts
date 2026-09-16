@@ -13,6 +13,28 @@ export async function list(_req: Request, res: Response, next: NextFunction) {
   } catch (e) { next(e); }
 }
 
+/**
+ * Patient-facing directory: who a patient can book with.
+ * Deliberately a minimal projection — no email, phone or other staff PII.
+ */
+export async function available(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await db.query.staff.findMany({
+      where: eq(staff.status, "on-duty"),
+      with: { user: { columns: { firstName: true, lastName: true } } },
+    });
+    res.json(
+      result.map((s: any) => ({
+        id: s.id,
+        department: s.department,
+        specialty: s.specialty,
+        firstName: s.user?.firstName,
+        lastName: s.user?.lastName,
+      }))
+    );
+  } catch (e) { next(e); }
+}
+
 export async function getById(req: Request, res: Response, next: NextFunction) {
   try {
     const id = String(req.params.id);

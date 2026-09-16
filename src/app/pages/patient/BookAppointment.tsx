@@ -34,16 +34,19 @@ function BookAppointment() {
     }
     setLoading(true);
     setError("");
-    Promise.all([
+    // The clinician directory is a convenience — if it's unavailable we still
+    // let the patient book (the backend assigns a doctor).
+    Promise.allSettled([
       patientService.getById(patientId),
-      staffService.list(),
+      staffService.available(),
     ])
-      .then(([, s]) => {
-        setStaff(s.filter((member: any) => member.status === "on-duty"));
-      })
-      .catch((err: any) => {
-        setError(err?.message || "Could not load booking data");
-        showError("Error", "Could not load booking data");
+      .then(([patientRes, staffRes]) => {
+        if (staffRes.status === "fulfilled") {
+          setStaff(staffRes.value);
+        }
+        if (patientRes.status === "rejected") {
+          setError(patientRes.reason?.message || "Could not load booking data");
+        }
       })
       .finally(() => setLoading(false));
   }, [patientId]);
@@ -74,7 +77,7 @@ function BookAppointment() {
       });
       success("Appointment booked", "Your appointment has been scheduled");
       await refresh();
-      navigate("/patient/appointments");
+      navigate("/patient/care/appointments");
     } catch (err: any) {
       setError(err?.message || "Failed to book appointment");
       showError("Booking failed", err?.message);

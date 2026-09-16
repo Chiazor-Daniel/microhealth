@@ -17,6 +17,9 @@ const schema = z.object({
   status: z.enum(["on-duty","off-duty"]).optional(),
 });
 
+// Any authenticated user (incl. patients) may see who is available to book.
+// Must be declared before "/:id" so it isn't captured as an id.
+staffRoutes.get("/available", authorize("admin","staff","patient"), ctrl.available);
 staffRoutes.get("/", authorize("admin","staff"), ctrl.list);
 staffRoutes.get("/:id", authorize("admin","staff"), ctrl.getById);
 staffRoutes.patch("/:id/status", authorize("admin","staff"), ctrl.updateStatus);
