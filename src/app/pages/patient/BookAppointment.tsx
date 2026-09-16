@@ -57,7 +57,11 @@ function BookAppointment() {
     if (!patientId) return;
     const confirmed = await confirmAction(
       "Confirm Booking?",
-      `Book ${selected.service} at ${selected.unit} on ${selected.date} at ${selected.time}?`,
+      `Book ${selected.service} at ${selected.unit} on ${
+        selected.date
+          ? new Date(selected.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+          : "the selected date"
+      } at ${selected.time}?`,
       "Book Now"
     );
     if (!confirmed) return;
