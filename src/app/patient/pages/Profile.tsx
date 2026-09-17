@@ -1,68 +1,70 @@
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import {
-  ChevronLeft,
-  Watch,
-  Bell,
-  Shield,
-  HelpCircle,
-  ChevronRight,
-  LogOut,
-} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useWearable } from "../hooks/useWearable";
 import { confirmAction } from "../../components/shared/SweetAlert";
 import { patientTheme } from "../theme";
-import { StatusBadge } from "../components/StatusBadge";
+import {
+  PersonIcon,
+  WatchIcon,
+  BellIcon,
+  SecurityIcon,
+  EmergencyIcon,
+  HelpIcon,
+  LogOutIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  type GlyphProps,
+} from "../icons";
 
-function InfoRow({ label, value }: { label: string; value?: string }) {
-  return (
-    <div
-      className="flex items-center justify-between px-4 py-3.5"
-      style={{ borderTop: `1px solid ${patientTheme.colors.borderLight}` }}
-    >
-      <span className="text-[13px]" style={{ color: patientTheme.colors.textSecondary }}>{label}</span>
-      <span className="text-[13px] font-medium text-right" style={{ color: patientTheme.colors.textPrimary }}>
-        {value || "—"}
-      </span>
-    </div>
-  );
-}
-
+/** A settings row: outlined glyph, label, and the row's own affordance. */
 function MenuRow({
   icon: Icon,
   label,
+  sublabel,
   onClick,
   danger,
   last,
 }: {
-  icon: React.ElementType;
+  icon: (p: GlyphProps) => React.ReactElement;
   label: string;
+  sublabel?: React.ReactNode;
   onClick?: () => void;
   danger?: boolean;
   last?: boolean;
 }) {
+  const color = danger ? patientTheme.colors.error : patientTheme.colors.textPrimary;
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
-      style={{ borderTop: last ? "none" : `1px solid ${patientTheme.colors.borderLight}` }}
+      className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left"
+      style={{ borderTop: last ? "none" : `1px solid ${patientTheme.colors.hairlineSoft}` }}
     >
-      <div
-        className="mh-icon w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-        style={{ color: danger ? patientTheme.colors.error : patientTheme.colors.textSecondary, ...(danger ? { background: "radial-gradient(circle at 32% 28%, #FEF2F2 0%, #FEE2E2 70%, #FCD5D5 100%)", borderColor: "#FECACA" } : {}) }}
-      >
-        <Icon size={15} />
-      </div>
-      <span
-        className="flex-1 text-sm font-medium"
-        style={{ color: danger ? patientTheme.colors.error : patientTheme.colors.textPrimary }}
-      >
-        {label}
+      <span className="flex-shrink-0" style={{ color: danger ? patientTheme.colors.error : patientTheme.colors.textSecondary }}>
+        <Icon size={21} />
       </span>
-      <ChevronRight size={16} style={{ color: patientTheme.colors.textMuted }} />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] font-medium truncate" style={{ color }}>
+          {label}
+        </span>
+        {sublabel && <span className="block text-[12.5px] mt-0.5">{sublabel}</span>}
+      </span>
+      <span className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }}>
+        <ChevronRightIcon size={17} />
+      </span>
     </button>
   );
+}
+
+/** Patient IDs are quoted as MH-XXXXXX; a raw uuid fragment tells nobody anything. */
+function patientId(user: any) {
+  const raw: string | undefined = user?.profile?.id ?? user?.id;
+  if (!raw) return "—";
+  const digits = raw.replace(/\D/g, "");
+  const source = digits.length >= 5 ? digits : raw.replace(/-/g, "");
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) hash = (hash * 31 + source.charCodeAt(i)) % 1000000;
+  return `MH-${String(hash).padStart(6, "0")}`;
 }
 
 export default function Profile() {
@@ -72,7 +74,6 @@ export default function Profile() {
 
   const initials = `${user?.firstName?.[0] ?? "?"}${user?.lastName?.[0] ?? "?"}`.toUpperCase();
   const fullName = user ? `${user.firstName} ${user.lastName}` : "";
-  const dob = user?.profile?.dateOfBirth;
 
   return (
     <motion.div
@@ -81,100 +82,107 @@ export default function Profile() {
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-5"
     >
-      {/* Header */}
-      <div className="flex items-center">
+      {/* Back sits alone on the left; the identity is the header */}
+      <div className="flex items-center h-9">
         <button
           onClick={() => navigate("/patient/home")}
           aria-label="Back to home"
-          className="mh-btn-icon w-9 h-9 rounded-full flex items-center justify-center"
+          className="flex items-center justify-center w-9 h-9 -ml-2"
           style={{ color: patientTheme.colors.textPrimary }}
         >
-          <ChevronLeft size={18} />
+          <ChevronLeftIcon size={22} />
         </button>
       </div>
 
       {/* Identity */}
       <div className="text-center">
         <div
-          className="mh-avatar mh-avatar-raised w-20 h-20 flex items-center justify-center text-2xl font-semibold mx-auto"
-          style={{ color: patientTheme.colors.primaryDark }}
+          className="mh-avatar mh-avatar-raised flex items-center justify-center mx-auto text-[26px] font-semibold"
+          style={{ width: 84, height: 84, color: patientTheme.colors.primaryDark }}
         >
           {initials}
         </div>
-        <p className="text-lg font-semibold mt-3" style={{ color: patientTheme.colors.textPrimary }}>
-          {fullName || "Loading..."}
+        <p className="text-[19px] font-semibold mt-3.5" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
+          {fullName || "Loading…"}
         </p>
-        <p className="text-[13px] mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
-          Patient ID: {user?.profile?.id?.slice(0, 8) || user?.id?.slice(0, 8) || "—"}
+        <p className="text-[13px] mt-1" style={{ color: patientTheme.colors.textSecondary }}>
+          Patient ID: {patientId(user)}
         </p>
-        <button
-          className="mh-btn-secondary mt-4 px-5 py-2 text-[13px] font-semibold"
-        >
-          Edit Profile
-        </button>
       </div>
 
-      {/* Personal information */}
-      <section>
-        <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Personal Information</p>
-        <div className="mh-card overflow-hidden">
-          <div className="px-4 py-3.5">
-            <span className="text-[13px]" style={{ color: patientTheme.colors.textSecondary }}>Full Name</span>
-            <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textPrimary }}>{fullName || "—"}</p>
-          </div>
-          <InfoRow label="Date of Birth" value={dob ? new Date(dob).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : undefined} />
-          <InfoRow label="Phone Number" value={user?.profile?.phone || user?.phone} />
-          <InfoRow label="Email" value={user?.email} />
-        </div>
-      </section>
+      {/* Everything you can reach from here, in one card */}
+      <div className="mh-card overflow-hidden">
+        <MenuRow icon={PersonIcon} label="Personal Information" onClick={() => navigate("/patient/family")} />
+        <MenuRow
+          icon={WatchIcon}
+          label="Wearable & Devices"
+          sublabel={
+            <span className="flex items-center gap-1.5" style={{ color: patientTheme.colors.textSecondary }}>
+              {connected ? "Connected" : "Not connected"}
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: connected ? patientTheme.colors.primaryGreen : patientTheme.colors.textMuted,
+                  display: "inline-block",
+                }}
+              />
+            </span>
+          }
+          onClick={() => navigate("/patient/vitals")}
+        />
+        <MenuRow icon={BellIcon} label="Notifications" onClick={() => navigate("/patient/notifications")} />
+        <MenuRow icon={EmergencyIcon} label="Emergency Information" onClick={() => navigate("/patient/family")} />
+        <MenuRow icon={SecurityIcon} label="Security & Privacy" onClick={() => navigate("/patient/family")} />
+        <MenuRow
+          icon={HelpIcon}
+          label="Help & Support"
+          onClick={() => navigate("/patient/care/messages")}
+          last
+        />
+      </div>
 
-      {/* Connected devices */}
-      <section>
-        <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Connected Devices</p>
-        <div className="mh-card flex items-center gap-3 p-4">
-          <div
-            className="mh-icon mh-icon-slate w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ color: patientTheme.colors.textSecondary }}
-          >
-            <Watch size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold whitespace-nowrap" style={{ color: patientTheme.colors.textPrimary }}>
-                MicroHealth Band
-              </p>
-              <StatusBadge status={connected ? "connected" : "pending"} />
-            </div>
-            <p className="text-[11px] mt-0.5 truncate" style={{ color: patientTheme.colors.textMuted }}>
-              {batteryLevel != null ? `Battery ${Math.round(batteryLevel)}%` : "Battery —"}
-              {lastSynced ? ` · Synced ${lastSynced}` : ""}
-            </p>
-          </div>
-          <ChevronRight size={16} className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }} />
+      {/* The device itself, as its own quiet card */}
+      <div className="mh-card flex items-center gap-3.5 p-4">
+        <span
+          className="mh-icon flex items-center justify-center flex-shrink-0"
+          style={{ width: 52, height: 52, color: patientTheme.colors.primaryDark, background: patientTheme.gradients.tile }}
+        >
+          <WatchIcon size={25} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px]" style={{ color: patientTheme.colors.textSecondary }}>
+            Connected Device
+          </p>
+          <p className="text-[14px] font-semibold mt-0.5" style={{ color: patientTheme.colors.textPrimary }}>
+            MicroHealth Band
+          </p>
+          <p className="text-[12.5px] mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+            {batteryLevel != null ? `Battery ${Math.round(batteryLevel)}%` : "Battery —"}
+            {lastSynced ? ` • Synced ${lastSynced}` : ""}
+          </p>
         </div>
-      </section>
+        <span className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }}>
+          <ChevronRightIcon size={17} />
+        </span>
+      </div>
 
-      {/* Settings */}
-      <section>
-        <p className="text-sm font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>Settings</p>
-        <div className="mh-card overflow-hidden">
-          <MenuRow icon={Bell} label="Notifications" onClick={() => navigate("/patient/notifications")} />
-          <MenuRow icon={Shield} label="Privacy & Security" />
-          <MenuRow icon={HelpCircle} label="Help & Support" />
-          <MenuRow
-            icon={LogOut}
-            label="Log Out"
-            danger
-            last
-            onClick={async () => {
-              const ok = await confirmAction("Sign Out?", "You will be returned to the patient login page.");
-              if (!ok) return;
-              logout();
-              navigate("/patient/login");
-            }}
-          />
-        </div>
-      </section>
+      {/* The one destructive action, deliberately on its own */}
+      <div className="mh-card overflow-hidden">
+        <MenuRow
+          icon={LogOutIcon}
+          label="Log Out"
+          danger
+          last
+          onClick={async () => {
+            const ok = await confirmAction("Sign Out?", "You will be returned to the patient login page.");
+            if (!ok) return;
+            logout();
+            navigate("/patient/login");
+          }}
+        />
+      </div>
     </motion.div>
   );
 }

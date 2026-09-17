@@ -6,10 +6,18 @@ interface SegmentedTabsProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-/** Physical segmented switch: recessed track, raised thumb. */
+/**
+ * Segmented switch: recessed track, solid green capsule for the active tab.
+ * The green fill — not a raised white thumb — is what marks selection, so the
+ * eye reads it at a glance the way the design system specifies.
+ */
 export function SegmentedTabs<T extends string>({ options, value, onChange }: SegmentedTabsProps<T>) {
   return (
-    <div className="mh-track flex gap-1 p-1 rounded-full" role="tablist">
+    /* The strip fits its labels rather than truncating them: `min-w-fit` stops
+       a tab shrinking below its word, so a long set ("Appointments,
+       Prescriptions, Labs, Messages") scrolls instead of becoming "Appoint…".
+       Short sets still stretch to fill the width. */
+    <div className="mh-track flex gap-1 p-1 rounded-full overflow-x-auto" role="tablist">
       {options.map((opt) => {
         const active = value === opt.value;
         return (
@@ -18,11 +26,18 @@ export function SegmentedTabs<T extends string>({ options, value, onChange }: Se
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`flex-1 py-2 text-[13px] font-medium rounded-full transition-all ${active ? "mh-track-thumb" : ""}`}
+            className={`flex-1 min-w-fit px-2.5 py-2 text-[11.5px] rounded-full transition-colors whitespace-nowrap ${
+              active ? "mh-tab-active" : ""
+            }`}
             style={
               active
-                ? { color: patientTheme.colors.textPrimary }
-                : { background: "transparent", border: "1px solid transparent", color: patientTheme.colors.textSecondary }
+                ? undefined
+                : {
+                    background: "transparent",
+                    border: "1px solid transparent",
+                    color: patientTheme.colors.textSecondary,
+                    fontWeight: 500,
+                  }
             }
           >
             {opt.label}

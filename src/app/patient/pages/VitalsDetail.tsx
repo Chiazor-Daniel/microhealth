@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
-import { ChevronLeft, MoreVertical, Heart, Activity, Wind, Thermometer, TrendingUp } from "lucide-react";
+import {
+  HeartIcon, DropletIcon, OxygenIcon, ThermometerIcon,
+  ChevronLeftIcon, MoreIcon, ArrowUpIcon, ArrowDownIcon, MinusIcon,
+} from "../icons";
 import {
   AreaChart,
   Area,
@@ -9,7 +12,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceArea,
   CartesianGrid,
 } from "recharts";
 import { usePatientData } from "../../hooks/usePatientData";
@@ -19,6 +21,7 @@ import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { patientTheme, metricTint } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
+import { buildSeries, axisLabel, distinctTicks } from "../lib/timeSeries";
 
 /**
  * Per-metric definition: label, unit, the healthy band, and the value reader.
@@ -30,39 +33,34 @@ const METRICS: Record<string, {
   icon: React.ReactNode;
   baseline: [number, number];
   read: (v: any) => number | null;
-  prev: (v: any) => number | null;
 }> = {
   heartRate: {
     label: "Heart Rate",
     unit: "BPM",
-    icon: <Heart size={20} />,
+    icon: <HeartIcon size={21} />,
     baseline: [64, 78],
     read: (v) => v?.heartRate ?? null,
-    prev: (v) => v?.heartRate ?? null,
   },
   bloodPressure: {
     label: "Blood Pressure",
     unit: "mmHg",
-    icon: <Activity size={20} />,
+    icon: <DropletIcon size={21} />,
     baseline: [90, 120],
     read: (v) => v?.bloodPressureSystolic ?? v?.systolic ?? null,
-    prev: (v) => v?.bloodPressureSystolic ?? v?.systolic ?? null,
   },
   spo2: {
     label: "Blood Oxygen",
     unit: "%",
-    icon: <Wind size={20} />,
+    icon: <OxygenIcon size={21} />,
     baseline: [95, 100],
     read: (v) => v?.spo2 ?? null,
-    prev: (v) => v?.spo2 ?? null,
   },
   temperature: {
     label: "Temperature",
     unit: "°C",
-    icon: <Thermometer size={20} />,
+    icon: <ThermometerIcon size={21} />,
     baseline: [36.1, 37.2],
     read: (v) => v?.temperature ?? null,
-    prev: (v) => v?.temperature ?? null,
   },
 };
 
@@ -73,19 +71,12 @@ const RANGES = [
   { value: "quarter", label: "3 Months" },
 ];
 
-const POINTS: Record<string, number> = { day: 12, week: 20, month: 40, quarter: 60 };
 const PERIOD_LABEL: Record<string, string> = {
   day: "Compared to earlier today",
   week: "Compared to last week",
   month: "Compared to last month",
   quarter: "Compared to last quarter",
 };
-
-function formatAxis(iso: string, range: string) {
-  const d = new Date(iso);
-  if (range === "day") return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 export default function VitalsDetail() {
   const { metric = "heartRate" } = useParams();
@@ -115,25 +106,24 @@ export default function VitalsDetail() {
 
   const series = useMemo(
     () =>
-      vitals
-        .slice(0, POINTS[range])
-        .reverse()
-        .map((v: any) => ({ label: formatAxis(v.recordedAt, range), value: def.read(v) }))
-        .filter((p) => p.value != null),
+      buildSeries(vitals, range, def.read).map((p) => ({
+        label: axisLabel(p.at, range),
+        value: p.value,
+      })),
     [vitals, range, def]
   );
 
+  /* Distinct tick labels — a minute can hold several readings, and forcing a
+     tick at each of them prints the same time more than once. */
+  const xTicks = useMemo(() => distinctTicks(series.map((p) => p.label)), [series]);
+
   const current = def.read(vitals[0]);
-  const previous = def.prev(vitals[1]);
-  const delta = current != null && previous != null ? Math.round((current - previous) * 10) / 10 : null;
+  /* Movement across the window, not against the reading 3 seconds ago. */
+  const windowStart = series.length > 1 ? series[0].value : null;
+  const delta = current != null && windowStart != null ? Math.round((current - windowStart) * 10) / 10 : null;
 
   const inRange = current != null && current >= def.baseline[0] && current <= def.baseline[1];
   const tint = metricTint(metric);
-
-  // Widest excursion across the window, for the "your range" summary.
-  const observed = series.map((p) => p.value as number);
-  const observedLow = observed.length ? Math.min(...observed) : def.baseline[0];
-  const observedHigh = observed.length ? Math.max(...observed) : def.baseline[1];
 
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error} onRetry={refresh} />;
@@ -149,20 +139,25 @@ export default function VitalsDetail() {
       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-5"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — bare controls, the title is the axis of the screen */}
+      <div className="relative flex items-center justify-center h-9">
         <button
           onClick={() => navigate("/patient/vitals")}
           aria-label="Back to vitals"
-          className="mh-btn-icon w-9 h-9 flex items-center justify-center"
+          className="absolute left-0 flex items-center justify-center w-9 h-9 -ml-2"
+          style={{ color: patientTheme.colors.textPrimary }}
         >
-          <ChevronLeft size={18} />
+          <ChevronLeftIcon size={22} />
         </button>
-        <h1 className="text-[17px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+        <h1 className="text-[17px] font-semibold" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
           {def.label}
         </h1>
-        <button aria-label="More options" className="mh-btn-icon w-9 h-9 flex items-center justify-center">
-          <MoreVertical size={16} />
+        <button
+          aria-label="More options"
+          className="absolute right-0 flex items-center justify-center w-9 h-9 -mr-1"
+          style={{ color: patientTheme.colors.textSecondary }}
+        >
+          <MoreIcon size={18} />
         </button>
       </div>
 
@@ -225,11 +220,10 @@ export default function VitalsDetail() {
                 <CartesianGrid vertical={false} stroke={patientTheme.colors.hairlineSoft} strokeDasharray="3 6" />
                 <XAxis
                   dataKey="label"
+                  ticks={xTicks}
                   tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
                   axisLine={false}
                   tickLine={false}
-                  interval="preserveStartEnd"
-                  minTickGap={34}
                   dy={4}
                 />
                 <YAxis
@@ -252,12 +246,6 @@ export default function VitalsDetail() {
                     boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.14)",
                     padding: "8px 12px",
                   }}
-                />
-                <ReferenceArea
-                  y1={def.baseline[0]}
-                  y2={def.baseline[1]}
-                  fill={patientTheme.colors.primaryGreen}
-                  fillOpacity={0.045}
                 />
                 <Area
                   type="monotone"
@@ -288,28 +276,47 @@ export default function VitalsDetail() {
         </div>
       </div>
 
-      {/* Your range */}
+      {/* Your Range — the band the reading should sit in, and how the latest
+          reading moved against the previous one. */}
       <div className="mh-card p-4">
         <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
           Your Range
         </p>
-        <p className="text-[22px] font-bold mt-1" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
+        <p className="text-[24px] font-bold mt-1" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
           {def.baseline[0]} – {def.baseline[1]} {def.unit}
         </p>
-        <p className="text-[12px] mt-1" style={{ color: patientTheme.colors.textMuted }}>
-          Observed this period: {Math.round(observedLow * 10) / 10} – {Math.round(observedHigh * 10) / 10} {def.unit}
-        </p>
-      </div>
 
-      {/* Change since previous reading — hidden when there's no real change */}
-      {delta !== null && delta !== 0 && (
-        <div className="mh-card flex items-center gap-3 p-4">
-          <div className="mh-icon w-11 h-11" style={{ color: tint.fg, background: tint.tile }}>
-            <TrendingUp size={19} style={{ transform: delta < 0 ? "scaleY(-1)" : undefined }} />
+        <div className="flex items-center gap-3.5 mt-4">
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              color: delta != null && delta < 0 ? "#B45309" : patientTheme.colors.primaryDark,
+              background:
+                delta != null && delta < 0
+                  ? "linear-gradient(160deg, #FFFBF0 0%, #FEF3C7 100%)"
+                  : "linear-gradient(160deg, #F0FBF4 0%, #DCF2E5 100%)",
+              border: `1px solid ${delta != null && delta < 0 ? "rgba(250, 227, 160, 0.9)" : "rgba(198, 233, 211, 0.9)"}`,
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(16,24,40,0.05), 0 6px 14px -5px rgba(22,101,52,0.18)",
+            }}
+          >
+            {delta == null || delta === 0 ? (
+              <MinusIcon size={26} />
+            ) : delta > 0 ? (
+              <ArrowUpIcon size={26} />
+            ) : (
+              <ArrowDownIcon size={26} />
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
-              {delta > 0 ? "+" : ""}{delta} {def.unit}
+            <p
+              className="text-[15px] font-semibold"
+              style={{ color: delta != null && delta < 0 ? "#B45309" : patientTheme.colors.primaryDark }}
+            >
+              {delta == null || delta === 0 ? "No change" : `${delta > 0 ? "+" : ""}${delta} ${def.unit}`}
             </p>
             <p className="text-[12.5px]" style={{ color: patientTheme.colors.textSecondary }}>
               {PERIOD_LABEL[range]}
@@ -319,7 +326,7 @@ export default function VitalsDetail() {
             </p>
           </div>
         </div>
-      )}
+      </div>
     </motion.div>
   );
 }

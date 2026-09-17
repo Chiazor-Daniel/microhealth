@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Heart, Activity, Wind, Thermometer, Calendar, Pill, FlaskConical, Check, AlertTriangle } from "lucide-react";
+import { HeartIcon, DropletIcon, OxygenIcon, ThermometerIcon, CalendarIcon, CheckIcon, AlertIcon } from "../icons";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis } from "recharts";
 import { motion } from "motion/react";
 import { patientTheme, vitalStatusColor } from "../theme";
@@ -45,10 +45,10 @@ export function GenUI({ elements, onAction }: GenUIProps) {
                 className="mh-card p-4"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  {el.data?.label?.includes("Heart") ? <Heart size={16} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
-                  {el.data?.label?.includes("Blood") ? <Activity size={16} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
-                  {el.data?.label?.includes("SpO") ? <Wind size={16} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
-                  {el.data?.label?.includes("Temp") ? <Thermometer size={16} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
+                  {el.data?.label?.includes("Heart") ? <HeartIcon size={17} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
+                  {el.data?.label?.includes("Blood") ? <DropletIcon size={17} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
+                  {el.data?.label?.includes("SpO") ? <OxygenIcon size={17} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
+                  {el.data?.label?.includes("Temp") ? <ThermometerIcon size={17} style={{ color: vitalStatusColor(el.data?.status) }} /> : null}
                   <span className="text-xs font-medium" style={{ color: patientTheme.colors.textMuted }}>
                     {el.data?.label}
                   </span>
@@ -95,10 +95,10 @@ export function GenUI({ elements, onAction }: GenUIProps) {
                     }}
                   >
                     <span className="text-sm font-medium flex items-center gap-2" style={{ color: patientTheme.colors.textPrimary }}>
-                      <Calendar size={14} style={{ color: patientTheme.colors.primaryGreen }} />
+                      <CalendarIcon size={15} style={{ color: patientTheme.colors.primaryGreen }} />
                       {opt.label}
                     </span>
-                    {selected === opt.value && <Check size={16} style={{ color: patientTheme.colors.primaryGreen }} />}
+                    {selected === opt.value && <CheckIcon size={17} style={{ color: patientTheme.colors.primaryGreen }} />}
                   </motion.button>
                 ))}
               </div>
@@ -188,7 +188,7 @@ export function GenUI({ elements, onAction }: GenUIProps) {
                       color: "#fff",
                     }}
                   >
-                    {a.action === "call_emergency" && <AlertTriangle size={12} className="inline mr-1" />}
+                    {a.action === "call_emergency" && <span className="inline-flex align-[-2px] mr-1"><AlertIcon size={13} /></span>}
                     {a.label}
                   </button>
                 ))}

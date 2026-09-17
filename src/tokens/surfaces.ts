@@ -115,8 +115,8 @@ export const gradients = {
   },
   /** Mint surface — feature panels. */
   mint: {
-    colors: ["#F0FBF3", "#E6F6EC", "#DFF2E6"],
-    locations: [0, 0.6, 1],
+    colors: ["#C9F4D9", "#D8F7E2", "#E7FBEF"],
+    locations: [0, 0.55, 1],
     angleCSS: "165deg",
     start: { x: 0.2, y: 0 },
     end: { x: 0.8, y: 1 },

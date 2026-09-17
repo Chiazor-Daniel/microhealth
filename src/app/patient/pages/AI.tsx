@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Sparkles, Send, Heart, Calendar, Pill, FlaskConical, Settings } from "lucide-react";
 import { patientTheme } from "../theme";
 import { InsightCard } from "../components/InsightCard";
-import { AIIndicator } from "../components/AIIndicator";
+import { AgentOrb } from "../components/AgentOrb";
+import { CheckCircleIcon, HeartIcon, CalendarIcon, CapsuleIcon, FlaskIcon, SendIcon, ChevronLeftIcon } from "../icons";
 import { GenUI, type GenUIElement } from "../components/GenUI";
 import { useInsights } from "../hooks/useInsights";
 import { aiService, type Insight } from "../../services/ai.service";
@@ -17,10 +17,10 @@ interface Message {
 }
 
 const suggestions = [
-  { icon: <Heart size={13} />, label: "Analyze my vitals" },
-  { icon: <Calendar size={13} />, label: "Book appointment" },
-  { icon: <Pill size={13} />, label: "My medications" },
-  { icon: <FlaskConical size={13} />, label: "My latest labs" },
+  { icon: <HeartIcon size={15} />, label: "Analyze my vitals" },
+  { icon: <CalendarIcon size={15} />, label: "Book appointment" },
+  { icon: <CapsuleIcon size={15} />, label: "My medications" },
+  { icon: <FlaskIcon size={15} />, label: "My latest labs" },
 ];
 
 export default function AI() {
@@ -93,51 +93,25 @@ export default function AI() {
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       className="flex flex-col space-y-4"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <AIIndicator size={36} active={typing} />
-          <div>
-            <h1 className="text-[18px] font-semibold leading-tight" style={{ color: patientTheme.colors.textPrimary }}>
-              AI Health Assistant
-            </h1>
-            <p className="text-xs flex items-center gap-1.5" style={{ color: patientTheme.colors.textSecondary }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: patientTheme.colors.success }} />
-              {typing ? "Thinking..." : "Online"}
-            </p>
-          </div>
-        </div>
+      {/* Header — the agent introduces itself rather than being labelled */}
+      <div className="relative flex flex-col items-center pt-1">
         <button
-          aria-label="Assistant settings"
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{
-            background: patientTheme.colors.surface,
-            border: `1px solid ${patientTheme.colors.border}`,
-            color: patientTheme.colors.textSecondary,
-          }}
+          onClick={() => navigate("/patient/home")}
+          aria-label="Back to home"
+          className="absolute left-0 top-0 flex items-center justify-center w-9 h-9 -ml-2"
+          style={{ color: patientTheme.colors.textPrimary }}
         >
-          <Settings size={16} />
+          <ChevronLeftIcon size={22} />
         </button>
-      </div>
-
-      {/* Hero greeting */}
-      <div
-        className="mh-green-card"
-        style={{
-          background: "linear-gradient(135deg, #16A34A 0%, #15803D 60%, #14532D 100%)",
-          borderRadius: 20,
-          padding: 18,
-        }}
-      >
-        <div
-          aria-hidden
-          className="absolute rounded-full"
-          style={{ right: -20, top: -20, width: 110, height: 110, border: "1.5px solid rgba(255,255,255,0.18)" }}
-        />
-        <p className="text-lg font-semibold text-white">How can I help you today?</p>
-        <p className="text-[13px] mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-          Ask about your vitals, trends, medications or care.
+        <h1 className="text-[17px] font-semibold" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
+          Health Agent
+        </h1>
+        <p className="text-[13px] font-medium mt-0.5" style={{ color: patientTheme.colors.primaryDark }}>
+          Always here for you
         </p>
+        <div className="mt-2 -mb-1">
+          <AgentOrb size={92} active={typing} />
+        </div>
       </div>
 
       {/* Suggestion chips */}
@@ -182,8 +156,8 @@ export default function AI() {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             {msg.role === "agent" && (
-              <div className="flex-shrink-0 mt-1">
-                <AIIndicator size={26} active={typing} />
+              <div className="flex-shrink-0 -mt-1">
+                <AgentOrb size={30} />
               </div>
             )}
             <div
@@ -208,26 +182,32 @@ export default function AI() {
                 <GenUI elements={msg.insight.context.elements as GenUIElement[]} onAction={handleGenUIAction} />
               )}
               {msg.role === "agent" && msg.insight?.suggestedActions && (
-                <div className="flex flex-wrap gap-2 mt-3">
+                <ul className="space-y-2 mt-3.5">
                   {(Array.isArray(msg.insight.suggestedActions) ? msg.insight.suggestedActions : []).map((action: string) => (
-                    <button
-                      key={action}
-                      onClick={() => send(action)}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium"
-                      style={{ background: patientTheme.colors.primaryPale, color: patientTheme.colors.primaryGreen }}
-                    >
-                      {action}
-                    </button>
+                    <li key={action} className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0 mt-0.5" style={{ color: patientTheme.colors.primaryGreen }}>
+                        <CheckCircleIcon size={17} />
+                      </span>
+                      <button
+                        onClick={() => send(action)}
+                        className="text-[13px] text-left leading-snug"
+                        style={{ color: patientTheme.colors.textPrimary }}
+                      >
+                        {action}
+                      </button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
           </div>
         ))}
         {typing && (
-          <div className="flex items-center gap-2">
-            <AIIndicator size={26} active />
-            <span className="text-xs" style={{ color: patientTheme.colors.textMuted }}>Typing...</span>
+          <div className="flex items-center gap-2.5">
+            <AgentOrb size={30} />
+            <span className="text-[12.5px]" style={{ color: patientTheme.colors.textMuted }}>
+              Thinking…
+            </span>
           </div>
         )}
         <div ref={scrollRef} />
@@ -253,7 +233,7 @@ export default function AI() {
           className="mh-btn-primary w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-40 flex-shrink-0"
           style={{ color: "#fff" }}
         >
-          <Send size={17} />
+          <SendIcon size={18} />
         </button>
       </div>
     </motion.div>

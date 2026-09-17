@@ -43,7 +43,7 @@ export type MetricKey = "heartRate" | "bloodPressure" | "spo2" | "temperature";
 
 export const metricTints: Record<MetricKey, { fg: string; tile: string }> = {
   heartRate: { fg: colors.rose, tile: gradients.tileRose.colors[1] },
-  bloodPressure: { fg: colors.blue, tile: gradients.tileBlue.colors[1] },
+  bloodPressure: { fg: colors.green700, tile: gradients.tile.colors[1] },
   spo2: { fg: colors.teal, tile: gradients.tileTeal.colors[1] },
   temperature: { fg: colors.amber, tile: gradients.tileAmber.colors[1] },
 };

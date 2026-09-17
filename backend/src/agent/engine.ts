@@ -1,10 +1,11 @@
 import { db } from "../config/database";
 import { aiInsights, staff } from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { type InsightType, type InsightPriority, type GeneratedInsight } from "./types";
 import { buildPatientContext, formatPatientContext } from "./rag";
 import { retrieveKnowledge } from "./medicalRag";
 import { generateAgentResponse, systemPrompt } from "./ollama";
+import { summariseInsight, insightFormatPrompt } from "./response";
 import { detectTrend, checkVitalRanges } from "./rules";
 import { findAvailableAppointments, bookAppointment, prepareCareTeamMessage } from "./tools";
 
@@ -20,6 +21,9 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
     const checks = checkVitalRanges(latest);
     const urgent = checks.find((c) => c.status === "attention");
     if (urgent) {
+      /* Guarded like the other branches — without it, every reading that is
+         out of range raises its own identical alert. */
+      if (await recentSimilarInsight(ctx.patientId, "vital_trend")) return null;
       return await generateInsight(ctx, {
         type: "vital_trend",
         priority: "attention",
@@ -32,6 +36,7 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
 
   const hrTrend = detectTrend(ctx.recentVitals, "heartRate");
   if (hrTrend.direction === "rising" && hrTrend.change >= 5) {
+    if (await recentSimilarInsight(ctx.patientId, "vital_trend")) return null;
     return await generateInsight(ctx, {
       type: "vital_trend",
       priority: "watch",
@@ -42,6 +47,7 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
   }
 
   if (hrTrend.direction === "falling" && hrTrend.change <= -5) {
+    if (await recentSimilarInsight(ctx.patientId, "vital_recovery")) return null;
     return await generateInsight(ctx, {
       type: "vital_recovery",
       priority: "info",
@@ -281,7 +287,7 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
   const medicalKnowledge = retrieveKnowledge(event.type, 2);
 
   const response = await generateAgentResponse({
-    system: systemPrompt,
+    system: `${systemPrompt}\n\n${insightFormatPrompt}`,
     patientContext,
     medicalKnowledge,
     event,
@@ -298,7 +304,9 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
     type: event.type,
     priority: response.priority || event.priority,
     title: event.title,
-    message: response.text || event.message,
+    /* The card leads with the finding. The model's full reply is kept as the
+       explanation behind it, so nothing the agent said is lost. */
+    message: summariseInsight(response.text, event.message),
     explanation: response.text,
     suggestedActions: response.suggestedActions,
     context: { ...event.context, elements },
@@ -306,19 +314,27 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
   };
 }
 
+/**
+ * Has this same insight already been raised recently?
+ *
+ * Looked up by *type*, not by "whatever was written last" — an unrelated
+ * insight landing in between would otherwise reset the window and let the
+ * same finding be re-emitted on every evaluation cycle.
+ */
 async function recentSimilarInsight(patientId: string, type: string, sourceId?: string): Promise<boolean> {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const existing = await db.query.aiInsights.findFirst({
-    where: eq(aiInsights.patientId, patientId),
+    where: and(eq(aiInsights.patientId, patientId), eq(aiInsights.type, type as any)),
     orderBy: [desc(aiInsights.createdAt)],
   });
   if (!existing) return false;
   if (existing.createdAt < oneHourAgo) return false;
-  if (existing.type === type) {
-    const ctxSource = (existing.context as any)?.labId || (existing.context as any)?.appointmentId || (existing.context as any)?.prescriptionId;
-    if (!sourceId || !ctxSource || ctxSource === sourceId) return true;
-  }
-  return false;
+  const ctxSource =
+    (existing.context as any)?.labId ||
+    (existing.context as any)?.appointmentId ||
+    (existing.context as any)?.prescriptionId;
+  /* An insight with no source row (a trend, say) is deduped on type alone. */
+  return !sourceId || !ctxSource || ctxSource === sourceId;
 }
 
 async function getDoctorName(staffId?: string | null): Promise<string> {

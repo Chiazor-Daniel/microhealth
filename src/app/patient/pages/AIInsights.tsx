@@ -1,24 +1,25 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Activity,
-  Heart,
-  AlertCircle,
-  Droplets,
-  Moon,
-  Pill,
-} from "lucide-react";
 import { useInsights } from "../hooks/useInsights";
 import { patientTheme } from "../theme";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { SegmentedTabs } from "../components/SegmentedTabs";
+import {
+  SparkIcon,
+  TrendIcon,
+  HeartIcon,
+  CapsuleIcon,
+  CalendarIcon,
+  DropletIcon,
+  FlaskIcon,
+  WatchIcon,
+  InsightMarkIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  type GlyphProps,
+} from "../icons";
 
 const RANGES = [
   { value: "today", label: "Today" },
@@ -28,26 +29,43 @@ const RANGES = [
 
 const WINDOW_DAYS: Record<string, number> = { today: 1, week: 7, month: 30 };
 
-/** Icon + tint per insight type, and by keyword for the common reminders. */
-function visualFor(type: string, title: string) {
+type Visual = { Icon: (p: GlyphProps) => React.ReactElement; fg: string; tile: string };
+
+const TILES = {
+  green: { fg: patientTheme.colors.primaryDark, tile: "linear-gradient(160deg, #F4FCF6 0%, #DCF2E5 100%)" },
+  rose: { fg: patientTheme.colors.rose, tile: "linear-gradient(160deg, #FFF5F7 0%, #FFE1E8 100%)" },
+  amber: { fg: patientTheme.colors.amber, tile: "linear-gradient(160deg, #FFFBF0 0%, #FDE9B0 100%)" },
+  blue: { fg: patientTheme.colors.blue, tile: "linear-gradient(160deg, #F4F8FF 0%, #D8E8FD 100%)" },
+  teal: { fg: patientTheme.colors.teal, tile: "linear-gradient(160deg, #F0FCFA 0%, #CCF3EA 100%)" },
+} as const;
+
+/**
+ * Icon + tint per insight. The design system fixes these pairs, so a
+ * hydration reminder is amber and a sleep note is blue wherever they appear —
+ * the tint is how the list is read at a glance.
+ */
+function visualFor(type: string, title: string): Visual {
   const t = `${type} ${title}`.toLowerCase();
-  if (t.includes("hydrat") || t.includes("water")) return { icon: Droplets, cls: "mh-icon-blue" };
-  if (t.includes("sleep")) return { icon: Moon, cls: "mh-icon-blue" };
-  if (t.includes("medic") || t.includes("dose")) return { icon: Pill, cls: "" };
+  if (t.includes("hydrat") || t.includes("water") || t.includes("fluid")) return { Icon: DropletIcon, ...TILES.amber };
+  if (t.includes("sleep") || t.includes("rest")) return { Icon: SparkIcon, ...TILES.blue };
+  if (t.includes("medic") || t.includes("dose") || t.includes("prescription")) return { Icon: CapsuleIcon, ...TILES.green };
+  if (t.includes("appointment")) return { Icon: CalendarIcon, ...TILES.green };
+  if (t.includes("lab") || t.includes("result")) return { Icon: FlaskIcon, ...TILES.green };
+  if (t.includes("heart") || t.includes("recovery")) return { Icon: HeartIcon, ...TILES.rose };
   switch (type) {
     case "trend":
-      return { icon: TrendingUp, cls: "" };
+      return { Icon: TrendIcon, ...TILES.green };
     case "lab":
-      return { icon: Activity, cls: "mh-icon-blue" };
+      return { Icon: FlaskIcon, ...TILES.green };
     case "recovery":
-      return { icon: Heart, cls: "mh-icon-rose" };
+      return { Icon: HeartIcon, ...TILES.rose };
     case "medication":
     case "appointment":
-      return { icon: Clock, cls: "" };
+      return { Icon: CapsuleIcon, ...TILES.green };
     case "wearable":
-      return { icon: AlertCircle, cls: "mh-icon-amber" };
+      return { Icon: WatchIcon, ...TILES.amber };
     default:
-      return { icon: Sparkles, cls: "" };
+      return { Icon: SparkIcon, ...TILES.green };
   }
 }
 
@@ -71,8 +89,8 @@ export default function AIInsights() {
     const cutoff = Date.now() - WINDOW_DAYS[range] * 24 * 60 * 60 * 1000;
     const inWindow = insights.filter((i) => new Date(i.createdAt).getTime() >= cutoff);
 
-    // The agent can emit the same insight repeatedly; collapse to the newest
-    // per title so the list reads as distinct findings, not a repeated log.
+    /* The agent can emit the same finding more than once; collapse to the
+       newest per title so the list reads as distinct findings. */
     const byTitle = new Map<string, (typeof inWindow)[number]>();
     for (const i of inWindow) {
       const key = i.title.trim().toLowerCase();
@@ -86,7 +104,6 @@ export default function AIInsights() {
     );
   }, [insights, range]);
 
-  // The strongest current signal is featured; the rest fall into the list.
   const featured = filtered.find((i) => i.priority === "watch" || i.priority === "attention" || i.priority === "urgent") ?? filtered[0];
   const others = filtered.filter((i) => i.id !== featured?.id);
 
@@ -102,29 +119,32 @@ export default function AIInsights() {
       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-5"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — bare chevron, the title on the axis */}
+      <div className="relative flex items-center justify-center h-9">
         <button
           onClick={() => navigate("/patient/home")}
           aria-label="Back"
-          className="mh-btn-icon w-9 h-9 flex items-center justify-center"
+          className="absolute left-0 flex items-center justify-center w-9 h-9 -ml-2"
+          style={{ color: patientTheme.colors.textPrimary }}
         >
-          <ChevronLeft size={18} />
+          <ChevronLeftIcon size={22} />
         </button>
-        <h1 className="text-[17px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+        <h1 className="text-[17px] font-semibold" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
           AI Insights
         </h1>
-        <span className="w-9" aria-hidden />
       </div>
 
       <SegmentedTabs options={RANGES} value={range} onChange={setRange} />
 
       {filtered.length === 0 ? (
         <div className="mh-card flex flex-col items-center justify-center py-14 px-6">
-          <div className="mh-icon w-12 h-12">
-            <Sparkles size={20} />
-          </div>
-          <p className="text-sm font-semibold mt-3" style={{ color: patientTheme.colors.textPrimary }}>
+          <span
+            className="mh-icon flex items-center justify-center"
+            style={{ width: 52, height: 52, color: patientTheme.colors.primaryDark, background: patientTheme.gradients.tile }}
+          >
+            <SparkIcon size={24} />
+          </span>
+          <p className="text-[14px] font-semibold mt-3.5" style={{ color: patientTheme.colors.textPrimary }}>
             Nothing to report
           </p>
           <p className="text-[13px] mt-1 text-center" style={{ color: patientTheme.colors.textMuted }}>
@@ -133,28 +153,32 @@ export default function AIInsights() {
         </div>
       ) : (
         <>
-          {/* Featured insight */}
+          {/* The strongest current signal, given the room to explain itself */}
           {featured && featuredVisual && (
             <section>
-              <h2 className="text-[15px] font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>
+              <h2 className="text-[15px] font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
                 Health Trend
               </h2>
-              <div className="mh-card-feature mh-card" style={{ padding: 18 }}>
+              <div className="mh-card" style={{ padding: 18 }}>
                 <div className="flex items-start gap-3">
-                  <div className={`mh-icon ${featuredVisual.cls} w-11 h-11`}>
-                    <featuredVisual.icon size={19} />
-                  </div>
+                  {/* The featured mark is the AI one, not a metric tile — it
+                      sits above the metric glyphs in the hierarchy. */}
+                  <span
+                    className="flex items-center justify-center flex-shrink-0"
+                    style={{ width: 42, height: 42, color: patientTheme.colors.ink }}
+                    aria-hidden
+                  >
+                    <InsightMarkIcon size={40} />
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-[15.5px] font-semibold leading-snug" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
-                        {featured.title}
-                      </p>
-                      <span className="text-[11px] whitespace-nowrap mt-0.5" style={{ color: patientTheme.colors.textMuted }}>
-                        {relativeTime(featured.createdAt)}
-                      </span>
-                    </div>
+                    <p className="text-[15.5px] font-semibold leading-snug" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
+                      {featured.title}
+                    </p>
                     <p className="text-[13px] leading-relaxed mt-1.5" style={{ color: patientTheme.colors.textSecondary }}>
                       {featured.message}
+                    </p>
+                    <p className="text-[11.5px] mt-2" style={{ color: patientTheme.colors.textMuted }}>
+                      {relativeTime(featured.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -169,35 +193,37 @@ export default function AIInsights() {
             </section>
           )}
 
-          {/* Other insights */}
           {others.length > 0 && (
             <section>
-              <h2 className="text-[15px] font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary }}>
+              <h2 className="text-[15px] font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
                 Other Insights
               </h2>
-              <div className="mh-card overflow-hidden">
-                {others.map((ins, i) => {
+              <div className="space-y-3">
+                {others.map((ins) => {
                   const v = visualFor(ins.type as string, ins.title);
-                  const Icon = v.icon;
                   return (
                     <button
                       key={ins.id}
                       onClick={() => navigate("/patient/ai")}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
-                      style={{ borderTop: i === 0 ? "none" : `1px solid ${patientTheme.colors.hairlineSoft}` }}
+                      className="mh-card w-full flex items-center gap-3 p-3.5 text-left"
                     >
-                      <div className={`mh-icon ${v.cls} w-10 h-10`}>
-                        <Icon size={17} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+                      <span
+                        className="mh-icon flex items-center justify-center flex-shrink-0"
+                        style={{ width: 40, height: 40, color: v.fg, background: v.tile }}
+                      >
+                        <v.Icon size={19} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13.5px] font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
                           {ins.title}
-                        </p>
-                        <p className="text-[12.5px] truncate mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+                        </span>
+                        <span className="block text-[12.5px] truncate mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
                           {ins.message}
-                        </p>
-                      </div>
-                      <ChevronRight size={16} className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }} />
+                        </span>
+                      </span>
+                      <span className="flex-shrink-0" style={{ color: patientTheme.colors.textMuted }}>
+                        <ChevronRightIcon size={16} />
+                      </span>
                     </button>
                   );
                 })}

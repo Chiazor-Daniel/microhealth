@@ -45,3 +45,7 @@ backend.log
 frontend.log
 pnpm-lock.yaml
 pnpm-config-tmp.json
+
+# Tooling output
+.playwright-mcp/
+tmp/

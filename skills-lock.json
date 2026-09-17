@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "custom-icons": {
+      "source": "jkc66/custom-icons-skill",
+      "sourceType": "github",
+      "skillPath": "skills/SKILL.md",
+      "computedHash": "75b787f166400b574126011d912b3a2334231013f96e3428339f73edb5615ada"
+    }
+  }
+}

@@ -1,6 +1,5 @@
-import { Pill } from "lucide-react";
 import { patientTheme } from "../theme";
-import { StatusBadge } from "./StatusBadge";
+import { CapsuleIcon, ChevronRightIcon } from "../icons";
 
 interface MedicationCardProps {
   name: string;
@@ -9,39 +8,62 @@ interface MedicationCardProps {
   status: string;
   refills?: number;
   onRefill?: () => void;
+  onClick?: () => void;
 }
 
-export function MedicationCard({ name, dosage, duration, status, refills, onRefill }: MedicationCardProps) {
-  const active = status !== "expired";
+/**
+ * Prescription row.
+ * A medicine is a row in a list, not a hero: the capsule leads, the schedule
+ * reads as one line, and the only action offered is the one that matters.
+ */
+export function MedicationCard({ name, dosage, duration, status, refills, onRefill, onClick }: MedicationCardProps) {
+  const expired = status === "expired";
+  const schedule = [dosage, duration].filter(Boolean).join(" • ");
+  const canRefill = !expired && (refills ?? 0) > 0 && !!onRefill;
+
   return (
     <div
-      className="mh-card p-4"
-      style={{
-        borderLeft: active ? `3px solid ${patientTheme.colors.primaryGreen}` : `3px solid ${patientTheme.colors.error}`,
-      }}
+      onClick={onClick}
+      className="mh-card flex items-center gap-3 p-3.5"
+      style={{ cursor: onClick ? "pointer" : undefined }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold" style={{ color: patientTheme.colors.textPrimary }}>{name}</p>
-          <p className="text-xs mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>{dosage}</p>
-          {duration && <p className="text-xs mt-0.5" style={{ color: patientTheme.colors.textMuted }}>{duration}</p>}
-        </div>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: patientTheme.colors.primaryPale }}>
-          <Pill size={18} style={{ color: patientTheme.colors.primaryGreen }} />
-        </div>
+      <span
+        className="mh-icon flex items-center justify-center flex-shrink-0"
+        style={{
+          width: 40,
+          height: 40,
+          color: expired ? patientTheme.colors.textSecondary : patientTheme.colors.primaryDark,
+          background: expired
+            ? "linear-gradient(160deg, #FAFCFD 0%, #E9EFF4 100%)"
+            : "linear-gradient(160deg, #F4FCF6 0%, #DCF2E5 100%)",
+        }}
+      >
+        <CapsuleIcon size={19} />
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[13.5px] font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
+          {name}
+        </p>
+        <p className="text-[12.5px] truncate mt-0.5" style={{ color: patientTheme.colors.textSecondary }}>
+          {schedule || "—"}
+        </p>
       </div>
-      <div className="flex items-center justify-between mt-3">
-        <StatusBadge status={status} />
-        {active && (refills ?? 0) > 0 && onRefill && (
-          <button
-            onClick={onRefill}
-            className="mh-btn-primary px-3 py-1.5 rounded-xl text-xs font-semibold"
-            style={{ color: "#fff" }}
-          >
-            Refill · {refills}
-          </button>
-        )}
-      </div>
+
+      {expired ? (
+        <span className="text-[12px] font-semibold flex-shrink-0" style={{ color: patientTheme.colors.rose }}>
+          Expired
+        </span>
+      ) : canRefill ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRefill?.(); }}
+          className="mh-btn-secondary px-3 py-1.5 text-[12px] font-semibold flex-shrink-0"
+        >
+          Refill · {refills}
+        </button>
+      ) : onClick ? (
+        <ChevronRightIcon size={16} />
+      ) : null}
     </div>
   );
 }

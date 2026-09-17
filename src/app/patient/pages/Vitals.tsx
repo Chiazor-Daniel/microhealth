@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Heart, Activity, Wind, Thermometer, Plus } from "lucide-react";
+import { HeartIcon, DropletIcon, OxygenIcon, ThermometerIcon, WatchIcon, ChevronRightIcon } from "../icons";
 import { usePatientData } from "../../hooks/usePatientData";
 import { useAuth } from "../../hooks/useAuth";
 import { useWearable } from "../hooks/useWearable";
@@ -9,28 +10,31 @@ import { ErrorState } from "../../components/shared/ErrorState";
 import { patientTheme, metricTint } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
 import { StatusBadge } from "../components/StatusBadge";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceArea,
-  CartesianGrid,
-} from "recharts";
+import { buildSeries } from "../lib/timeSeries";
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 
 const tabs = [
   { value: "today", label: "Day" },
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
-];
+  { value: "quarter", label: "3 Months" },
+] as const;
+
+type TabValue = (typeof tabs)[number]["value"];
 
 const MetricIcon: Record<string, React.ReactNode> = {
-  heartRate: <Heart size={18} />,
-  bloodPressure: <Activity size={18} />,
-  spo2: <Wind size={18} />,
-  temperature: <Thermometer size={18} />,
+  heartRate: <HeartIcon size={20} />,
+  bloodPressure: <DropletIcon size={20} />,
+  spo2: <OxygenIcon size={20} />,
+  temperature: <ThermometerIcon size={20} />,
+};
+
+/** The healthy band for each metric, and how it is written out. */
+const RANGES: Record<string, { lo: number; hi: number; label: string }> = {
+  heartRate: { lo: 60, hi: 100, label: "60 – 100 bpm" },
+  bloodPressure: { lo: 90, hi: 120, label: "90/60 – 120/80 mmHg" },
+  spo2: { lo: 95, hi: 100, label: "95 – 100 %" },
+  temperature: { lo: 36.1, hi: 37.2, label: "36.1 – 37.2 °C" },
 };
 
 function formatTime(iso?: string) {
@@ -41,40 +45,54 @@ function formatTime(iso?: string) {
 function interpretValue(metric: string, value: number) {
   switch (metric) {
     case "heartRate":
-      if (value < 55) return { status: "attention", text: "Lower than usual" };
-      if (value > 100) return { status: "attention", text: "Higher than usual" };
-      if (value > 85) return { status: "high", text: "Slightly elevated" };
-      return { status: "normal", text: "Normal range" };
+      if (value < 55) return { status: "low", text: "Low" };
+      if (value > 100) return { status: "high", text: "High" };
+      if (value > 85) return { status: "attention", text: "Elevated" };
+      return { status: "normal", text: "Normal" };
     case "bloodPressure":
-      if (value > 140) return { status: "attention", text: "High" };
-      if (value > 125) return { status: "high", text: "Elevated" };
-      return { status: "normal", text: "Normal range" };
+      if (value > 140) return { status: "high", text: "High" };
+      if (value > 125) return { status: "attention", text: "Elevated" };
+      return { status: "normal", text: "Normal" };
     case "spo2":
-      if (value < 95) return { status: "attention", text: "Below 95%" };
-      return { status: "normal", text: "Normal range" };
+      if (value < 95) return { status: "low", text: "Low" };
+      return { status: "normal", text: "Normal" };
     case "temperature":
-      if (value > 37.6) return { status: "attention", text: "Fever range" };
-      if (value > 37.2) return { status: "high", text: "Slightly elevated" };
-      return { status: "normal", text: "Normal range" };
+      if (value > 37.6) return { status: "high", text: "Fever" };
+      if (value > 37.2) return { status: "attention", text: "Elevated" };
+      return { status: "normal", text: "Normal" };
     default:
-      return { status: "normal", text: "Normal range" };
+      return { status: "normal", text: "Normal" };
   }
 }
 
-/** Sparkline for compact vital cards — single luminous line, no axes. */
-function Sparkline({ data }: { data: number[] }) {
-  if (data.length < 2) return null;
+/**
+ * The reading's own sparkline — a single luminous line with a whisper of fill.
+ * Every card carries one, which is what makes the screen scannable at a glance.
+ */
+function Spark({ data, height = 46 }: { data: number[]; height?: number }) {
+  if (data.length < 2) return <div style={{ height }} />;
   const points = data.map((v, i) => ({ i, v }));
   return (
-    <ResponsiveContainer width="100%" height={36}>
-      <AreaChart data={points} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={points} margin={{ top: 6, right: 2, left: 2, bottom: 0 }}>
         <defs>
           <linearGradient id="mhSparkGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.20} />
-            <stop offset="70%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.03} />
+            <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.28} />
+            <stop offset="60%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.08} />
             <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
           </linearGradient>
         </defs>
+        <Tooltip
+          cursor={false}
+          contentStyle={{
+            background: "rgba(255,255,255,0.97)",
+            border: "1px solid rgba(226,236,231,0.95)",
+            borderRadius: 12,
+            fontSize: 11,
+            padding: "5px 9px",
+            boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 20px -8px rgba(16,24,40,0.16)",
+          }}
+        />
         <Area
           type="monotone"
           dataKey="v"
@@ -83,7 +101,7 @@ function Sparkline({ data }: { data: number[] }) {
           strokeLinecap="round"
           fill="url(#mhSparkGradient)"
           dot={{ r: 1.8, fill: patientTheme.colors.primaryGreen, stroke: "#fff", strokeWidth: 1 }}
-          activeDot={false}
+          activeDot={{ r: 4 }}
           isAnimationActive={false}
           className="mh-chart-line"
         />
@@ -96,7 +114,8 @@ export default function Vitals() {
   const { user } = useAuth();
   const { vitals: existingVitals, loading, error, refresh } = usePatientData();
   const { latest: wearableLatest } = useWearable(user?.profile?.id, true);
-  const [tab, setTab] = useState<"today" | "week" | "month">("today");
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<TabValue>("today");
 
   const vitals = useMemo(() => {
     const list = [...existingVitals];
@@ -115,51 +134,44 @@ export default function Vitals() {
     return list;
   }, [existingVitals, wearableLatest]);
 
-  const current = vitals[0];
+  const current: any = vitals[0];
 
   const metrics = useMemo(() => {
-    const hr = current?.heartRate ?? null;
     const bpSys = current?.bloodPressureSystolic ?? current?.systolic ?? null;
     const bpDia = current?.bloodPressureDiastolic ?? current?.diastolic ?? null;
-    const spo2 = current?.spo2 ?? null;
-    const temp = current?.temperature ?? null;
     return [
-      { key: "heartRate", label: "Heart Rate", value: hr, unit: "bpm", baseline: [64, 74] as [number, number] },
-      { key: "bloodPressure", label: "Blood Pressure", value: bpSys, unit: "mmHg", baseline: [110, 125] as [number, number] },
-      { key: "spo2", label: "Blood Oxygen", value: spo2, unit: "%", baseline: [95, 100] as [number, number] },
-      { key: "temperature", label: "Temperature", value: temp, unit: "°C", baseline: [36.1, 37.2] as [number, number] },
+      {
+        key: "heartRate",
+        label: "Heart Rate",
+        display: current?.heartRate ?? null,
+        unit: "bpm",
+        reading: current?.heartRate,
+      },
+      {
+        key: "bloodPressure",
+        label: "Blood Pressure",
+        display: bpSys == null ? null : bpDia == null ? bpSys : `${bpSys}/${bpDia}`,
+        unit: "mmHg",
+        reading: bpSys,
+      },
+      { key: "spo2", label: "Blood Oxygen", display: current?.spo2 ?? null, unit: "%", reading: current?.spo2 },
+      {
+        key: "temperature",
+        label: "Temperature",
+        display: current?.temperature ?? null,
+        unit: "°C",
+        reading: current?.temperature,
+      },
     ];
   }, [current]);
 
-  const [selected, setSelected] = useState("heartRate");
-  const selectedMetric = metrics.find((m) => m.key === selected) || metrics[0];
-
-  const readingCount = tab === "today" ? 10 : tab === "week" ? 20 : 40;
-
-  const chartData = useMemo(() => {
-    return vitals
-      .slice(0, readingCount)
-      .reverse()
-      .map((v: any) => ({
-        label: formatTime(v.recordedAt),
-        value: selected === "bloodPressure" ? (v.bloodPressureSystolic ?? v.systolic) : v[selected],
-      }));
-  }, [vitals, selected, readingCount]);
-
-  const sparkData = (key: string) =>
-    vitals.slice(0, 10).reverse().map((v: any) => (key === "bloodPressure" ? (v.bloodPressureSystolic ?? v.systolic) : v[key]));
+  const sparkFor = (key: string) =>
+    buildSeries(vitals, tab, (v) =>
+      key === "bloodPressure" ? (v.bloodPressureSystolic ?? v.systolic) : v[key]
+    ).map((p) => p.value);
 
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error} onRetry={refresh} />;
-
-  const interp = interpretValue(selected, Number(selectedMetric.value));
-  const prevValue = selected === "bloodPressure"
-    ? (vitals[1]?.bloodPressureSystolic ?? vitals[1]?.systolic ?? null)
-    : vitals[1]?.[selected] ?? null;
-  const delta =
-    selectedMetric.value != null && prevValue != null && selectedMetric.value !== prevValue
-      ? `${selectedMetric.value > prevValue ? "+" : ""}${Math.round((selectedMetric.value - prevValue) * 10) / 10} ${selectedMetric.unit} · recently`
-      : undefined;
 
   return (
     <motion.div
@@ -168,186 +180,93 @@ export default function Vitals() {
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-5"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>Vitals</h1>
-        <button
-          aria-label="Add reading"
-          className="mh-btn-icon w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ color: patientTheme.colors.textSecondary }}
+      {/* Header — the title is the axis of the screen, so it centres */}
+      <div className="relative flex items-center justify-center">
+        <h1
+          className="text-[22px] font-semibold"
+          style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}
         >
-          <Plus size={18} />
-        </button>
+          Vitals
+        </h1>
+        <span
+          className="absolute right-0 flex items-center justify-center w-10 h-10"
+          style={{ color: patientTheme.colors.textSecondary }}
+          title="MicroHealth Band"
+        >
+          <WatchIcon size={20} />
+        </span>
       </div>
 
-      {/* Range tabs */}
-      <SegmentedTabs options={tabs} value={tab} onChange={setTab} />
+      <SegmentedTabs options={tabs as unknown as { value: TabValue; label: string }[]} value={tab} onChange={setTab} />
 
-      {/* Hero chart card */}
-      <div className="mh-card" style={{ padding: 18 }}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="mh-icon w-11 h-11"
-              style={{ color: metricTint(selected).fg, background: metricTint(selected).tile }}
+      {/* Every metric gets its own full-width card and its own sparkline, so
+          the screen can be read top to bottom without picking one first. */}
+      <div className="space-y-3">
+        {metrics.map((m) => {
+          const interp = interpretValue(m.key, Number(m.reading));
+          const tint = metricTint(m.key);
+          const range = RANGES[m.key];
+          const series = sparkFor(m.key);
+
+          return (
+            <motion.button
+              key={m.key}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => navigate(`/patient/vitals/${m.key}`)}
+              className="mh-card w-full text-left block"
+              style={{ padding: 16 }}
+              aria-label={`${m.label}, ${m.display ?? "no reading"} ${m.unit}`}
             >
-              {MetricIcon[selected]}
-            </div>
-            <div>
-              <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
-                {selectedMetric.label}
-              </p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[32px] font-bold tracking-tight leading-none" style={{ color: patientTheme.colors.textPrimary }}>
-                  {selectedMetric.value === null ? "—" : selectedMetric.value}
-                </span>
-                <span className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
-                  {selectedMetric.unit}
-                </span>
-              </div>
-            </div>
-          </div>
-          <StatusBadge status={interp.status} />
-        </div>
-
-        {delta && (
-          <span
-            className="inline-flex items-center mt-2.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-            style={{ background: patientTheme.colors.successSoft, color: patientTheme.colors.success }}
-          >
-            {delta}
-          </span>
-        )}
-
-        <div className="h-44 mt-4 -mx-1">
-          {chartData.length > 1 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="mhVitalGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.22} />
-                    <stop offset="55%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.06} />
-                    <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
-                  </linearGradient>
-                  {/* Soft glow beneath the active data point */}
-                  <filter id="mhPointGlow" x="-120%" y="-120%" width="340%" height="340%">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-                <CartesianGrid
-                  vertical={false}
-                  stroke={patientTheme.colors.hairlineSoft}
-                  strokeDasharray="3 6"
-                />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval="preserveStartEnd"
-                  minTickGap={30}
-                  dy={4}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: patientTheme.colors.textMuted }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={44}
-                  domain={["dataMin - 4", "dataMax + 4"]}
-                />
-                <Tooltip
-                  cursor={{ stroke: "rgba(134,202,158,0.55)", strokeWidth: 1.5, strokeDasharray: "4 4" }}
-                  contentStyle={{
-                    background: "rgba(255,255,255,0.97)",
-                    border: "1px solid rgba(226,236,231,0.95)",
-                    borderRadius: 14,
-                    fontSize: 12,
-                    color: patientTheme.colors.textPrimary,
-                    boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(16,24,40,0.14)",
-                    padding: "8px 12px",
-                  }}
-                />
-                {/* "Your Range" band — a whisper, not a highlight */}
-                <ReferenceArea
-                  y1={selectedMetric.baseline[0]}
-                  y2={selectedMetric.baseline[1]}
-                  fill={patientTheme.colors.primaryGreen}
-                  fillOpacity={0.045}
-                  ifOverflow="extendDomain"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={patientTheme.colors.primaryGreen}
-                  strokeWidth={2.25}
-                  strokeLinecap="round"
-                  fill="url(#mhVitalGradient)"
-                  className="mh-chart-line"
-                  dot={{ r: 2.2, fill: "#fff", stroke: patientTheme.colors.primaryGreen, strokeWidth: 1.6 }}
-                  activeDot={{
-                    r: 6,
-                    fill: patientTheme.colors.primaryGreen,
-                    stroke: "#fff",
-                    strokeWidth: 2.5,
-                    filter: "url(#mhPointGlow)",
-                  }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-[13px]" style={{ color: patientTheme.colors.textMuted }}>
-                Not enough data for this range yet.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <p className="text-[11px] text-center mt-2" style={{ color: patientTheme.colors.textMuted }}>
-          Shaded band · your range {selectedMetric.baseline[0]}–{selectedMetric.baseline[1]} {selectedMetric.unit}
-        </p>
-      </div>
-
-      {/* Other vitals with sparklines */}
-      <div className="grid grid-cols-2 gap-3">
-        {metrics
-          .filter((m) => m.key !== selected)
-          .map((m) => {
-            const mInterp = interpretValue(m.key, Number(m.value));
-            return (
-              <button
-                key={m.key}
-                onClick={() => setSelected(m.key)}
-                className="mh-card text-left p-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>{m.label}</p>
-                  <div
-                    className="mh-icon w-9 h-9"
-                    style={{ color: metricTint(m.key).fg, background: metricTint(m.key).tile }}
-                  >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="mh-icon w-11 h-11" style={{ color: tint.fg, background: tint.tile }}>
                     {MetricIcon[m.key]}
                   </div>
+                  <p className="text-[13px] font-medium" style={{ color: patientTheme.colors.textPrimary }}>
+                    {m.label}
+                  </p>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold" style={{ color: patientTheme.colors.textPrimary }}>
-                    {m.value === null ? "—" : m.value}
-                  </span>
-                  <span className="text-[11px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>{m.unit}</span>
+                {/* On this screen every metric states its status as a capsule —
+                    there is room for it, and the cards are compared side by
+                    side. Home's compact pair states it as plain text instead. */}
+                <StatusBadge status={m.key === "heartRate" ? "inrange" : interp.status} variant="pill" />
+              </div>
+
+              <div className="flex items-baseline gap-1.5 mt-3">
+                <span
+                  style={{
+                    fontSize: 34,
+                    fontWeight: 700,
+                    lineHeight: 1.02,
+                    letterSpacing: "-0.035em",
+                    color: patientTheme.colors.textPrimary,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {m.display === null ? "—" : m.display}
+                </span>
+                <span className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
+                  {m.unit}
+                </span>
+              </div>
+
+              <p className="text-[12px] mt-1 font-medium" style={{ color: patientTheme.colors.textMuted }}>
+                Normal range: {range.label}
+              </p>
+
+              {/* The card opens a detail screen, so it says so — the chevron
+                  gets its own column rather than sitting on the last point. */}
+              <div className="mt-2 flex items-center gap-1">
+                <div className="flex-1 min-w-0">
+                  <Spark data={series} />
                 </div>
-                <p className="text-[11px] mt-0.5 font-medium" style={{ color: mInterp.status === "normal" ? patientTheme.colors.success : patientTheme.colors.warning }}>
-                  {mInterp.text}
-                </p>
-                <div className="mt-2 -mb-1">
-                  <Sparkline data={sparkData(m.key).filter((v) => v != null)} />
-                </div>
-              </button>
-            );
-          })}
+                <span style={{ color: patientTheme.colors.textMuted }} aria-hidden>
+                  <ChevronRightIcon size={17} />
+                </span>
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
     </motion.div>
   );

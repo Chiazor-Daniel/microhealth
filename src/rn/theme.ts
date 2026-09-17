@@ -211,10 +211,9 @@ export const theme = StyleSheet.create({
     paddingBottom: 6,
     ...shadow(elevation.e3),
   },
-  navItemActive: {
-    backgroundColor: colors.green100,
-    borderRadius: radii.pill,
-  },
+  /* A selected destination is carried by colour alone — tint the icon and the
+     label with `semantic.accentDeep`. There is deliberately no background
+     capsule; adding one unbalances the bar against the raised AI control. */
 
   /* ---- Avatars ---- */
   avatar: {

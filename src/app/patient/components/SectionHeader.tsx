@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "../icons";
 import { patientTheme } from "../theme";
 
 interface SectionHeaderProps {
@@ -27,7 +27,7 @@ export function SectionHeader({ title, actionLabel, onAction, actionTo, right }:
               style={{ color: patientTheme.colors.primaryGreen }}
             >
               {actionLabel}
-              {actionTo && <ChevronRight size={14} />}
+              {actionTo && <ChevronRightIcon size={14} />}
             </button>
           ))}
     </div>
