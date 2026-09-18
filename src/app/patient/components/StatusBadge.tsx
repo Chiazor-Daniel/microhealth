@@ -43,7 +43,10 @@ const pillClass: Record<Tone, string> = {
 };
 
 const textColor: Record<Tone, string> = {
-  green: patientTheme.colors.primaryDark,
+  /* Every status this tone carries — Normal, Confirmed, Connected, Paid — is a
+     *verdict*, so it takes the signal colour, not the brand. Teal here would
+     say "this is chrome" about the one word on the screen saying "you're fine". */
+  green: patientTheme.colors.signalDeep,
   amber: "#B45309",
   rose: "#BE123C",
   slate: patientTheme.colors.textSecondary,

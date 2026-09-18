@@ -517,7 +517,9 @@ export const metrics = {
   calories: {
     key: "calories",
     label: "Calories",
-    short: "kcal",
+    /* Not "kcal" — that is the unit, and a compact tile would then read
+       "kcal 354 kcal". */
+    short: "Energy",
     unit: "kcal",
     category: "activity",
     shape: "cumulative",

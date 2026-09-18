@@ -13,7 +13,8 @@ import { patientTheme } from "../theme";
 import { StatusBadge } from "../components/StatusBadge";
 import { useWearable } from "../hooks/useWearable";
 import { BrandMark } from "../components/BrandMark";
-import { HealthScoreRing, scoreExplanation } from "../components/HealthScoreRing";
+import { HealthScoreRing, ScoreBandChip, ScoreScale, scoreExplanation } from "../components/HealthScoreRing";
+import { MetricTile } from "../components/MetricTile";
 import { GlyphIcon, HeartIcon, CalendarIcon, SparkIcon, SpeakerIcon, TrendIcon, ChevronRightIcon } from "../icons";
 import { resolveAll, toScoreReadings, type MetricValue } from "../../../metrics/readings";
 import { computeHealthScore } from "../../../metrics/healthScore";
@@ -101,46 +102,8 @@ function HeroSpark({ data, domain }: { data: number[]; domain: [number, number] 
 }
 
 /** A compact live tile — icon, label, the number as the anchor. */
-function LiveTile({ mv, onClick }: { mv: MetricValue; onClick: () => void }) {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.985 }}
-      onClick={onClick}
-      className="mh-card text-left p-3 w-full"
-      aria-label={`${mv.metric.label}, ${mv.display} ${mv.unit}, ${mv.statusText}`}
-    >
-      <div className="flex items-center gap-2">
-        <div className="mh-icon w-8 h-8" style={{ color: patientTheme.colors.brandDeep, background: patientTheme.gradients.tile }}>
-          <GlyphIcon name={mv.metric.icon} size={16} />
-        </div>
-        <p className="text-[11.5px] font-medium leading-tight truncate" style={{ color: patientTheme.colors.textPrimary }}>
-          {mv.metric.short ?? mv.metric.label}
-        </p>
-      </div>
-      <div className="flex items-baseline gap-1 mt-2">
-        <span
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            lineHeight: 1.05,
-            letterSpacing: "-0.035em",
-            color: patientTheme.colors.textPrimary,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {mv.display}
-        </span>
-        <span className="text-[11px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
-          {mv.unit}
-        </span>
-      </div>
-      {mv.status !== "normal" && (
-        <div className="mt-1.5">
-          <StatusBadge status={mv.status} />
-        </div>
-      )}
-    </motion.button>
-  );
+function LiveTile({ mv, series, onClick }: { mv: MetricValue; series?: number[]; onClick: () => void }) {
+  return <MetricTile mv={mv} size="tile" series={series} onClick={onClick} />;
 }
 
 /**
@@ -158,41 +121,9 @@ function TodayRow({ items, onOpen }: { items: MetricValue[]; onOpen: (mv: Metric
       <h2 className="text-[15px] font-semibold mb-3" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
         Today
       </h2>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2.5 items-stretch">
         {items.map((mv) => (
-          <motion.button
-            key={mv.metric.key}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onOpen(mv)}
-            className="mh-card text-left px-3 py-3 w-full"
-            aria-label={`${mv.metric.label}, ${mv.display} ${mv.unit}`}
-          >
-            <div style={{ color: patientTheme.colors.brandDeep }}>
-              <GlyphIcon name={mv.metric.icon} size={17} />
-            </div>
-            <div className="flex items-baseline gap-0.5 mt-2">
-              <span
-                style={{
-                  fontSize: 19,
-                  fontWeight: 700,
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.03em",
-                  color: patientTheme.colors.textPrimary,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {mv.display}
-              </span>
-              {mv.unit && (
-                <span className="text-[10px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
-                  {mv.unit}
-                </span>
-              )}
-            </div>
-            <p className="text-[10.5px] mt-1 truncate" style={{ color: patientTheme.colors.textMuted }}>
-              {mv.metric.short ?? mv.metric.label}
-            </p>
-          </motion.button>
+          <MetricTile key={mv.metric.key} mv={mv} size="mini" onClick={() => onOpen(mv)} />
         ))}
       </div>
     </section>
@@ -254,6 +185,12 @@ export default function Home() {
     [sourceVitals]
   );
   const heroDomain = useMemo(() => sparkDomain(heroSeries), [heroSeries]);
+
+  /** The day's series for any metric the registry can read out of the packet. */
+  const sparkFor = (metric: MetricValue["metric"]) => {
+    if (!metric.read) return undefined;
+    return buildSeries(sourceVitals, "day", (v) => metric.read!(v)).map((p) => p.value as number);
+  };
 
   const topInsight = insights[0];
   const nextAppt = dashboard?.nextAppointment || appointments[0];
@@ -347,28 +284,36 @@ export default function Home() {
         </button>
       </div>
 
-      {/* The one number that answers "am I okay" */}
+      {/* The one number that answers "am I okay". The ring carries the value,
+          the chip carries the verdict, the scale carries the position — a
+          ring alone cannot say where a high score sits. */}
       <button
         onClick={() => navigate("/patient/vitals")}
-        className="mh-card w-full text-left flex items-center gap-4"
+        className="mh-card w-full text-left block"
         style={{ padding: 16 }}
-        aria-label={`Health score ${score.score ?? "unavailable"}. ${scoreExplanation(score)}`}
+        aria-label={`Health score ${score.score ?? "unavailable"}, ${score.band ?? "no data"}. ${scoreExplanation(score)}`}
       >
-        <HealthScoreRing result={score} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
-            Health Score
-          </p>
-          <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
-            {scoreExplanation(score)}
-          </p>
-          <p className="text-[11px] mt-1.5" style={{ color: patientTheme.colors.textMuted }}>
-            Based on {score.scoredCount} of {score.scorableCount} measures
-          </p>
+        <div className="flex items-center gap-4">
+          <HealthScoreRing result={score} size={96} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-[13.5px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+                Health Score
+              </p>
+              <ScoreBandChip band={score.band} />
+            </div>
+            <p className="text-[12.5px] mt-1.5 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
+              {scoreExplanation(score)}
+            </p>
+          </div>
+          <span className="flex-shrink-0 self-center" style={{ color: patientTheme.colors.textMuted }} aria-hidden>
+            <ChevronRightIcon size={17} />
+          </span>
         </div>
-        <span style={{ color: patientTheme.colors.textMuted }} aria-hidden>
-          <ChevronRightIcon size={17} />
-        </span>
+        <ScoreScale score={score.score} />
+        <p className="text-[10.5px] mt-2" style={{ color: patientTheme.colors.textMuted }}>
+          Based on {score.scoredCount} of {score.scorableCount} measures
+        </p>
       </button>
 
       {/* Heart rate — the headline live reading */}
@@ -427,10 +372,17 @@ export default function Home() {
       {/* The rest of what is live right now. An odd count would leave the last
           tile with a gap beside it, so it takes the full width instead. */}
       {live.length > 0 && (
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 items-stretch">
           {live.map((mv, i) => (
-            <div key={mv.metric.key} className={live.length % 2 === 1 && i === live.length - 1 ? "col-span-2" : ""}>
-              <LiveTile mv={mv} onClick={() => navigate(`/patient/vitals/${mv.metric.key}`)} />
+            <div
+              key={mv.metric.key}
+              className={live.length % 2 === 1 && i === live.length - 1 ? "col-span-2" : ""}
+            >
+              <LiveTile
+                mv={mv}
+                series={sparkFor(mv.metric)}
+                onClick={() => navigate(`/patient/vitals/${mv.metric.key}`)}
+              />
             </div>
           ))}
         </div>

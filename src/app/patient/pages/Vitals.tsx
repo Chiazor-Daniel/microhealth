@@ -9,11 +9,10 @@ import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { patientTheme } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
-import { StatusBadge } from "../components/StatusBadge";
+import { MetricTile } from "../components/MetricTile";
 import { buildSeries } from "../lib/timeSeries";
 import { CATEGORY_ORDER, CATEGORY_LABEL, metricsIn, type Metric } from "../../../metrics/registry";
 import { resolveAll, type MetricValue } from "../../../metrics/readings";
-import { AreaChart, Area, Tooltip, ResponsiveContainer, YAxis } from "recharts";
 
 const tabs = [
   { value: "today", label: "Day" },
@@ -23,59 +22,6 @@ const tabs = [
 ] as const;
 
 type TabValue = (typeof tabs)[number]["value"];
-
-/**
- * The reading's own sparkline — a single luminous line with a whisper of fill.
- *
- * Scaled to the series' own range, like the hero on Home: a vital that holds
- * steady inside a narrow band still has a shape, and a zero-anchored axis
- * flattens it into a straight line that says nothing.
- */
-function Spark({ data, height = 40 }: { data: number[]; height?: number }) {
-  if (data.length < 2) return <div style={{ height }} />;
-  const points = data.map((v, i) => ({ i, v }));
-  const lo = Math.min(...data);
-  const hi = Math.max(...data);
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={points} margin={{ top: 5, right: 2, left: 2, bottom: 5 }}>
-        <defs>
-          <linearGradient id="mhSparkGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={patientTheme.colors.brand} stopOpacity={0.28} />
-            <stop offset="60%" stopColor={patientTheme.colors.brand} stopOpacity={0.08} />
-            <stop offset="100%" stopColor={patientTheme.colors.brand} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <YAxis hide domain={lo === hi ? [lo - 1, hi + 1] : [lo, hi]} />
-        <Tooltip
-          cursor={false}
-          contentStyle={{
-            background: "rgba(255,255,255,0.97)",
-            border: "1px solid rgba(226,232,238,0.95)",
-            borderRadius: 12,
-            fontSize: 11,
-            padding: "5px 9px",
-            boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 20px -8px rgba(16,24,40,0.16)",
-          }}
-        />
-        <Area
-          type="monotone"
-          dataKey="v"
-          stroke={patientTheme.colors.brand}
-          strokeWidth={2}
-          strokeLinecap="round"
-          fill="url(#mhSparkGradient)"
-          dot={false}
-          activeDot={{ r: 4 }}
-          isAnimationActive
-          animationDuration={900}
-          animationEasing="ease-out"
-          className="mh-chart-line"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-}
 
 /**
  * The three resolutions a heart rate is actually read at.
@@ -125,117 +71,6 @@ function HeartRateWindows({ vitals, latest }: { vitals: any[]; latest: number | 
         </div>
       ))}
     </div>
-  );
-}
-
-/** A metric that has a reading, sized to how much it has to say. */
-function MetricCard({
-  mv,
-  series,
-  hero,
-  heroExtra,
-  onClick,
-}: {
-  mv: MetricValue;
-  series: number[];
-  hero?: boolean;
-  heroExtra?: React.ReactNode;
-  onClick: () => void;
-}) {
-  const { metric } = mv;
-  const tint = { fg: patientTheme.colors.brandDeep, tile: patientTheme.gradients.tile };
-
-  return (
-    <motion.button
-      whileTap={{ scale: 0.99 }}
-      onClick={onClick}
-      className={`mh-card w-full text-left block ${hero ? "col-span-2" : ""}`}
-      style={{ padding: hero ? 16 : 13 }}
-      aria-label={`${metric.label}, ${mv.display} ${mv.unit}, ${mv.statusText}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className={hero ? "mh-icon w-11 h-11" : "mh-icon w-9 h-9"}
-            style={{ color: tint.fg, background: tint.tile }}
-          >
-            <GlyphIcon name={metric.icon} size={hero ? 20 : 17} />
-          </div>
-          <div className="min-w-0">
-            <p
-              className="text-[12.5px] font-medium truncate"
-              style={{ color: patientTheme.colors.textPrimary }}
-            >
-              {metric.label}
-            </p>
-            {metric.cadence === "cumulative" && (
-              <p className="text-[10.5px]" style={{ color: patientTheme.colors.textMuted }}>
-                today
-              </p>
-            )}
-          </div>
-        </div>
-        {mv.status !== "normal" && <StatusBadge status={mv.status} variant="pill" />}
-      </div>
-
-      <div className={`flex items-baseline gap-1.5 ${hero ? "mt-3" : "mt-2"}`}>
-        <span
-          style={{
-            fontSize: hero ? 34 : 26,
-            fontWeight: 700,
-            lineHeight: 1.05,
-            letterSpacing: "-0.035em",
-            color: patientTheme.colors.textPrimary,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {mv.display}
-        </span>
-        {mv.unit && (
-          <span className="text-[12px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
-            {mv.unit}
-          </span>
-        )}
-      </div>
-
-      {/* A metric with parts reads as its parts — blood pressure's two numbers
-          and a night's four stages are the reading, not a footnote to it. */}
-      {mv.parts.length > 0 && mv.parts.some((p) => p.value != null) && (
-        <div className={`flex flex-wrap gap-x-3 gap-y-1 ${hero || mv.parts.length > 2 ? "mt-2.5" : "mt-1.5"}`}>
-          {mv.parts
-            .filter((p) => p.value != null)
-            .map((p) => (
-              <span
-                key={p.key}
-                className="text-[10.5px] font-medium"
-                style={{ color: patientTheme.colors.textMuted, fontVariantNumeric: "tabular-nums" }}
-              >
-                {p.label}{" "}
-                <span
-                  style={{
-                    color:
-                      p.status === "normal"
-                        ? patientTheme.colors.textSecondary
-                        : p.status === "high" || p.status === "low"
-                          ? patientTheme.colors.error
-                          : "#B45309",
-                  }}
-                >
-                  {p.display}
-                </span>
-              </span>
-            ))}
-        </div>
-      )}
-
-      {heroExtra}
-
-      {!heroExtra && series.length > 1 && (
-        <div className="mt-1 -mx-1">
-          <Spark data={series} height={hero ? 44 : 34} />
-        </div>
-      )}
-    </motion.button>
   );
 }
 
@@ -432,20 +267,24 @@ export default function Vitals() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 items-stretch">
               {present.map((mv, i) => (
-                <MetricCard
-                  key={mv.metric.key}
-                  mv={mv}
-                  hero={spansFull(i)}
-                  series={sparkFor(mv.metric)}
-                  heroExtra={
-                    mv.metric.key === "heartRate" ? (
-                      <HeartRateWindows vitals={vitals} latest={mv.value} />
-                    ) : undefined
-                  }
-                  onClick={() => openMetric(mv.metric)}
-                />
+                <div key={mv.metric.key} className={spansFull(i) ? "col-span-2" : ""}>
+                  <MetricTile
+                    mv={mv}
+                    size={spansFull(i) ? "hero" : "tile"}
+                    series={sparkFor(mv.metric)}
+                    /* Vitals compares cards side by side, so every one states
+                       its range state — including "Normal". Home does not. */
+                    alwaysStatus
+                    extra={
+                      mv.metric.key === "heartRate" ? (
+                        <HeartRateWindows vitals={vitals} latest={mv.value} />
+                      ) : undefined
+                    }
+                    onClick={() => openMetric(mv.metric)}
+                  />
+                </div>
               ))}
             </div>
           </section>
