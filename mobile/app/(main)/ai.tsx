@@ -233,7 +233,7 @@ export default function AI() {
 
             {msg.role === "user" ? (
               <LinearGradient
-                colors={["#22C55E", "#16A34A"]}
+                colors={["#0A7085", "#005F73"]}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={[styles.bubble, styles.bubbleUser]}
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
     flexShrink: 0,
   },
   suggestionLabel: { fontSize: 13, ...font(500), lineHeight: 20, color: semantic.textPrimary },

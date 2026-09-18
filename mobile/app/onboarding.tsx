@@ -98,7 +98,7 @@ function Welcome({ name, onNext, onSkip }: { name?: string; onNext: () => void; 
             <View key={title} style={styles.point}>
               <LinearGradient
                 {...linearGradient("tile")}
-                style={[styles.pointIcon, { borderColor: "rgba(198,233,211,0.9)" }]}
+                style={[styles.pointIcon, { borderColor: "rgba(196,224,233,0.9)" }]}
               >
                 <Icon size={18} color={semantic.accentDeep} />
               </LinearGradient>
@@ -162,7 +162,7 @@ function Wearable({
         <View style={styles.bandCard}>
           <LinearGradient
             {...linearGradient("tile")}
-            style={[styles.bandIcon, { borderColor: "rgba(198,233,211,0.9)" }]}
+            style={[styles.bandIcon, { borderColor: "rgba(196,224,233,0.9)" }]}
           >
             <WatchIcon size={22} color={semantic.accentDeep} />
           </LinearGradient>

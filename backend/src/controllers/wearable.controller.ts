@@ -16,6 +16,13 @@ export interface WearableReadingBody {
   diastolic?: number;
   bloodSugar?: number;
   weight?: number;
+  /* Wide-packet additions — the band reports these on the same tick, so they
+     land on the same row. See the `vitals` table for why they share it. */
+  respiratoryRate?: number;
+  hrv?: number;
+  stress?: number;
+  fatigue?: number;
+  gsr?: number;
 }
 
 export async function receiveReading(req: Request, res: Response, next: NextFunction) {
@@ -33,6 +40,11 @@ export async function receiveReading(req: Request, res: Response, next: NextFunc
       bloodPressureDiastolic: body.diastolic,
       bloodSugar: body.bloodSugar,
       weight: body.weight,
+      respiratoryRate: body.respiratoryRate,
+      hrv: body.hrv,
+      stress: body.stress,
+      fatigue: body.fatigue,
+      gsr: body.gsr,
       recordedAt: body.timestamp ? new Date(body.timestamp) : new Date(),
     }).returning();
 

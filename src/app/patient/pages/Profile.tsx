@@ -119,7 +119,9 @@ export default function Profile() {
                   width: 6,
                   height: 6,
                   borderRadius: 999,
-                  background: connected ? patientTheme.colors.primaryGreen : patientTheme.colors.textMuted,
+                  /* A pairing indicator is a *status*, so it takes the signal
+                     colour, not the brand. */
+                  background: connected ? patientTheme.colors.signal : patientTheme.colors.textMuted,
                   display: "inline-block",
                 }}
               />

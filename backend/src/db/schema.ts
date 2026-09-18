@@ -59,6 +59,7 @@ export const patientsRelations = relations(patients, ({ one, many }) => ({
   }),
   appointments: many(appointments),
   vitals: many(vitals),
+  metricReadings: many(metricReadings),
   labTests: many(labTests),
   prescriptions: many(prescriptions),
   payments: many(payments),
@@ -114,6 +115,22 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   }),
 }));
 
+/**
+ * The band's wide packet: several measures co-recorded on one row.
+ *
+ * These are the metrics the MicroHealth band reports *together*, every few
+ * seconds — which is why they live as columns rather than as individual
+ * records. A row here is "what the band saw at this instant", and heart rate
+ * and respiration on the same row genuinely are the same instant.
+ *
+ * Metrics that arrive on their own schedule — a night of sleep, an ECG
+ * capture, a body-composition scan, a lab panel — do *not* belong here; one
+ * row per measure is what `metricReadings` is for. Adding a sparse column here
+ * for something recorded monthly would leave the table almost entirely null.
+ *
+ * The metric registry in `src/metrics/registry.ts` is the authoritative list;
+ * a column here exists to feed a metric whose `source` is "vitals".
+ */
 export const vitals = sqliteTable("vitals", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
@@ -124,9 +141,54 @@ export const vitals = sqliteTable("vitals", {
   spo2: integer("spo2"),
   bloodSugar: real("blood_sugar"),
   weight: real("weight"),
+  /* ---- Wide-packet additions ---- */
+  respiratoryRate: real("respiratory_rate"),
+  hrv: real("hrv"),
+  stress: integer("stress"),
+  fatigue: integer("fatigue"),
+  gsr: real("gsr"),
   notes: text("notes"),
   recordedAt: ts("recorded_at"),
   recordedBy: text("recorded_by").references(() => staff.id),
+});
+
+/**
+ * A single reading of any metric, recorded on its own schedule.
+ *
+ * Deliberately generic. Sleep, ECG, body composition, glucose and the lipid
+ * panel have nothing in common structurally — a hypnogram, a 30-second
+ * waveform, four proportions, a fingerstick and five analytes from one draw —
+ * and giving each its own table would mean five migrations, five controllers
+ * and five service methods for what is, at the storage layer, the same thing:
+ * a value for a named metric at a time.
+ *
+ * What differs between them is *interpretation*, and that is not the database's
+ * job. The registry says how each metric is read, banded and scored; this
+ * table only records that a reading happened.
+ *
+ * `value` is the primary number and `value2` the secondary (blood pressure's
+ * diastolic, a composition pair), so a two-part reading stays one row. `meta`
+ * carries whatever is genuinely metric-specific and not worth a column —
+ * the ECG's rhythm classification, a composition scan's device — as JSON.
+ */
+export const metricReadings = sqliteTable("metric_readings", {
+  id: id(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  /** Matches a `key` in src/metrics/registry.ts. */
+  metricKey: text("metric_key").notNull(),
+  value: real("value"),
+  value2: real("value2"),
+  unit: text("unit"),
+  /**
+   * Where the reading came from: "band", "cuff", "scale", "lab", "manual",
+   * "agent". Kept because a patient should be able to tell a lab result from
+   * a wearable estimate, and the two are not equally authoritative.
+   */
+  source: text("source").default("manual"),
+  /** Free-form extras. JSON, and only for what has no column. */
+  meta: text("meta"),
+  notes: text("notes"),
+  recordedAt: ts("recorded_at"),
 });
 
 export const vitalsRelations = relations(vitals, ({ one }) => ({
@@ -137,6 +199,13 @@ export const vitalsRelations = relations(vitals, ({ one }) => ({
   recorder: one(staff, {
     fields: [vitals.recordedBy],
     references: [staff.id],
+  }),
+}));
+
+export const metricReadingsRelations = relations(metricReadings, ({ one }) => ({
+  patient: one(patients, {
+    fields: [metricReadings.patientId],
+    references: [patients.id],
   }),
 }));
 

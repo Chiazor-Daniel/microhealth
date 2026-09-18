@@ -59,7 +59,7 @@ export function Avatar({ seed, variant, name, size = 46, style }: AvatarProps) {
     justifyContent: "center",
     backgroundColor: colors.green50,
     borderWidth: 1,
-    borderColor: "rgba(198,233,211,0.9)",
+    borderColor: "rgba(196,224,233,0.9)",
   };
 
   if (!key) {

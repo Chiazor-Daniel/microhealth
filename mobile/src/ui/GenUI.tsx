@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     backgroundColor: colors.green50,
     borderWidth: 1,
-    borderColor: "rgba(22,163,74,0.19)",
+    borderColor: "rgba(0,95,115,0.19)",
     gap: spacing.sm,
   },
   confirmButton: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.card },

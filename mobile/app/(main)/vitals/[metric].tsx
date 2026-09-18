@@ -158,8 +158,9 @@ export default function VitalsDetail() {
   const tile = METRIC_TILE[metric] ?? METRIC_TILE.heartRate;
 
   /* A fall wears amber — the same high-amber the pills use — and anything else
-     the deep green the rest of the app states a good reading in. */
-  const deltaColor = delta != null && delta < 0 ? pillTone.amber.fg : semantic.accentDeep;
+     the signal green the rest of the app states a good reading in. Both are
+     *statuses*, so neither takes the brand teal. */
+  const deltaColor = delta != null && delta < 0 ? pillTone.amber.fg : semantic.signalDeep;
   const rangePill = inRange ? pillTone.green : pillTone.amber;
 
   /* The chart bleeds 4px past the card's padding on each side (`-mx-1`), so it

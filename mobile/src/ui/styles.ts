@@ -17,18 +17,23 @@ import { shadow } from "@rn/theme";
 /* ------------------------------------------------------------------ */
 
 /**
- * `.mh-atmosphere` — the page is a near-white field that warms into mint at
- * the edges. CSS does it with three radial gradients stacked on a linear one;
- * RN has no radial background, so `Atmosphere.tsx` paints them with an SVG
- * layer instead. These are just the base colour and the radial stops.
+ * `.mh-atmosphere` — the page is effectively white, with a barely-there teal
+ * cast so it still has a direction of light rather than being a flat fill.
+ *
+ * It used to carry visible mint bloom, which is what made the product read as
+ * green: a tinted page also fights every tinted card placed on it, so the
+ * ground is now neutral and the colour lives in the content. CSS does it with
+ * three radial gradients stacked on a linear one; RN has no radial background,
+ * so `Atmosphere.tsx` paints them with an SVG layer instead. These are just
+ * the base colour and the radial stops.
  */
 export const atmosphere = {
-  base: ["#F8FBF9", "#F5F9F6", "#F2F8F4"] as const,
+  base: ["#FCFDFE", "#FAFBFC", "#F8FAFB"] as const,
   /** [colour, cx, cy, rx% , ry% , fade-at] as CSS writes them. */
   blooms: [
-    { color: "rgba(214,244,224,0.55)", cx: "15%", cy: "-10%", rx: 1.2, ry: 0.8, to: 0.55 },
-    { color: "rgba(219,234,254,0.32)", cx: "95%", cy: "5%", rx: 1.0, ry: 0.7, to: 0.55 },
-    { color: "rgba(203,239,217,0.42)", cx: "50%", cy: "108%", rx: 0.9, ry: 0.6, to: 0.6 },
+    { color: "rgba(214,236,242,0.16)", cx: "15%", cy: "-10%", rx: 1.2, ry: 0.8, to: 0.55 },
+    { color: "rgba(226,232,240,0.14)", cx: "95%", cy: "5%", rx: 1.0, ry: 0.7, to: 0.55 },
+    { color: "rgba(219,234,240,0.12)", cx: "50%", cy: "108%", rx: 0.9, ry: 0.6, to: 0.6 },
   ],
 } as const;
 
@@ -60,28 +65,38 @@ export const cardSmall: ViewStyle = {
 };
 
 /**
- * `.mh-mint-card` / the hero's `background: gradients.mint`.
+ * `.mh-wash-card` / the hero's `background: gradients.wash`.
  *
- * On web this is a CSS gradient; here the card is a plain view and the caller
- * wraps it in `<LinearGradient {...linearGradient("mint")}>`. These are the
- * properties that go on the gradient element itself.
+ * The palest tinted ground: it still reads as a tinted panel against the
+ * neutral page without competing with the brand card. On web this is a CSS
+ * gradient; here the card is a plain view and the caller wraps it in
+ * `<LinearGradient {...linearGradient("wash")}>`. These are the properties that
+ * go on the gradient element itself.
+ *
+ * Was `mintCard`; the old name is kept as an alias below.
  */
-export const mintCard: ViewStyle = {
+export const washCard: ViewStyle = {
   borderWidth: 1,
-  borderColor: "rgba(190,231,205,0.75)",
+  borderColor: "rgba(196,224,233,0.75)",
   borderRadius: radii.feature,
   overflow: "hidden",
   ...shadow(elevation.e2),
 };
 
-/** `.mh-green-card` — compose with `<LinearGradient {...linearGradient("greenCard")}>`. */
-export const greenCard: ViewStyle = {
+/** @deprecated Use `washCard`. */
+export const mintCard: ViewStyle = washCard;
+
+/** `.mh-brand-card` — compose with `<LinearGradient {...linearGradient("brandCard")}>`. */
+export const brandCard: ViewStyle = {
   borderWidth: 1,
   borderColor: "rgba(255,255,255,0.14)",
   borderRadius: radii.feature,
   overflow: "hidden",
-  ...shadow(coloredElevation.greenCard),
+  ...shadow(coloredElevation.brandCard),
 };
+
+/** @deprecated Use `brandCard`. */
+export const greenCard: ViewStyle = brandCard;
 
 /* ------------------------------------------------------------------ */
 /* Dimensional icon containers                                         */
@@ -98,29 +113,34 @@ export const iconTile: ViewStyle = {
   flexShrink: 0,
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(198,233,211,0.9)",
+  borderColor: "rgba(196,224,233,0.9)",
   ...shadow(elevation.e1),
 };
 
 /** Border colours per category — the rest of the tile comes from its gradient. */
 export const iconTileBorder: Record<string, string> = {
-  green: "rgba(198,233,211,0.9)",
+  brand: "rgba(196,224,233,0.9)",
+  /** @deprecated Use `brand`. */
+  green: "rgba(196,224,233,0.9)",
+  leaf: "rgba(195,233,189,0.9)",
   rose: "rgba(253,205,216,0.9)",
   amber: "rgba(252,230,168,0.9)",
   blue: "rgba(196,219,252,0.9)",
   teal: "rgba(178,235,224,0.9)",
+  violet: "rgba(216,205,250,0.9)",
+  indigo: "rgba(199,210,254,0.9)",
   slate: "rgba(220,230,238,0.9)",
 };
 
 /**
- * `.mh-icon-green` — the solid green control (nav AI button, hero marks).
- * Compose with `<LinearGradient {...linearGradient("iconGreen")}>`.
+ * `.mh-icon-brand` — the solid brand control (nav AI button, hero marks).
+ * Compose with `<LinearGradient {...linearGradient("brandSolid")}>`.
  *
  * The web version also carries inset highlights down each edge; RN cannot
  * inset-shadow, so the gel comes from the gradient's own stops and the lit
  * border alone. At 40px nobody reads the difference.
  */
-export const iconGreen: ViewStyle = {
+export const iconBrand: ViewStyle = {
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
@@ -130,24 +150,30 @@ export const iconGreen: ViewStyle = {
   ...shadow(coloredElevation.navBar),
 };
 
+/** @deprecated Use `iconBrand`. */
+export const iconGreen: ViewStyle = iconBrand;
+
 /* ------------------------------------------------------------------ */
 /* Pills, tracks, buttons                                              */
 /* ------------------------------------------------------------------ */
 
-/** `.mh-pill` — compose with `<LinearGradient {...linearGradient(...)}>` when tinted. */
+/** `.mh-pill` — compose with `<LinearGradient {...linearGradient(...)}>` when tinted.
+ *  The default pill is the *success* pill, so it is leaf. */
 export const pill: ViewStyle = {
   flexDirection: "row",
   alignItems: "center",
   alignSelf: "flex-start",
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(190,231,205,0.8)",
+  borderColor: "rgba(195,233,189,0.85)",
   paddingHorizontal: 10,
   paddingVertical: 4,
 };
 
 export const pillTone = {
-  green: { borderColor: "rgba(190,231,205,0.8)", bg: ["#F2FCF5", "#E4F8EA"] as const, fg: colors.green700 },
+  leaf: { borderColor: "rgba(195,233,189,0.85)", bg: ["#F5FCF3", "#E7F7E2"] as const, fg: colors.leaf700 },
+  /** @deprecated Use `leaf`. */
+  green: { borderColor: "rgba(195,233,189,0.85)", bg: ["#F5FCF3", "#E7F7E2"] as const, fg: colors.leaf700 },
   amber: { borderColor: "rgba(250,227,160,0.85)", bg: ["#FFFCF3", "#FEF3C7"] as const, fg: "#B45309" },
   rose: { borderColor: "rgba(253,205,216,0.85)", bg: ["#FFF7F9", "#FFE4E9"] as const, fg: "#BE123C" },
   slate: { borderColor: "rgba(222,232,240,0.9)", bg: ["#FBFCFE", "#F0F4F8"] as const, fg: semantic.textSecondary },
@@ -167,22 +193,22 @@ export const track: ViewStyle = {
   padding: 4,
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(220,233,226,0.95)",
+  borderColor: "rgba(224,230,236,0.95)",
 };
 
-/** `.mh-tab-active` — compose with `<LinearGradient {...linearGradient(...)}>`. */
+/** `.mh-tab-active` — compose with `<LinearGradient {...linearGradient("brandTab")}>`. */
 export const tabActive: ViewStyle = {
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(17,122,60,0.55)",
+  borderColor: "rgba(5,65,79,0.55)",
   overflow: "hidden",
 };
 
-/** `.mh-btn-primary` — compose with `buttonPrimary`. */
+/** `.mh-btn-primary` — compose with `brandButton`. */
 export const buttonPrimary: ViewStyle = {
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(17,122,60,0.85)",
+  borderColor: "rgba(5,65,79,0.85)",
   overflow: "hidden",
   ...shadow(elevation.e2),
 };
@@ -193,7 +219,7 @@ export const buttonSecondary: ViewStyle = {
   justifyContent: "center",
   borderRadius: radii.pill,
   borderWidth: 1,
-  borderColor: "rgba(134,202,158,0.65)",
+  borderColor: "rgba(133,192,206,0.65)",
   backgroundColor: colors.surface,
   ...shadow(elevation.e1),
 };
@@ -206,7 +232,7 @@ export const buttonSecondary: ViewStyle = {
 export const navBar: ViewStyle = {
   borderWidth: 1,
   borderBottomWidth: 0,
-  borderColor: "rgba(228,238,232,0.9)",
+  borderColor: "rgba(228,233,238,0.9)",
   borderTopLeftRadius: 26,
   borderTopRightRadius: 26,
   paddingTop: 10,
@@ -214,7 +240,7 @@ export const navBar: ViewStyle = {
 };
 
 /**
- * `.mh-nav-ai-halo` — the mint glow that seats the raised AI control.
+ * `.mh-nav-ai-halo` — the pale teal glow that seats the raised AI control.
  * Rendered as an SVG radial in `BottomNavigation`; these are its bounds.
  *
  * No `top` offset: the glow is anchored to the top of the nav's container,

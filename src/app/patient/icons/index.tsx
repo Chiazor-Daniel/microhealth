@@ -119,3 +119,19 @@ export const AlertIcon = bind("alert");
 export const BatteryIcon = bind("battery");
 export const CheckCircleIcon = bind("checkCircle");
 export const InsightMarkIcon = bind("insightMark");
+
+/* ---- Metric glyphs ---- */
+export const LungsIcon = bind("lungs");
+export const EcgIcon = bind("ecg");
+export const MoonIcon = bind("moon");
+export const BatteryLowIcon = bind("batteryLow");
+export const SweatIcon = bind("sweat");
+export const RunIcon = bind("run");
+export const FlameIcon = bind("flame");
+export const FootstepsIcon = bind("footsteps");
+export const RouteIcon = bind("route");
+export const GaugeIcon = bind("gauge");
+export const SmileIcon = bind("smile");
+export const HrvIcon = bind("hrv");
+export const BodyCompositionIcon = bind("bodyComposition");
+export const GlucoseIcon = bind("glucose");

@@ -58,7 +58,7 @@ export function Avatar({ seed, variant, name, size = 46, className = "" }: Avata
     return (
       <span
         className={`mh-avatar mh-avatar-raised flex items-center justify-center flex-shrink-0 ${className}`}
-        style={{ width: size, height: size, fontSize: size * 0.33, color: "var(--mh-green-dark)" }}
+        style={{ width: size, height: size, fontSize: size * 0.33, color: "var(--mh-brand-deep)" }}
         aria-hidden="true"
       >
         {initials || "?"}

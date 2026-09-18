@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
     backgroundColor: colors.green50,
   },
   demoTitle: { fontSize: 12, ...font(600), lineHeight: 17, color: semantic.accentDeep },

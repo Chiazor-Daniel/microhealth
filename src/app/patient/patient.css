@@ -1,11 +1,26 @@
 /* ============================================================
    MicroHealth Patient Experience
-   Visual language: SOFT + TACTILE + DIMENSIONAL + MINT + PREMIUM HEALTHCARE
-   ============================================================
+   Visual language: SOFT + TACTILE + DIMENSIONAL + NEUTRAL + PREMIUM HEALTHCARE
+
+   TWO HUES, TWO JOBS
+   ------------------
+   One green used to do both jobs — it was the brand *and* it meant "healthy" —
+   so the product read as overwhelmingly green and neither meaning landed. The
+   palette is now split:
+
+     teal (--mh-brand-*)  structure. Headings, nav, primary actions, large
+                          visual elements, chart strokes. "What is this?"
+     leaf (--mh-signal-*) signal. Success, in-range, checkmarks, the health
+                          score. "How am I doing?"
+
+   The page ground is deliberately *neutral*. A tinted page fights every tinted
+   card sitting on it, which is what made the whole screen read green; colour
+   belongs in the content, not the ground.
+
    Three surface levels:
-     L1  page atmosphere   — near-white revealing pale mint light
+     L1  page atmosphere   — effectively white, with a barely-there teal cast
      L2  elevated cards    — lit white surfaces, soft ambient shadow
-     L3  interactive       — mint/white raised controls, dimensional icons
+     L3  interactive       — pale teal/white raised controls, dimensional icons
 
    Depth comes from elevation, shadow and tonal difference — never
    from harsh borders. Shadows are always extremely soft and spread.
@@ -14,33 +29,39 @@
 /* Tokens live at the root so overlays (rendered in a portal outside the
    shell) and any host surface can use them. */
 :root {
-  /* ---- Green ramp ---- */
-  --mh-green: #16A34A;
-  --mh-green-dark: #15803D;
-  --mh-green-deep: #14532D;
-  --mh-green-soft: #DCFCE7;
-  --mh-green-pale: #F0FDF4;
+  /* ---- Teal ramp: the brand ---- */
+  --mh-brand-pale: #F0F7F9;
+  --mh-brand-soft: #DBEDF2;
+  --mh-brand: #005F73;
+  --mh-brand-deep: #08546C;
 
-  /* ---- Mint atmosphere ---- */
-  --mh-mint: #EAF7EE;
-  --mh-mint-deep: #DCF0E3;
-  --mh-mint-pale: #F3FAF5;
+  /* ---- Leaf ramp: the accent ---- */
+  --mh-signal-pale: #F1FAEF;
+  --mh-signal-soft: #E0F4DC;
+  --mh-signal: #53A627;
+  --mh-signal-bright: #4CAF50;
+  --mh-signal-deep: #45841F;
+
+  /* ---- Pale teal washes: tinted panel grounds ---- */
+  --mh-wash: #F2F8FA;
+  --mh-wash-deep: #E6F1F5;
+  --mh-wash-pale: #F8FCFD;
 
   /* ---- Ink: navy, never black ---- */
   --mh-text: #0F172A;
   --mh-text-secondary: #64748B;
   --mh-text-muted: #94A3B8;
 
-  /* ---- Surfaces ---- */
-  --mh-bg: #F7FAF8;
+  /* ---- Surfaces: cool neutrals ---- */
+  --mh-bg: #F9FAFB;
   --mh-surface: #FFFFFF;
-  --mh-surface-2: #F4F7F9;
-  --mh-hairline: #E8EEF2;
-  --mh-hairline-soft: #F1F5F7;
-  --mh-border: #E8EEF2;
-  --mh-border-light: #F1F5F7;
+  --mh-surface-2: #F3F4F6;
+  --mh-hairline: #E5E7EB;
+  --mh-hairline-soft: #F1F3F5;
+  --mh-border: #E5E7EB;
+  --mh-border-light: #F1F3F5;
 
-  --mh-success: #16A34A;
+  --mh-success: #53A627;
   --mh-warning: #F59E0B;
   --mh-error: #EF4444;
   --mh-info: #3B82F6;
@@ -48,7 +69,10 @@
   --mh-amber: #D97706;
   --mh-blue: #2563EB;
   --mh-teal: #0D9488;
-  --mh-ai: #16A34A;
+  --mh-violet: #7C3AED;
+  --mh-indigo: #4F46E5;
+  --mh-slate: #475569;
+  --mh-ai: #005F73;
 
   /* ---- Radii: 16 / 20 / 24. No excessive 30–40px rounding. ---- */
   --mh-radius-small: 16px;
@@ -65,9 +89,23 @@
   --mh-shadow-soft: var(--mh-e1);
   --mh-shadow-medium: var(--mh-e2);
   --mh-shadow-strong: var(--mh-e3);
-  --mh-shadow-green: 0 2px 6px rgba(16,24,40,0.06), 0 16px 32px -12px rgba(22,101,52,0.35);
+  --mh-shadow-brand: 0 2px 6px rgba(16,24,40,0.06), 0 16px 32px -12px rgba(8,84,108,0.34);
 
   --mh-font: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ---- @deprecated Pre-teal names.
+     `--mh-green-*` aliases the brand teal, because one green used to serve
+     both roles and these names outlived that meaning. `--mh-mint-*` aliases
+     the washes. Delete once nothing references them; use --mh-brand-* and
+     --mh-wash-* in new code. ---- */
+  --mh-green: #005F73;
+  --mh-green-dark: #08546C;
+  --mh-green-deep: #05404F;
+  --mh-green-soft: #DBEDF2;
+  --mh-green-pale: #F0F7F9;
+  --mh-mint: #F2F8FA;
+  --mh-mint-deep: #E6F1F5;
+  --mh-mint-pale: #F8FCFD;
 }
 
 .patient-shell {
@@ -77,14 +115,16 @@
 }
 
 /* ---- L1: page atmosphere ----
-   Almost white at a glance; pale mint light blooms behind the content. */
+   Effectively white. The blooms survive at a fraction of their old alpha so
+   the page still has a direction of light rather than being a flat fill — but
+   at a glance it is white, which is the point. */
 .mh-atmosphere {
   position: relative;
   background:
-    radial-gradient(120% 80% at 15% -10%, rgba(214,244,224,0.55) 0%, rgba(214,244,224,0) 55%),
-    radial-gradient(100% 70% at 95% 5%, rgba(219,234,254,0.32) 0%, rgba(219,234,254,0) 55%),
-    radial-gradient(90% 60% at 50% 108%, rgba(203,239,217,0.42) 0%, rgba(203,239,217,0) 60%),
-    linear-gradient(180deg, #F8FBF9 0%, #F5F9F6 55%, #F2F8F4 100%);
+    radial-gradient(120% 80% at 15% -10%, rgba(214,236,242,0.16) 0%, rgba(214,236,242,0) 55%),
+    radial-gradient(100% 70% at 95% 5%, rgba(226,232,240,0.14) 0%, rgba(226,232,240,0) 55%),
+    radial-gradient(90% 60% at 50% 108%, rgba(219,234,240,0.12) 0%, rgba(219,234,240,0) 60%),
+    linear-gradient(180deg, #FCFDFE 0%, #FAFBFC 55%, #F8FAFB 100%);
   background-attachment: fixed;
 }
 
@@ -103,8 +143,8 @@
    ============================================================ */
 .mh-card {
   position: relative;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 62%, #FBFDFC 100%);
-  border: 1px solid rgba(226, 236, 231, 0.9);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 62%, #FCFDFE 100%);
+  border: 1px solid rgba(226, 232, 238, 0.9);
   border-radius: var(--mh-radius-card);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
@@ -131,24 +171,29 @@
 }
 
 /* ============================================================
-   Green feature card — rich emerald with believable depth.
+   Brand feature card — deep teal with believable depth.
    Tonal gradient + embedded light patterns + lit top edge +
-   soft outer shadow. Never flat `background: green`.
+   soft outer shadow. Never flat `background: teal`.
+
+   Was `.mh-green-card`; the old name is kept alongside so screens that
+   haven't been migrated still paint.
    ============================================================ */
+.mh-brand-card,
 .mh-green-card {
   position: relative;
   overflow: hidden;
   border-radius: var(--mh-radius-feature);
-  background: linear-gradient(158deg, #1CAE51 0%, #16A34A 32%, #15803D 72%, #14703A 100%);
+  background: linear-gradient(158deg, #1A8A9E 0%, #005F73 32%, #08546C 72%, #05414F 100%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -20px 40px -24px rgba(6, 60, 30, 0.55),
+    inset 0 -20px 40px -24px rgba(3, 43, 53, 0.55),
     0 2px 6px rgba(16, 24, 40, 0.06),
-    0 16px 32px -12px rgba(22, 101, 52, 0.35);
+    0 16px 32px -12px rgba(8, 84, 108, 0.34);
 }
 
 /* Soft internal lighting sweep */
+.mh-brand-card::before,
 .mh-green-card::before {
   content: "";
   position: absolute;
@@ -158,6 +203,7 @@
 }
 
 /* Embedded decorative geometry — light patterns, not decoration */
+.mh-brand-card::after,
 .mh-green-card::after {
   content: "";
   position: absolute;
@@ -171,17 +217,21 @@
   box-shadow: 0 0 0 34px rgba(255, 255, 255, 0.05);
 }
 
-/* Mint feature card — lighter, for AI/insight panels */
+/* Wash card — the palest tinted ground, for AI/insight panels.
+   Pulled most of the way to white: it still reads as a tinted panel against
+   the neutral page without competing with the brand card.
+   Was `.mh-mint-card`. */
+.mh-wash-card,
 .mh-mint-card {
   position: relative;
   overflow: hidden;
   border-radius: var(--mh-radius-feature);
-  background: linear-gradient(165deg, #F0FBF3 0%, #E6F6EC 60%, #DFF2E6 100%);
-  border: 1px solid rgba(190, 231, 205, 0.75);
+  background: linear-gradient(165deg, #F6FBFC 0%, #EFF7FA 60%, #E8F2F6 100%);
+  border: 1px solid rgba(196, 224, 233, 0.75);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     0 1px 2px rgba(16, 24, 40, 0.03),
-    0 10px 24px -10px rgba(22, 101, 52, 0.12);
+    0 10px 24px -10px rgba(8, 84, 108, 0.10);
 }
 
 /* ============================================================
@@ -196,14 +246,27 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 50%;
-  background: linear-gradient(160deg, #F4FCF6 0%, #E8F8EE 55%, #DCF2E5 100%);
-  border: 1px solid rgba(198, 233, 211, 0.9);
+  background: linear-gradient(160deg, #F4FAFC 0%, #E9F4F8 55%, #DFEFF4 100%);
+  border: 1px solid rgba(196, 224, 233, 0.9);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -2px 4px rgba(20, 90, 50, 0.05),
+    inset 0 -2px 4px rgba(8, 84, 108, 0.05),
     0 1px 2px rgba(16, 24, 40, 0.05),
-    0 4px 10px -3px rgba(22, 101, 52, 0.14);
-  color: var(--mh-green-dark);
+    0 4px 10px -3px rgba(8, 84, 108, 0.14);
+  color: var(--mh-brand-deep);
+}
+
+/* Leaf tile — for a success/signal container, the only tinted icon ground
+   that carries the accent rather than the brand. */
+.mh-icon-leaf {
+  background: linear-gradient(160deg, #F5FCF3 0%, #E7F7E2 55%, #DAF2D4 100%);
+  border-color: rgba(195, 233, 189, 0.9);
+  color: var(--mh-signal-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(56, 106, 27, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(56, 106, 27, 0.16);
 }
 
 .mh-icon-rose {
@@ -250,10 +313,32 @@
     0 4px 10px -3px rgba(15, 118, 110, 0.14);
 }
 
+.mh-icon-violet {
+  background: linear-gradient(160deg, #F8F5FF 0%, #EDE9FE 55%, #E4DDFC 100%);
+  border-color: rgba(216, 205, 250, 0.9);
+  color: var(--mh-violet);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(91, 33, 182, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(91, 33, 182, 0.14);
+}
+
+.mh-icon-indigo {
+  background: linear-gradient(160deg, #F4F6FF 0%, #E0E7FF 55%, #D5DEFD 100%);
+  border-color: rgba(199, 210, 254, 0.9);
+  color: var(--mh-indigo);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(55, 48, 163, 0.05),
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 4px 10px -3px rgba(55, 48, 163, 0.14);
+}
+
 .mh-icon-slate {
   background: linear-gradient(160deg, #FAFCFD 0%, #F0F4F8 55%, #E9EFF4 100%);
   border-color: rgba(220, 230, 238, 0.9);
-  color: var(--mh-text-secondary);
+  color: var(--mh-slate);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     inset 0 -2px 4px rgba(16, 24, 40, 0.04),
@@ -261,30 +346,35 @@
     0 4px 10px -3px rgba(16, 24, 40, 0.10);
 }
 
-/* Solid green dimensional control — nav AI button, agent mark.
-   Carries its own radius because it is used both with and without .mh-icon. */
+/* Solid brand control — nav AI button, agent mark.
+   Carries its own radius because it is used both with and without .mh-icon.
+   Was `.mh-icon-green`. */
+.mh-icon-brand,
 .mh-icon-green {
   border-radius: 50%;
-  background: linear-gradient(165deg, #29B85C 0%, #16A34A 45%, #15803D 100%);
+  background: linear-gradient(165deg, #1E8CA0 0%, #005F73 45%, #08546C 100%);
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: #FFFFFF;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -3px 6px rgba(6, 60, 30, 0.28),
+    inset 0 -3px 6px rgba(3, 43, 53, 0.28),
     0 2px 4px rgba(16, 24, 40, 0.08),
-    0 8px 18px -4px rgba(22, 101, 52, 0.42);
+    0 8px 18px -4px rgba(8, 84, 108, 0.42);
 }
 
 /* ============================================================
    Status pills — soft physical pills, embedded not pasted on.
+
+   The default pill is the *success* pill, so it is leaf. A pill that says
+   "in range" is the one place the accent colour carries meaning.
    ============================================================ */
 .mh-pill {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  background: linear-gradient(180deg, #F2FCF5 0%, #E4F8EA 100%);
-  border: 1px solid rgba(190, 231, 205, 0.8);
-  color: var(--mh-green-dark);
+  background: linear-gradient(180deg, #F5FCF3 0%, #E7F7E2 100%);
+  border: 1px solid rgba(195, 233, 189, 0.85);
+  color: var(--mh-signal-deep);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     0 1px 2px rgba(16, 24, 40, 0.04);
@@ -310,19 +400,19 @@
 
 /* ============================================================
    Buttons — tactile, pill-shaped.
-   Primary: emerald gradient + soft elevation + lit top.
+   Primary: brand teal gradient + soft elevation + lit top.
    Pressed: darker, reduced elevation, tiny scale reduction.
    ============================================================ */
 .mh-btn-primary {
-  background: linear-gradient(180deg, #1FB055 0%, #16A34A 55%, #158840 100%);
-  border: 1px solid rgba(17, 122, 60, 0.85);
+  background: linear-gradient(180deg, #0A7085 0%, #005F73 55%, #08546C 100%);
+  border: 1px solid rgba(5, 65, 79, 0.85);
   color: #FFFFFF;
   border-radius: 999px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.30),
-    inset 0 -2px 5px rgba(6, 60, 30, 0.20),
+    inset 0 -2px 5px rgba(3, 43, 53, 0.20),
     0 1px 2px rgba(16, 24, 40, 0.06),
-    0 6px 16px -4px rgba(22, 101, 52, 0.38);
+    0 6px 16px -4px rgba(8, 84, 108, 0.38);
   transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
 }
 
@@ -331,9 +421,9 @@
   filter: brightness(0.96);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -1px 3px rgba(6, 60, 30, 0.16),
+    inset 0 -1px 3px rgba(3, 43, 53, 0.16),
     0 1px 2px rgba(16, 24, 40, 0.06),
-    0 2px 6px -2px rgba(22, 101, 52, 0.30);
+    0 2px 6px -2px rgba(8, 84, 108, 0.30);
 }
 
 .mh-btn-primary:disabled {
@@ -341,11 +431,11 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
-/* Secondary: white surface, green border, green text, subtle elevation */
+/* Secondary: white surface, teal border, teal text, subtle elevation */
 .mh-btn-secondary {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FAFDFB 100%);
-  border: 1px solid rgba(134, 202, 158, 0.65);
-  color: var(--mh-green-dark);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%);
+  border: 1px solid rgba(133, 192, 206, 0.65);
+  color: var(--mh-brand-deep);
   border-radius: 999px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
@@ -361,8 +451,8 @@
 
 /* Quiet icon button — raised circular control (back, bell, kebab) */
 .mh-btn-icon {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FAFDFB 100%);
-  border: 1px solid rgba(226, 236, 231, 0.95);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%);
+  border: 1px solid rgba(226, 232, 238, 0.95);
   color: var(--mh-text-secondary);
   border-radius: 999px;
   box-shadow:
@@ -381,52 +471,52 @@
    Segmented switch — recessed track, raised white thumb
    ============================================================ */
 .mh-track {
-  background: linear-gradient(180deg, #EDF3EF 0%, #F3F8F5 100%);
-  border: 1px solid rgba(220, 233, 226, 0.95);
+  background: linear-gradient(180deg, #F0F3F6 0%, #F5F8FA 100%);
+  border: 1px solid rgba(224, 230, 236, 0.95);
   box-shadow:
     inset 0 2px 4px rgba(16, 24, 40, 0.05),
     inset 0 -1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .mh-track-thumb {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F9FCFA 100%);
-  border: 1px solid rgba(226, 236, 231, 0.9);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%);
+  border: 1px solid rgba(226, 232, 238, 0.9);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 1px 2px rgba(16, 24, 40, 0.06),
     0 3px 8px -2px rgba(16, 24, 40, 0.10);
 }
 
-/* Selected tab — solid green capsule with white text. Reads instantly, and
-   keeps the gel highlight + green glow so it still feels pressed by hand.
-   Stops mirror the `tabActive` gradient token, which the native build reads. */
+/* Selected tab — solid brand capsule with white text. Reads instantly, and
+   keeps the gel highlight + teal glow so it still feels pressed by hand.
+   Stops mirror the `brandTab` gradient token, which the native build reads. */
 .mh-tab-active {
-  background: linear-gradient(180deg, #22B457 0%, #16A34A 60%, #15873F 100%);
-  border: 1px solid rgba(17, 122, 60, 0.55);
+  background: linear-gradient(180deg, #0A7085 0%, #005F73 60%, #044A5C 100%);
+  border: 1px solid rgba(5, 65, 79, 0.55);
   color: #FFFFFF;
   font-weight: 650;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -2px 5px rgba(6, 60, 30, 0.20),
-    0 4px 12px -3px rgba(22, 101, 52, 0.40);
+    inset 0 -2px 5px rgba(3, 43, 53, 0.20),
+    0 4px 12px -3px rgba(8, 84, 108, 0.40);
 }
 
 /* ============================================================
    Recessed input field
    ============================================================ */
 .mh-field {
-  background: linear-gradient(180deg, #F2F6F8 0%, #F8FBFC 100%);
-  border: 1px solid rgba(224, 234, 240, 0.95);
+  background: linear-gradient(180deg, #F1F4F7 0%, #F7F9FB 100%);
+  border: 1px solid rgba(224, 230, 236, 0.95);
   box-shadow:
     inset 0 2px 4px rgba(16, 24, 40, 0.05),
     inset 0 -1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .mh-field:focus {
-  border-color: rgba(134, 202, 158, 0.8);
+  border-color: rgba(133, 192, 206, 0.8);
   box-shadow:
     inset 0 2px 4px rgba(16, 24, 40, 0.05),
-    0 0 0 3.5px rgba(22, 163, 74, 0.12);
+    0 0 0 3.5px rgba(0, 95, 115, 0.12);
 }
 
 /* ============================================================
@@ -434,8 +524,8 @@
    content scrolls beneath. Rounded top corners, soft shadow.
    ============================================================ */
 .mh-nav {
-  background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(250,253,251,0.97) 100%);
-  border: 1px solid rgba(228, 238, 232, 0.9);
+  background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(250,251,252,0.97) 100%);
+  border: 1px solid rgba(228, 233, 238, 0.9);
   border-bottom: none;
   border-radius: 26px 26px 0 0;
   box-shadow:
@@ -444,7 +534,7 @@
     0 -14px 34px -12px rgba(16, 24, 40, 0.16);
 }
 
-/* Pale mint glow that seats the raised AI control into the bar */
+/* Pale teal glow that seats the raised AI control into the bar */
 .mh-nav-ai-halo {
   position: absolute;
   left: 50%;
@@ -454,15 +544,15 @@
   height: 66px;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(closest-side, rgba(134, 239, 172, 0.42) 0%, rgba(134, 239, 172, 0.16) 55%, rgba(134, 239, 172, 0) 100%);
+  background: radial-gradient(closest-side, rgba(133, 192, 206, 0.42) 0%, rgba(133, 192, 206, 0.16) 55%, rgba(133, 192, 206, 0) 100%);
 }
 
 /* ============================================================
-   Charts — the green line should read slightly luminous, and sit
+   Charts — the brand line should read slightly luminous, and sit
    inside the card rather than pasted on top of it.
    ============================================================ */
 .mh-chart-line {
-  filter: drop-shadow(0 2px 5px rgba(22, 163, 74, 0.22));
+  filter: drop-shadow(0 2px 5px rgba(0, 95, 115, 0.22));
 }
 
 .mh-chart-line .recharts-curve {
@@ -478,7 +568,7 @@
    Timeline — thin elegant line, dimensional nodes
    ============================================================ */
 .mh-timeline-line {
-  background: linear-gradient(180deg, rgba(134, 202, 158, 0.55) 0%, rgba(134, 202, 158, 0.28) 100%);
+  background: linear-gradient(180deg, rgba(133, 192, 206, 0.55) 0%, rgba(133, 192, 206, 0.28) 100%);
   width: 1.5px;
 }
 
@@ -487,19 +577,19 @@
    ============================================================ */
 .mh-avatar {
   border-radius: 50%;
-  background: linear-gradient(160deg, #F1FBF4 0%, #E1F5E8 100%);
-  border: 1px solid rgba(198, 233, 211, 0.9);
+  background: linear-gradient(160deg, #F3FAFC 0%, #E4F1F5 100%);
+  border: 1px solid rgba(196, 224, 233, 0.9);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 1px 2px rgba(16, 24, 40, 0.05),
-    0 6px 14px -5px rgba(22, 101, 52, 0.18);
+    0 6px 14px -5px rgba(8, 84, 108, 0.18);
 }
 
 .mh-avatar-raised {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 1px 2px rgba(16, 24, 40, 0.05),
-    0 10px 22px -8px rgba(22, 101, 52, 0.24);
+    0 10px 22px -8px rgba(8, 84, 108, 0.24);
 }
 
 /* ============================================================
@@ -520,7 +610,7 @@
 }
 
 .mh-shimmer {
-  background: linear-gradient(90deg, #F6FAF7 25%, #EDF3EF 50%, #F6FAF7 75%);
+  background: linear-gradient(90deg, #F7F9FB 25%, #EFF3F6 50%, #F7F9FB 75%);
   background-size: 200% 100%;
   animation: mh-shimmer 1.5s infinite;
 }
@@ -531,7 +621,7 @@
 }
 
 /* ============================================================
-   Desktop: the device rests in a pale mint environment.
+   Desktop: the device rests in a near-white environment.
    No dark bezel — the atmosphere stays light.
    (Mobile collapses the frame wrappers; this must come BEFORE the
    media query so the desktop rules win at desktop widths.)
@@ -542,12 +632,15 @@
 }
 
 @media (min-width: 768px) {
+  /* Same near-white as mobile, scaled up. The tinted desktop environment was
+     the loudest source of the "too green" complaint — the device frame is
+     meant to be the subject, not the surround. */
   .patient-shell {
     background:
-      radial-gradient(1000px 600px at 20% -8%, rgba(214, 244, 224, 0.6) 0%, transparent 62%),
-      radial-gradient(800px 520px at 88% 10%, rgba(219, 234, 254, 0.35) 0%, transparent 58%),
-      radial-gradient(900px 620px at 50% 112%, rgba(203, 239, 217, 0.45) 0%, transparent 62%),
-      linear-gradient(165deg, #F9FCFA 0%, #F4F9F6 50%, #EEF6F1 100%);
+      radial-gradient(1000px 600px at 20% -8%, rgba(214, 236, 242, 0.18) 0%, transparent 62%),
+      radial-gradient(800px 520px at 88% 10%, rgba(226, 232, 240, 0.16) 0%, transparent 58%),
+      radial-gradient(900px 620px at 50% 112%, rgba(219, 234, 240, 0.14) 0%, transparent 62%),
+      linear-gradient(165deg, #FCFDFE 0%, #FAFBFC 50%, #F8FAFB 100%);
     background-attachment: fixed;
   }
 
@@ -562,10 +655,10 @@
     background: #FFFFFF;
     border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow:
-      0 0 0 1px rgba(214, 231, 221, 0.9),
+      0 0 0 1px rgba(226, 232, 238, 0.9),
       0 2px 6px rgba(16, 24, 40, 0.05),
       0 32px 64px -20px rgba(16, 24, 40, 0.22),
-      0 80px 120px -40px rgba(22, 101, 52, 0.18);
+      0 80px 120px -40px rgba(8, 84, 108, 0.16);
     height: calc(100dvh - 52px);
     height: calc(100vh - 52px);
   }

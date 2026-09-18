@@ -119,9 +119,9 @@ function BookAppointment() {
         isSelected
           ? {
               background: patientTheme.gradients.mint,
-              borderColor: "rgba(134, 202, 158, 0.8)",
+              borderColor: "rgba(133, 192, 206, 0.8)",
               boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(22,101,52,0.20)",
+                "inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -8px rgba(8,84,108,0.20)",
             }
           : undefined
       }

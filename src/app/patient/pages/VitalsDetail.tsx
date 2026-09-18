@@ -236,7 +236,7 @@ export default function VitalsDetail() {
                   allowDataOverflow
                 />
                 <Tooltip
-                  cursor={{ stroke: "rgba(134,202,158,0.55)", strokeWidth: 1.5, strokeDasharray: "4 4" }}
+                  cursor={{ stroke: "rgba(133,192,206,0.55)", strokeWidth: 1.5, strokeDasharray: "4 4" }}
                   contentStyle={{
                     background: "rgba(255,255,255,0.97)",
                     border: "1px solid rgba(226,236,231,0.95)",
@@ -298,9 +298,9 @@ export default function VitalsDetail() {
                 delta != null && delta < 0
                   ? "linear-gradient(160deg, #FFFBF0 0%, #FEF3C7 100%)"
                   : "linear-gradient(160deg, #F0FBF4 0%, #DCF2E5 100%)",
-              border: `1px solid ${delta != null && delta < 0 ? "rgba(250, 227, 160, 0.9)" : "rgba(198, 233, 211, 0.9)"}`,
+              border: `1px solid ${delta != null && delta < 0 ? "rgba(250, 227, 160, 0.9)" : "rgba(196, 224, 233, 0.9)"}`,
               boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(16,24,40,0.05), 0 6px 14px -5px rgba(22,101,52,0.18)",
+                "inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(16,24,40,0.05), 0 6px 14px -5px rgba(8,84,108,0.18)",
             }}
           >
             {delta == null || delta === 0 ? (

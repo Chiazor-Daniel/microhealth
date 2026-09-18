@@ -82,6 +82,7 @@ export interface Glyph {
 const p = (d: string, extra: Paintable = {}): PathPrim => ({ t: "p", d, ...extra });
 const c = (cx: number, cy: number, r: number, extra: Paintable = {}): CirclePrim => ({ t: "c", cx, cy, r, ...extra });
 const r = (x: number, y: number, w: number, h: number, extra: Paintable & { rx?: number } = {}): RectPrim => ({ t: "r", x, y, w, h, ...extra });
+const e = (cx: number, cy: number, rx: number, ry: number, extra: Paintable = {}): EllipsePrim => ({ t: "e", cx, cy, rx, ry, ...extra });
 const g = (transform: string, kids: Prim[]): GroupPrim => ({ t: "g", transform, kids });
 
 /** Everything is drawn inside a 24×24 box with a 2px optical margin. */
@@ -323,6 +324,158 @@ export const glyphs = {
       r(1.6, 1.6, 20.8, 20.8, { rx: 7, fill: "current", stroke: "none" }),
       p("M4.6 15.4c2-3.2 3.7-4.8 5.4-4.8 2.4 0 2.6 3.4 4.8 3.4 1.4 0 2.6-1 4.6-3", { stroke: "cut", sw: 1.8, cap: "round" }),
       c(10, 10.6, 2, { fill: "cut", stroke: "none" }),
+    ],
+  },
+
+  /* ================================================================
+     Metric glyphs.
+
+     One per measure the band, the scale or a lab draw can produce.
+     These are drawn for the *metric tile* — a 36–44px tinted disc — so they
+     favour a legible silhouette over interior detail, and they all read at
+     20px without a label.
+     ================================================================ */
+
+  /* Respiration — a pair of lobes either side of the trachea. The lobes are
+     drawn wide and shallow; a narrow tall pair reads as a cactus. */
+  lungs: {
+    reg: "outline",
+    prims: [
+      p("M12 2.8v5.4"),
+      p("M12 8.2c-1.5 0-2.7.7-3.6 2-1 1.3-1.6 3-1.8 4.8l-.2 2.4a3 3 0 0 0 3 3.3h.4a2.2 2.2 0 0 0 2.2-2.2V8.2Z"),
+      p("M12 8.2c1.5 0 2.7.7 3.6 2 1 1.3 1.6 3 1.8 4.8l.2 2.4a3 3 0 0 1-3 3.3h-.4a2.2 2.2 0 0 1-2.2-2.2V8.2Z"),
+    ],
+  },
+
+  /* ECG — one PQRST complex. The spike is the whole point of the glyph, so it
+     is drawn tall enough to survive the tile's tint at small sizes. */
+  ecg: {
+    reg: "outline",
+    sw: 1.7,
+    prims: [p("M3 13h3l1-1.4 1 1.4h1.5l.7 1.4 1.2-8.8 1.2 11.6.8-4.2h1.6l1.4-2.2 1.4 2.2h3.2")],
+  },
+
+  /* Sleep — a crescent. */
+  moon: {
+    reg: "solid",
+    prims: [p("M20.4 13.8A8.4 8.4 0 0 1 10.2 3.6a8.4 8.4 0 1 0 10.2 10.2Z")],
+  },
+
+  /* Fatigue — a battery down to its last bar. */
+  batteryLow: {
+    reg: "outline",
+    prims: [
+      r(2.4, 7.4, 16.2, 9.2, { rx: 2.6 }),
+      p("M21.4 10.6v2.8"),
+      r(4.6, 9.6, 3.4, 4.8, { rx: 1, fill: "current", stroke: "none" }),
+    ],
+  },
+
+  /* GSR — a droplet crossed by the conductance line it measures. */
+  sweat: {
+    reg: "solid",
+    prims: [
+      p("M12 3.6c2 2.3 6.2 7.4 6.2 11a6.2 6.2 0 0 1-12.4 0C5.8 11 10 5.9 12 3.6Z"),
+      p("M5.6 15.2c1.4-1.3 2.8-1.3 4.2 0s2.8 1.3 4.2 0 2.8-1.3 4.2 0", { fill: "none", stroke: "cut", so: 0.75, sw: 1.6, cap: "round" }),
+    ],
+  },
+
+  /* MET / activity intensity — a running figure. */
+  run: {
+    reg: "outline",
+    sw: 1.8,
+    prims: [
+      c(15.8, 4.8, 1.9),
+      p("M15.4 7.3 11.9 12.3"),
+      p("M14.6 8.2 11.5 8.6"),
+      p("M14.6 8.2 17.2 10.4"),
+      p("M11.9 12.3 14.4 14.8 13.4 19"),
+      p("M11.9 12.3 9.3 14.2 6.5 13.4"),
+    ],
+  },
+
+  /* Calories — a flame. */
+  flame: {
+    reg: "solid",
+    prims: [
+      p("M12 2.6c2.9 3.3 6.4 6.1 6.4 10.4a6.4 6.4 0 0 1-12.8 0c0-2.2 1.1-3.9 2.4-5.4.5 1 1.2 1.7 2 2-.9-2.4-.5-5.1 2-7Z"),
+    ],
+  },
+
+  /* Steps — two prints, offset the way a gait is. Each is one elongated
+     shape: a sole and a separate toe circle read as two unrelated blobs. */
+  footsteps: {
+    reg: "solid",
+    prims: [
+      p("M8.2 3.4c1.6 0 2.8 1.3 2.8 3.1 0 2.2-.6 4.6-1.3 6.3-.3.8-2.7.8-3 0-.7-1.7-1.3-4.1-1.3-6.3 0-1.8 1.2-3.1 2.8-3.1Z"),
+      p("M15.8 10.8c1.6 0 2.8 1.3 2.8 3.1 0 2.2-.6 4.6-1.3 6.3-.3.8-2.7.8-3 0-.7-1.7-1.3-4.1-1.3-6.3 0-1.8 1.2-3.1 2.8-3.1Z"),
+    ],
+  },
+
+  /* Distance — a route between two points. */
+  route: {
+    reg: "outline",
+    prims: [
+      c(4.6, 18.4, 1.8, { fill: "current", stroke: "none" }),
+      p("M6.4 18.4c0-3.6 4.4-3.4 7.4-4.6 2.4-1 4-2.6 4-5.4"),
+      c(17.8, 7.6, 1.8, { fill: "current", stroke: "none" }),
+    ],
+  },
+
+  /* Stress — a pressure gauge. A brain reads as mush at 20px; a needle does
+     not. */
+  gauge: {
+    reg: "outline",
+    sw: 1.9,
+    prims: [
+      p("M4.2 17.4a8.6 8.6 0 1 1 15.6 0"),
+      p("M12 17.4 16.4 10"),
+      c(12, 17.4, 1.6, { fill: "current", stroke: "none" }),
+    ],
+  },
+
+  /* Emotion — a face. */
+  smile: {
+    reg: "outline",
+    prims: [
+      c(12, 12, 9),
+      c(9, 10, 0.9, { fill: "current", stroke: "none" }),
+      c(15, 10, 0.9, { fill: "current", stroke: "none" }),
+      p("M8.4 14.2a4.6 4.6 0 0 0 7.2 0"),
+    ],
+  },
+
+  /* HRV — a beat followed by the interval it is measured across. The beat
+     needs real amplitude and the bracket a clear gap, or the two collapse
+     into one squiggle at 20px. */
+  hrv: {
+    reg: "outline",
+    sw: 1.7,
+    prims: [
+      p("M2.6 12.6h2.6l1.4-2.6 1.6 7.4 1.6-11.6 1.6 6.8h1.4"),
+      p("M14.6 12.6h6.6"),
+      p("M14.6 10.4v4.4M21.2 10.4v4.4"),
+    ],
+  },
+
+  /* Body composition — a torso silhouette. */
+  bodyComposition: {
+    reg: "outline",
+    sw: 1.8,
+    prims: [
+      c(12, 4.9, 2.5),
+      p("M12 8.4c-2.5 0-4.4 1.2-5.4 3.1l-1.6 3.6 2.1.9.9-2v6.8h8v-6.8l.9 2 2.1-.9-1.6-3.6c-1-1.9-2.9-3.1-5.4-3.1Z"),
+    ],
+  },
+
+  /* Blood glucose — the blood droplet with a reading window cut into it, so
+     it is not mistaken for plain `droplet` (blood pressure). */
+  glucose: {
+    reg: "solid",
+    prims: [
+      p("M12 3.2c2.1 2.4 6.3 7.6 6.3 11.2a6.3 6.3 0 0 1-12.6 0C5.7 10.8 9.9 5.6 12 3.2Z"),
+      c(12, 14.2, 2.7, { fill: "cut", stroke: "none" }),
+      c(12, 14.2, 1.25, { fill: "current", stroke: "none" }),
     ],
   },
 } satisfies Record<string, Glyph>;

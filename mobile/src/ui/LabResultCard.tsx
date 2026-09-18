@@ -38,7 +38,8 @@ export function LabResultCard({ testName, date, status, result, notes }: LabResu
           <Text style={styles.meta} numberOfLines={1}>
             {date}
             {date ? " • " : ""}
-            <Text style={{ color: normal ? semantic.accentDeep : colors.amber }}>
+            {/* "Normal" is a status, so it takes the signal colour. */}
+            <Text style={{ color: normal ? semantic.signalDeep : colors.amber }}>
               {normal ? "Normal" : status === "pending" ? "Pending" : status}
             </Text>
           </Text>

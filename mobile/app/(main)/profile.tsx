@@ -128,7 +128,9 @@ export default function Profile() {
               <View
                 style={[
                   styles.connectedDot,
-                  { backgroundColor: connected ? colors.green600 : semantic.textMuted },
+                  /* A pairing indicator is a *status*, so it takes the signal
+                     colour, not the brand. */
+                  { backgroundColor: connected ? colors.leaf600 : semantic.textMuted },
                 ]}
               />
             </View>
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(198,233,211,0.9)",
+    borderColor: "rgba(196,224,233,0.9)",
   },
   avatarText: { fontSize: 26, ...font(600), lineHeight: 39, color: semantic.accentDeep },
   name: {

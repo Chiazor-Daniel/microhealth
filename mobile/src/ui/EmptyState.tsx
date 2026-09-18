@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
     backgroundColor: colors.surface,
   },
   actionLabel: { fontSize: 13.5, ...font(600), lineHeight: 20, color: semantic.accentDeep },

@@ -41,8 +41,8 @@ export function InsightCard({ priority, title, message, time, actions, onClick }
               color: "#FFFFFF",
               background: flagged
                 ? `linear-gradient(165deg, #F87171 0%, ${patientTheme.colors.error} 100%)`
-                : "linear-gradient(165deg, #29B85C 0%, #16A34A 45%, #15803D 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 10px -3px rgba(22,101,52,0.35)",
+                : "linear-gradient(165deg, #1E8CA0 0%, #005F73 45%, #08546C 100%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 10px -3px rgba(8,84,108,0.35)",
             }}
           >
             <BrandMark size={15} />

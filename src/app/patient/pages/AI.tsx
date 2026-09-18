@@ -174,14 +174,14 @@ export default function AI() {
               style={{
                 maxWidth: "85%",
                 background: msg.role === "user"
-                  ? "linear-gradient(180deg, #22C55E 0%, #16A34A 100%)"
+                  ? "linear-gradient(180deg, #0A7085 0%, #005F73 100%)"
                   : undefined,
                 color: msg.role === "user" ? "#fff" : patientTheme.colors.textPrimary,
                 borderRadius: 16,
                 borderBottomRightRadius: msg.role === "user" ? 5 : 16,
                 borderBottomLeftRadius: msg.role === "user" ? 16 : 5,
                 boxShadow: msg.role === "user"
-                  ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(22,163,74,0.3)"
+                  ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(0,95,115,0.3)"
                   : undefined,
                 padding: "12px 14px",
               }}

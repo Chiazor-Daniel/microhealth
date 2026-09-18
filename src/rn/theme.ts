@@ -12,7 +12,7 @@
  *
  * Gradients need <LinearGradient> from expo-linear-gradient, since RN has no
  * native gradient primitive:
- *   <LinearGradient {...linearGradient("greenCard")} style={theme.heroCard} />
+ *   <LinearGradient {...linearGradient("brandCard")} style={theme.heroCard} />
  */
 
 import { StyleSheet, Platform, type ViewStyle, type TextStyle } from "react-native";
@@ -107,7 +107,7 @@ export const theme = StyleSheet.create({
     ...shadow(elevation.e1),
   },
 
-  /** Green hero — compose with <LinearGradient {...linearGradient("greenCard")}>. */
+  /** Brand hero — compose with <LinearGradient {...linearGradient("brandCard")}>. */
   heroCard: {
     borderRadius: radii.feature,
     overflow: "hidden",
@@ -120,14 +120,23 @@ export const theme = StyleSheet.create({
     justifyContent: "center",
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "#C6E9D3",
+    borderColor: "#C4E0E9",
     backgroundColor: gradients.tile.colors[1],
     ...shadow(elevation.e1),
   },
   iconLarge: { width: 44, height: 44 },
   iconMedium: { width: 40, height: 40 },
   iconSmall: { width: 36, height: 36 },
-  /** Solid green control (nav AI button). Compose with iconGreen gradient. */
+  /** Solid brand control (nav AI button). Compose with brandSolid gradient. */
+  iconSolidBrand: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+    ...shadow(elevation.e3),
+  },
+  /** @deprecated Use `iconSolidBrand`. */
   iconSolidGreen: {
     alignItems: "center",
     justifyContent: "center",
@@ -137,14 +146,16 @@ export const theme = StyleSheet.create({
     ...shadow(elevation.e3),
   },
 
-  /* ---- Pills ---- */
+  /* ---- Pills ----
+     The default pill is the *success* pill, so it is leaf: a pill that says
+     "in range" is the one place the accent colour carries meaning. */
   pill: {
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "#BEE7CD",
+    borderColor: "#C3E9BD",
     backgroundColor: colors.successSoft,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -161,7 +172,7 @@ export const theme = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
-  /** Primary: compose with <LinearGradient {...linearGradient("buttonPrimary")}>. */
+  /** Primary: compose with <LinearGradient {...linearGradient("brandButton")}>. */
   buttonPrimaryWrap: {
     borderRadius: radii.pill,
     overflow: "hidden",
@@ -175,7 +186,7 @@ export const theme = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
     ...shadow(elevation.e1),
   },
   buttonIcon: {
@@ -202,9 +213,9 @@ export const theme = StyleSheet.create({
     gap: 4,
     padding: 4,
     borderRadius: radii.pill,
-    backgroundColor: "#EDF3EF",
+    backgroundColor: "#F0F3F6",
     borderWidth: 1,
-    borderColor: "#DCE9E2",
+    borderColor: "#E0E6EC",
   },
   trackThumb: {
     borderRadius: radii.pill,
@@ -230,9 +241,9 @@ export const theme = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.pill,
-    backgroundColor: colors.green50,
+    backgroundColor: colors.teal50,
     borderWidth: 1,
-    borderColor: "#C6E9D3",
+    borderColor: "#C4E0E9",
     ...shadow(elevation.e1),
   },
 
@@ -304,7 +315,7 @@ export const text = StyleSheet.create({
   metric: { ...textStyle(typography.scale.metric), color: semantic.textPrimary } as TextStyle,
   metricLarge: { ...textStyle(typography.scale.metricLarge), color: semantic.textPrimary } as TextStyle,
   heroNumber: { ...textStyle(typography.scale.heroNumber), color: semantic.textPrimary } as TextStyle,
-  onGreen: { color: colors.onGreen },
+  onBrand: { color: colors.onBrand },
 });
 
 /* Re-exports so screens can import everything from one place. */

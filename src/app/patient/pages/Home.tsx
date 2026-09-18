@@ -252,7 +252,9 @@ export default function Home() {
         at: ms,
         label,
         value: v.heartRate != null ? `${v.heartRate} BPM` : "—",
-        tone: v.heartRate > 100 || v.heartRate < 55 ? "#EF4444" : "#16A34A",
+        /* A reading's tone is a *status*, so it takes the signal colour — the
+           row is saying "this is fine", not "this is the product". */
+        tone: v.heartRate > 100 || v.heartRate < 55 ? patientTheme.colors.error : patientTheme.colors.signal,
         kind: "reading",
       });
       if (entries.filter((e) => e.kind === "reading").length >= 3) break;
@@ -270,7 +272,7 @@ export default function Home() {
         at: day.getTime(),
         label: "Appointment",
         value: `${a.department || "General Practice"}${a.scheduledTime ? ` • ${a.scheduledTime.slice(0, 5)}` : ""}`,
-        tone: "#16A34A",
+        tone: patientTheme.colors.signal,
         kind: "appointment",
       });
     }
@@ -311,7 +313,10 @@ export default function Home() {
                 width: 6,
                 height: 6,
                 borderRadius: 999,
-                background: wearableConnected ? patientTheme.colors.primaryGreen : patientTheme.colors.textMuted,
+                /* A pairing indicator is a *status*, so it takes the signal
+                   colour, not the brand — the band being connected says "how
+                   am I doing", not "what is this". */
+                background: wearableConnected ? patientTheme.colors.signal : patientTheme.colors.textMuted,
                 display: "inline-block",
               }}
             />
@@ -445,7 +450,7 @@ export default function Home() {
               borderRadius: 999,
               color: patientTheme.colors.primaryDark,
               background: "linear-gradient(180deg, #EAF8EF 0%, #DDF2E6 100%)",
-              border: "1px solid rgba(190, 231, 205, 0.8)",
+              border: "1px solid rgba(196, 224, 233, 0.8)",
             }}
           >
             <SpeakerIcon size={16} />

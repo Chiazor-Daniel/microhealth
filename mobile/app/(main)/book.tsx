@@ -311,7 +311,7 @@ function OptionButton({ label, isSelected, onSelect }: { label: string; isSelect
   if (isSelected) {
     return (
       <Pressable onPress={onSelect}>
-        <LinearGradient {...linearGradient("mint")} style={[card, styles.option, { borderColor: "rgba(134,202,158,0.8)" }]}>
+        <LinearGradient {...linearGradient("mint")} style={[card, styles.option, { borderColor: "rgba(133,192,206,0.8)" }]}>
           {inner}
         </LinearGradient>
       </Pressable>
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
 
   chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   chip: { paddingVertical: 10, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
-  chipIdle: { backgroundColor: colors.surface, borderWidth: 1, borderColor: "rgba(134,202,158,0.65)" },
+  chipIdle: { backgroundColor: colors.surface, borderWidth: 1, borderColor: "rgba(133,192,206,0.65)" },
   chipLabel: { fontSize: 13, ...font(600), lineHeight: 19, color: semantic.accentDeep },
 
   confirmService: { fontSize: 14, ...font(600), lineHeight: 21, letterSpacing: -0.01 * 14, color: colors.onGreen },
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
   },
   secondaryLabel: { fontSize: 14, ...font(600), lineHeight: 20, color: semantic.accentDeep },
   navRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xl },

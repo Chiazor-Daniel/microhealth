@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(198,233,211,0.9)",
+    borderColor: "rgba(196,224,233,0.9)",
   },
   avatarText: { fontSize: 15, ...font(600), lineHeight: 22.5, color: semantic.accentDeep },
 

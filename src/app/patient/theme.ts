@@ -3,6 +3,15 @@
 // Values come from src/tokens (shared with the React Native build) and are
 // rendered into web shapes here: CSS length strings and box-shadow /
 // linear-gradient text. Editing a token updates web and native together.
+//
+// Two hues, two jobs — see src/tokens/colors.ts for the full rationale.
+//   brand  (teal) — structure. Headings, nav, primary actions, charts.
+//   signal (leaf) — success, health score, in-range, checkmarks.
+//
+// Components should reach for `brand*` / `signal*` rather than a ramp step.
+// The numbered ramps are for the cases where a specific lightness is the
+// point (a hairline tint, a pressed state); the `green*` block at the bottom
+// is deprecated and only exists for screens that haven't been migrated yet.
 
 import {
   colors as t,
@@ -20,22 +29,46 @@ import {
 
 export const patientTheme = {
   colors: {
-    /* ---- Green ramp ---- */
-    green50: t.green50,
-    green100: t.green100,
-    green200: t.green200,
-    green300: t.green300,
-    green400: t.green400,
-    green500: t.green500,
-    green600: t.green600,
-    green700: t.green700,
-    green800: t.green800,
-    green900: t.green900,
+    /* ---- Teal ramp: the brand ---- */
+    teal50: t.teal50,
+    teal100: t.teal100,
+    teal200: t.teal200,
+    teal300: t.teal300,
+    teal400: t.teal400,
+    teal500: t.teal500,
+    teal600: t.teal600,
+    teal700: t.teal700,
+    teal800: t.teal800,
+    teal900: t.teal900,
 
-    /* ---- Mint atmosphere ---- */
-    mint: t.mint,
-    mintDeep: t.mintDeep,
-    mintPale: t.mintPale,
+    /* ---- Leaf ramp: the accent ---- */
+    leaf50: t.leaf50,
+    leaf100: t.leaf100,
+    leaf200: t.leaf200,
+    leaf300: t.leaf300,
+    leaf400: t.leaf400,
+    leaf500: t.leaf500,
+    leaf600: t.leaf600,
+    leaf700: t.leaf700,
+    leaf800: t.leaf800,
+    leaf900: t.leaf900,
+
+    /* ---- Semantic roles — prefer these over a ramp step ---- */
+    brand: semantic.brand,
+    brandDeep: semantic.brandDeep,
+    brandSoft: semantic.brandSoft,
+    brandPale: semantic.brandPale,
+
+    signal: semantic.signal,
+    signalBright: semantic.signalBright,
+    signalDeep: semantic.signalDeep,
+    signalSoft: semantic.signalSoft,
+    signalPale: semantic.signalPale,
+
+    /* ---- Pale teal washes: tinted panel grounds ---- */
+    wash: t.wash,
+    washDeep: t.washDeep,
+    washPale: t.washPale,
 
     /* ---- Ink: navy / blue-gray. Never pure black. ---- */
     ink: t.ink,
@@ -58,15 +91,17 @@ export const patientTheme = {
     textSecondary: semantic.textSecondary,
     textMuted: semantic.textMuted,
 
-    primaryGreen: t.green600,
-    primaryDark: t.green700,
-    primaryDeep: t.green900,
-    primarySoft: t.green100,
-    primaryPale: t.green50,
-    aiAccent: t.green600,
+    primaryGreen: semantic.brand,
+    primaryDark: semantic.brandDeep,
+    primaryDeep: t.teal900,
+    primarySoft: semantic.brandSoft,
+    primaryPale: semantic.brandPale,
+    aiAccent: semantic.brand,
 
-    /* ---- Status ---- */
+    /* ---- Status. Success is leaf by definition; the rest are independent
+       hues so a warning can never be mistaken for "on brand". ---- */
     success: t.success,
+    successDeep: t.successDeep,
     successSoft: t.successSoft,
     warning: t.warning,
     warningSoft: t.warningSoft,
@@ -84,8 +119,43 @@ export const patientTheme = {
     blueSoft: t.blueSoft,
     teal: t.teal,
     tealSoft: t.tealSoft,
-    onGreen: t.onGreen,
-    onGreenMuted: t.onGreenMuted,
+    violet: t.violet,
+    violetSoft: t.violetSoft,
+    indigo: t.indigo,
+    indigoSoft: t.indigoSoft,
+    slate: t.slate,
+    slateSoft: t.slateSoft,
+
+    onBrand: t.onBrand,
+    onBrandMuted: t.onBrandMuted,
+
+    /* ================================================================
+       @deprecated The pre-teal `green*` ramp and its aliases.
+       ================================================================
+       One green used to serve both brand and success, which is what made the
+       product read as all-green. It is now split into `brand` (teal) and
+       `signal` (leaf). These keys alias the brand teal so screens that have
+       not been migrated keep rendering in the right hue rather than silently
+       keeping the old one. Delete once nothing references them. */
+    green50: t.teal50,
+    green100: t.teal100,
+    green200: t.teal200,
+    green300: t.teal300,
+    green400: t.teal400,
+    green500: t.teal500,
+    green600: t.teal600,
+    green700: t.teal700,
+    green800: t.teal800,
+    green900: t.teal900,
+
+    /** @deprecated Renamed to `wash*` — same values. */
+    mint: t.wash,
+    mintDeep: t.washDeep,
+    mintPale: t.washPale,
+
+    /** @deprecated Renamed to `onBrand*` — same values. */
+    onGreen: t.onBrand,
+    onGreenMuted: t.onBrandMuted,
   },
 
   /* Type scale as CSS-ready objects (px strings + numeric tracking). */
@@ -129,28 +199,45 @@ export const patientTheme = {
     strong: elevationToCSS(elevation.e3),
 
     emboss: "inset 0 1px 0 rgba(255,255,255,0.9)",
-    gel: "inset 0 1px 0 rgba(255,255,255,0.30), 0 4px 12px -2px rgba(22,163,74,0.38)",
+    gel: "inset 0 1px 0 rgba(255,255,255,0.30), 0 4px 12px -2px rgba(0,95,115,0.38)",
     inset: "inset 0 1px 0 rgba(255,255,255,0.6)",
-    greenCard: elevationToCSS(coloredElevation.greenCard),
+    brandCard: elevationToCSS(coloredElevation.brandCard),
+    /** @deprecated Use `brandCard`. */
+    greenCard: elevationToCSS(coloredElevation.brandCard),
   },
 
   /* Gradients rendered from the shared stop data. */
   gradients: {
     atmosphere: gradientToCSS(gradientTokens.atmosphere),
     card: gradientToCSS(gradientTokens.card),
-    greenCard: gradientToCSS(gradientTokens.greenCard),
-    greenCardSoft: gradientToCSS(gradientTokens.greenCard),
-    buttonPrimary: gradientToCSS(gradientTokens.buttonPrimary),
-    mint: gradientToCSS(gradientTokens.mint),
+    brandCard: gradientToCSS(gradientTokens.brandCard),
+    brandButton: gradientToCSS(gradientTokens.brandButton),
+    brandSolid: gradientToCSS(gradientTokens.brandSolid),
+    brandTab: gradientToCSS(gradientTokens.brandTab),
+    wash: gradientToCSS(gradientTokens.wash),
+    scoreRing: gradientToCSS(gradientTokens.scoreRing),
     tile: gradientToCSS(gradientTokens.tile),
     tileRose: gradientToCSS(gradientTokens.tileRose),
     tileAmber: gradientToCSS(gradientTokens.tileAmber),
     tileBlue: gradientToCSS(gradientTokens.tileBlue),
     tileTeal: gradientToCSS(gradientTokens.tileTeal),
     tileSlate: gradientToCSS(gradientTokens.tileSlate),
-    iconGreen: gradientToCSS(gradientTokens.iconGreen),
+    tileLeaf: gradientToCSS(gradientTokens.tileLeaf),
+    tileViolet: gradientToCSS(gradientTokens.tileViolet),
+    tileIndigo: gradientToCSS(gradientTokens.tileIndigo),
     surfaceRaise: gradientToCSS(gradientTokens.surfaceRaise),
     nav: gradientToCSS(gradientTokens.navBar),
+
+    /** @deprecated Use `brandCard`. */
+    greenCard: gradientToCSS(gradientTokens.brandCard),
+    /** @deprecated Use `brandCard`. */
+    greenCardSoft: gradientToCSS(gradientTokens.brandCard),
+    /** @deprecated Use `brandButton`. */
+    buttonPrimary: gradientToCSS(gradientTokens.brandButton),
+    /** @deprecated Use `wash`. */
+    mint: gradientToCSS(gradientTokens.wash),
+    /** @deprecated Use `brandSolid`. */
+    iconGreen: gradientToCSS(gradientTokens.brandSolid),
   },
 
   motion: {

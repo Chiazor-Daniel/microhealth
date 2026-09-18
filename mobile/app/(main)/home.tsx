@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.green50,
     borderWidth: 1,
-    borderColor: "rgba(198,233,211,0.9)",
+    borderColor: "rgba(196,224,233,0.9)",
   },
   avatarText: { fontSize: 15, ...font(600), color: semantic.accentDeep },
 
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EAF8EF",
     borderWidth: 1,
-    borderColor: "rgba(190,231,205,0.8)",
+    borderColor: "rgba(196,224,233,0.8)",
   },
   agentBody: { ...text.secondary, color: semantic.textPrimary, lineHeight: 21, marginTop: spacing.sm },
   agentActions: { flexDirection: "row", gap: 10, marginTop: spacing.md },
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "rgba(134,202,158,0.65)",
+    borderColor: "rgba(133,192,206,0.65)",
   },
   agentSecondaryLabel: { ...text.cardLabel, ...font(600), color: semantic.accentDeep },
 

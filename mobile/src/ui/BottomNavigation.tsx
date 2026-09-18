@@ -163,9 +163,9 @@ export function BottomNavigation() {
           <Svg width={navHalo.width} height={navHalo.height}>
             <Defs>
               <RadialGradient id="mhNavHalo" cx="0.5" cy="0.5" r="0.5">
-                <Stop offset={0} stopColor="#86EFAC" stopOpacity={0.42} />
-                <Stop offset={0.55} stopColor="#86EFAC" stopOpacity={0.16} />
-                <Stop offset={1} stopColor="#86EFAC" stopOpacity={0} />
+                <Stop offset={0} stopColor="#85C0CE" stopOpacity={0.42} />
+                <Stop offset={0.55} stopColor="#85C0CE" stopOpacity={0.16} />
+                <Stop offset={1} stopColor="#85C0CE" stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Rect x={0} y={0} width={navHalo.width} height={navHalo.height} fill="url(#mhNavHalo)" />

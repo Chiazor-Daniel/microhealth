@@ -48,14 +48,14 @@ export function AgentOrb({ size = 92, active = false }: { size?: number; active?
       <Svg width={size} height={size} viewBox="0 0 96 96" fill="none">
         <Defs>
           <RadialGradient id="mhOrbAura" cx="0.5" cy="0.5" r="0.5">
-            <Stop offset={0.42} stopColor="#86EFAC" stopOpacity={0.55} />
-            <Stop offset={0.72} stopColor="#86EFAC" stopOpacity={0.22} />
-            <Stop offset={1} stopColor="#86EFAC" stopOpacity={0} />
+            <Stop offset={0.42} stopColor="#85C0CE" stopOpacity={0.55} />
+            <Stop offset={0.72} stopColor="#85C0CE" stopOpacity={0.22} />
+            <Stop offset={1} stopColor="#85C0CE" stopOpacity={0} />
           </RadialGradient>
           <LinearGradient id="mhOrbBody" x1="0.3" y1="0.1" x2="0.72" y2="0.96">
-            <Stop offset={0} stopColor="#4ADE80" />
-            <Stop offset={0.45} stopColor="#22B457" />
-            <Stop offset={1} stopColor="#15803D" />
+            <Stop offset={0} stopColor="#4C9FB3" />
+            <Stop offset={0.45} stopColor="#005F73" />
+            <Stop offset={1} stopColor="#08546C" />
           </LinearGradient>
         </Defs>
 
@@ -67,11 +67,11 @@ export function AgentOrb({ size = 92, active = false }: { size?: number; active?
         <Ellipse cx={39} cy={31} rx={15} ry={9} fill="#FFFFFF" fillOpacity={0.2} />
 
         {/* Face */}
-        <Circle cx={39.5} cy={45} r={3.1} fill="#0B3D22" fillOpacity={0.55} />
-        <Circle cx={56.5} cy={45} r={3.1} fill="#0B3D22" fillOpacity={0.55} />
+        <Circle cx={39.5} cy={45} r={3.1} fill="#032B35" fillOpacity={0.55} />
+        <Circle cx={56.5} cy={45} r={3.1} fill="#032B35" fillOpacity={0.55} />
         <Path
           d="M39.5 56.5c2.4 3.4 5.4 5 8.5 5s6.1-1.6 8.5-5"
-          stroke="#0B3D22"
+          stroke="#032B35"
           strokeOpacity={0.55}
           strokeWidth={3.1}
           strokeLinecap="round"
