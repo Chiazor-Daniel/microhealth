@@ -11,7 +11,7 @@ import { patientTheme, metricTint } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
 import { StatusBadge } from "../components/StatusBadge";
 import { buildSeries } from "../lib/timeSeries";
-import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, Tooltip, ResponsiveContainer, YAxis } from "recharts";
 
 const tabs = [
   { value: "today", label: "Day" },
@@ -68,13 +68,19 @@ function interpretValue(metric: string, value: number) {
 /**
  * The reading's own sparkline — a single luminous line with a whisper of fill.
  * Every card carries one, which is what makes the screen scannable at a glance.
+ *
+ * Scaled to the series' own range, like the hero on Home: a vital that holds
+ * steady inside a narrow band still has a shape, and a zero-anchored axis
+ * flattens it into a straight line that says nothing.
  */
 function Spark({ data, height = 46 }: { data: number[]; height?: number }) {
   if (data.length < 2) return <div style={{ height }} />;
   const points = data.map((v, i) => ({ i, v }));
+  const lo = Math.min(...data);
+  const hi = Math.max(...data);
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={points} margin={{ top: 6, right: 2, left: 2, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 6, right: 2, left: 2, bottom: 6 }}>
         <defs>
           <linearGradient id="mhSparkGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.28} />
@@ -82,6 +88,7 @@ function Spark({ data, height = 46 }: { data: number[]; height?: number }) {
             <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
           </linearGradient>
         </defs>
+        <YAxis hide domain={lo === hi ? [lo - 1, hi + 1] : [lo, hi]} />
         <Tooltip
           cursor={false}
           contentStyle={{
@@ -100,9 +107,11 @@ function Spark({ data, height = 46 }: { data: number[]; height?: number }) {
           strokeWidth={2}
           strokeLinecap="round"
           fill="url(#mhSparkGradient)"
-          dot={{ r: 1.8, fill: patientTheme.colors.primaryGreen, stroke: "#fff", strokeWidth: 1 }}
+          dot={false}
           activeDot={{ r: 4 }}
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={900}
+          animationEasing="ease-out"
           className="mh-chart-line"
         />
       </AreaChart>

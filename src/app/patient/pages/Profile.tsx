@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { useAuth } from "../../hooks/useAuth";
 import { useWearable } from "../hooks/useWearable";
 import { confirmAction } from "../../components/shared/SweetAlert";
+import { Avatar } from "../components/Avatar";
 import { patientTheme } from "../theme";
 import {
   PersonIcon,
@@ -72,7 +73,6 @@ export default function Profile() {
   const { user, logout } = useAuth();
   const { connected, batteryLevel, lastSynced } = useWearable(user?.profile?.id, true);
 
-  const initials = `${user?.firstName?.[0] ?? "?"}${user?.lastName?.[0] ?? "?"}`.toUpperCase();
   const fullName = user ? `${user.firstName} ${user.lastName}` : "";
 
   return (
@@ -96,12 +96,7 @@ export default function Profile() {
 
       {/* Identity */}
       <div className="text-center">
-        <div
-          className="mh-avatar mh-avatar-raised flex items-center justify-center mx-auto text-[26px] font-semibold"
-          style={{ width: 84, height: 84, color: patientTheme.colors.primaryDark }}
-        >
-          {initials}
-        </div>
+        <Avatar seed={user?.profile?.id ?? user?.email} name={fullName} size={84} className="mx-auto" />
         <p className="text-[19px] font-semibold mt-3.5" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.02em" }}>
           {fullName || "Loading…"}
         </p>

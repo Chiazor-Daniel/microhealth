@@ -1,3 +1,4 @@
+import { Avatar } from "./Avatar";
 import { patientTheme } from "../theme";
 import { CalendarIcon, ChevronRightIcon } from "../icons";
 
@@ -30,14 +31,6 @@ export function AppointmentCard({
   actionLabel,
   onAction,
 }: AppointmentCardProps) {
-  const initials = (doctorName || department || "Dr")
-    .replace(/^Dr\.?\s+/i, "")
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const cancelled = status === "cancelled";
   const settled = status === "completed";
 
@@ -48,12 +41,7 @@ export function AppointmentCard({
         className="flex items-start gap-3"
         style={{ cursor: onClick ? "pointer" : undefined }}
       >
-        <span
-          className="mh-avatar flex items-center justify-center flex-shrink-0 text-[15px] font-semibold"
-          style={{ width: 52, height: 52, color: patientTheme.colors.primaryDark }}
-        >
-          {initials}
-        </span>
+        <Avatar seed={doctorName || department} name={doctorName || department} size={52} />
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-semibold truncate" style={{ color: patientTheme.colors.textPrimary, letterSpacing: "-0.01em" }}>
             {doctorName ? `Dr. ${doctorName}` : department}

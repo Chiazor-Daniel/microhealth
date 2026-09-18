@@ -26,6 +26,7 @@ export {
   surfaceHighlight,
   elevationToCSS,
   gradientToCSS,
+  gradientVector,
   type ElevationLevel,
   type ShadowLayer,
   type GradientToken,

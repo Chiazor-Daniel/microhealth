@@ -25,6 +25,7 @@ import {
   elevation,
   gradients,
   metricTint,
+  gradientVector,
   type ElevationLevel,
   type GradientName,
 } from "../tokens";
@@ -35,17 +36,24 @@ import {
 
 /**
  * One elevation level as an RN shadow.
- * iOS takes shadow* props; Android takes a single elevation value, so the
- * two platforms get their own approximation of the same lift.
+ *
+ * A platform can only paint one shadow per view, so a level's layered shadows
+ * have to collapse into a single approximation. We take the *last* layer: a
+ * level is authored innermost-first, so the last one is the wide, soft shadow
+ * that carries the visible lift. The tight contact shadow above it is a
+ * refinement nobody misses on its own.
+ *
+ * iOS takes shadow* props; Android takes a single elevation value, so the two
+ * platforms get their own approximation of the same lift.
  */
 export function shadow(level: ElevationLevel): ViewStyle {
-  const top = level.layers[0];
+  const dominant = level.layers[level.layers.length - 1];
   return Platform.select<ViewStyle>({
     ios: {
-      shadowColor: "#0F172A",
-      shadowOffset: { width: top.dx, height: top.dy },
-      shadowOpacity: 0.12,
-      shadowRadius: top.blur / 2,
+      shadowColor: dominant.color,
+      shadowOffset: { width: dominant.dx, height: dominant.dy },
+      shadowOpacity: 1,
+      shadowRadius: dominant.blur / 2,
     },
     android: { elevation: level.androidElevation },
     default: {},
@@ -55,11 +63,13 @@ export function shadow(level: ElevationLevel): ViewStyle {
 /** A gradient token as props for <LinearGradient>. */
 export function linearGradient(name: GradientName) {
   const g = gradients[name];
+  if (!g) throw new Error(`Unknown gradient token: "${name}"`);
+  const { start, end } = gradientVector(g);
   return {
     colors: [...g.colors] as [string, string, ...string[]],
     ...(g.locations ? { locations: [...g.locations] as [number, number, ...number[]] } : {}),
-    start: g.start,
-    end: g.end,
+    start,
+    end,
   };
 }
 
@@ -250,6 +260,25 @@ export const theme = StyleSheet.create({
 /* Text styles                                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Pick the Inter face for a weight.
+ *
+ * React Native has no font-weight axis for a custom font — the face is chosen
+ * by family name — so every piece of text has to name its weight's family
+ * explicitly. Spread this into a style instead of writing `fontWeight`:
+ *
+ *   { fontSize: 14, ...font(600) }
+ *
+ * `fontWeight` comes along for React Native Web and for any system fallback,
+ * which do honour it.
+ */
+export function font(weight: 400 | 500 | 600 | 700) {
+  return {
+    fontFamily: typography.familiesRN[weight],
+    fontWeight: String(weight) as TextStyle["fontWeight"],
+  };
+}
+
 /** Tracking is authored in em; RN wants points, so multiply by the size. */
 function tracked(size: number, tracking: number) {
   return tracking === 0 ? undefined : { letterSpacing: tracking * size };
@@ -257,8 +286,8 @@ function tracked(size: number, tracking: number) {
 
 function textStyle(t: { size: number; weight: number; lineHeight: number; tracking: number }): TextStyle {
   return {
+    ...font(t.weight as 400 | 500 | 600 | 700),
     fontSize: t.size,
-    fontWeight: String(t.weight) as TextStyle["fontWeight"],
     lineHeight: t.lineHeight,
     ...tracked(t.size, t.tracking),
   };

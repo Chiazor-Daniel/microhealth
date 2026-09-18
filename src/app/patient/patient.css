@@ -398,7 +398,8 @@
 }
 
 /* Selected tab — solid green capsule with white text. Reads instantly, and
-   keeps the gel highlight + green glow so it still feels pressed by hand. */
+   keeps the gel highlight + green glow so it still feels pressed by hand.
+   Stops mirror the `tabActive` gradient token, which the native build reads. */
 .mh-tab-active {
   background: linear-gradient(180deg, #22B457 0%, #16A34A 60%, #15873F 100%);
   border: 1px solid rgba(17, 122, 60, 0.55);

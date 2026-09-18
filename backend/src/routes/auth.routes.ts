@@ -21,6 +21,15 @@ const phoneLoginSchema = z.object({
   phone: z.string().min(10),
 });
 
+const registerSchema = z.object({
+  email: z.string().email(),
+  /* Longer than the login minimum: this is the one place a password is chosen
+     rather than checked, so it is where the rule belongs. */
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().optional(),
+});
+
 const resetSchema = z.object({
   email: z.string().email(),
   token: z.string().optional(),
@@ -28,6 +37,7 @@ const resetSchema = z.object({
 });
 
 authRoutes.post("/login", validate(loginSchema), authController.login);
+authRoutes.post("/register", validate(registerSchema), authController.register);
 authRoutes.post("/login/verify-otp", validate(otpSchema), authController.verifyOtp);
 authRoutes.post("/patient/login", validate(phoneLoginSchema), authController.patientLogin);
 authRoutes.post("/patient/verify-otp", validate(otpSchema), authController.verifyPatientOtp);

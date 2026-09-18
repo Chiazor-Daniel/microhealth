@@ -154,7 +154,11 @@ export default function Notifications() {
                   />
                 )}
               </span>
-              <span className="block text-[12.5px] leading-snug mt-0.5 line-clamp-2" style={{ color: patientTheme.colors.textSecondary }}>
+              {/* `line-clamp-2` supplies its own `display: -webkit-box`, which
+                  makes the clamp work. The `block` utility used to sit here and
+                  overrode that display, so the clamp silently did nothing and
+                  the full agent message spilled six lines into the list. */}
+              <span className="text-[12.5px] leading-snug mt-0.5 line-clamp-2" style={{ color: patientTheme.colors.textSecondary }}>
                 {n.message}
               </span>
             </span>

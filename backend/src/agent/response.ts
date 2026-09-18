@@ -27,6 +27,27 @@ export interface AgentStructuredResponse {
   suggestedActions?: string[];
 }
 
+/**
+ * Strip the inline markdown a model reaches for out of habit.
+ *
+ * The reply is rendered as plain text in both apps — there is no markdown
+ * renderer on either side — so `**115/74**` reaches the patient as literal
+ * asterisks. Prompting for plain text reduces this but does not prevent it,
+ * so the markers are removed on the way out too.
+ *
+ * Deliberately narrow: bold, italics, inline code and heading marks only.
+ * Dashes and slashes are left alone because the clinical vocabulary is full of
+ * them — "115-121/73-78 mmHg" must survive intact.
+ */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/(^|\W)\*(?!\s)(.+?)(?<!\s)\*(?=\W|$)/g, "$1$2")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "");
+}
+
 export function parseAgentOutput(raw: string): AgentStructuredResponse {
   const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
   const elements: GenUIElement[] = [];
@@ -35,7 +56,7 @@ export function parseAgentOutput(raw: string): AgentStructuredResponse {
 
   for (const line of lines) {
     if (line.startsWith("ACTION:")) {
-      suggestedActions.push(line.replace("ACTION:", "").trim());
+      suggestedActions.push(stripMarkdown(line.replace("ACTION:", "").trim()));
       continue;
     }
     if (line.startsWith("UI:")) {
@@ -51,14 +72,14 @@ export function parseAgentOutput(raw: string): AgentStructuredResponse {
   }
 
   return {
-    text: textLines.join("\n"),
+    text: stripMarkdown(textLines.join("\n")),
     elements,
     suggestedActions,
   };
 }
 
 export function buildStructuredPrompt(system: string, data: string): string {
-  return `${system}\n\n${data}\n\n## Response format\nRespond in plain text first. You may optionally include ONE structured UI block per response by appending a line starting with UI: followed by compact JSON. Allowed UI types: text, vital_card, appointment_card, appointment_selector, medication_card, lab_card, quick_actions, triage_question, confirmation, trend_chart.\n\nYou may also include up to 3 suggested patient actions as separate lines starting with ACTION:.`;
+  return `${system}\n\n${data}\n\n## Response format\nRespond in plain text first. You may optionally include ONE structured UI block per response by appending a line starting with UI: followed by compact JSON. Allowed UI types: text, vital_card, appointment_card, appointment_selector, medication_card, lab_card, quick_actions, triage_question, confirmation, trend_chart.\n\nYou may add at most 2 suggested patient actions, as lines starting with ACTION:. Only add them when the patient would plausibly want to do something next — often none are needed, and an empty list is better than padding.`;
 }
 
 /**

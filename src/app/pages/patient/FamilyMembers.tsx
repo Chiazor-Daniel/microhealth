@@ -9,6 +9,8 @@ import { ErrorState } from "../../components/shared/ErrorState";
 import { success, error as showError } from "../../components/shared/SweetAlert";
 import { patientTheme } from "../../patient/theme";
 import { StatusBadge } from "../../patient/components/StatusBadge";
+import { Avatar } from "../../patient/components/Avatar";
+import { variantForRelation } from "../../patient/lib/avatars";
 
 function FamilyMembers() {
   const { user } = useAuth();
@@ -135,12 +137,7 @@ function FamilyMembers() {
               className="mh-card p-4"
             >
               <div className="flex items-center gap-3">
-                <div
-                  className="mh-avatar w-11 h-11 flex items-center justify-center text-sm font-semibold"
-                  style={{ color: patientTheme.colors.primaryDark }}
-                >
-                  {m.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
+                <Avatar seed={m.id} variant={variantForRelation(m.relation)} name={m.name} size={44} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: patientTheme.colors.textPrimary }}>
                     {m.name}

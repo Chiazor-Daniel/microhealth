@@ -24,6 +24,10 @@ const map: Record<string, { tone: Tone; label: string; pill?: boolean }> = {
   normal: { tone: "green", label: "Normal" },
   low: { tone: "amber", label: "Low" },
   high: { tone: "rose", label: "High" },
+  /* Attention isn't high or low yet — the amber rung between them. Without
+     this entry the label falls through to the raw status string, which is how
+     "attention" ended up rendering as lowercase text on Home's BP card. */
+  attention: { tone: "amber", label: "Watch" },
   // The one state the design system draws as a capsule.
   inrange: { tone: "green", label: "In range", pill: true },
   pending: { tone: "amber", label: "Pending" },

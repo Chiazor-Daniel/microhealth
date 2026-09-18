@@ -1,19 +1,37 @@
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+import { platform } from "./platform";
 
 let authToken: string | null = null;
 
 export function setToken(token: string | null) {
   authToken = token;
-  if (token) localStorage.setItem("token", token);
-  else localStorage.removeItem("token");
+  platform().writeToken(token);
 }
 
 export function getToken(): string | null {
   if (!authToken) {
-    authToken = localStorage.getItem("token");
+    authToken = platform().readToken();
   }
   return authToken;
 }
+
+/**
+ * How long to wait before giving up.
+ *
+ * Nothing here is a long-running job — the slowest endpoint is the agent, which
+ * answers in seconds. A request that has not come back by now is not going to,
+ * and a spinner that never resolves is worse than an honest failure.
+ */
+const TIMEOUT_MS = 30_000;
+
+/**
+ * What to say when the request never reached the server.
+ *
+ * `fetch` rejects with the runtime's own words — "Network request failed" on
+ * React Native, "Failed to fetch" on web — and neither means anything to a
+ * patient. The overwhelmingly likely cause in this app is that the phone is not
+ * on the same network as the API, so the message names that.
+ */
+const OFFLINE = "Can't reach MicroHealth right now. Check your connection and try again.";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -23,11 +41,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let res: Response;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    res = await fetch(`${platform().apiBaseUrl}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+      signal: controller.signal,
+    });
+  } catch {
+    /* Covers both a refused connection and the timeout above — from the
+       caller's side they are the same thing: the server did not answer.
+       Written with AbortController rather than AbortSignal.timeout, which
+       exists in browsers and is not dependable in Hermes. */
+    throw new Error(OFFLINE);
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Network error" }));

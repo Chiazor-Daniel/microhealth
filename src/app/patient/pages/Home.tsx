@@ -7,12 +7,14 @@ import { useInsights } from "../hooks/useInsights";
 import { dashboardService } from "../../services/dashboard.service";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
+import { Avatar } from "../components/Avatar";
+import { FluidText } from "../components/FluidText";
 import { patientTheme, metricTint } from "../theme";
 import { StatusBadge } from "../components/StatusBadge";
 import { useWearable } from "../hooks/useWearable";
 import { BrandMark } from "../components/BrandMark";
 import { HeartIcon, DropletIcon, OxygenIcon, TrendIcon, CalendarIcon, SparkIcon, SpeakerIcon } from "../icons";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 import { buildSeries } from "../lib/timeSeries";
 
 /** The healthy band for each metric on this screen. */
@@ -45,13 +47,36 @@ function clockTime(iso?: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-/** The whisper of mint under the hero line — no axes, no chrome. */
-function HeroSpark({ data }: { data: number[] }) {
+/**
+ * The value range a series is drawn across.
+ *
+ * Shared with the native build's Sparkline so the label and the line agree.
+ */
+function sparkDomain(data: number[]): [number, number] {
+  if (!data.length) return [0, 1];
+  const lo = Math.min(...data);
+  const hi = Math.max(...data);
+  return lo === hi ? [lo - 1, hi + 1] : [lo, hi];
+}
+
+/** Width of the chart's value gutter. */
+const HERO_AXIS_W = 26;
+
+/**
+ * The whisper of mint under the hero line — no axes, no chrome.
+ *
+ * Scaled to the series' own min and max rather than anchored at zero. Zero is
+ * the conventional choice and the wrong one for a vital sign: a resting heart
+ * rate sitting at 72 ± 3 bpm draws as a dead flat line against a 0–100 axis,
+ * and the whole point of the chart is to show that it *is* moving. The caller
+ * labels the range so an auto-scaled wobble can't read as a crisis.
+ */
+function HeroSpark({ data, domain }: { data: number[]; domain: [number, number] }) {
   if (data.length < 2) return <div style={{ height: 72 }} />;
   const points = data.map((v, i) => ({ i, v }));
   return (
     <ResponsiveContainer width="100%" height={72}>
-      <AreaChart data={points} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 6, right: 4, left: 0, bottom: 6 }}>
         <defs>
           <linearGradient id="mhHeroGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0.30} />
@@ -59,6 +84,7 @@ function HeroSpark({ data }: { data: number[] }) {
             <stop offset="100%" stopColor={patientTheme.colors.primaryGreen} stopOpacity={0} />
           </linearGradient>
         </defs>
+        <YAxis hide domain={domain} />
         <Area
           type="monotone"
           dataKey="v"
@@ -66,9 +92,13 @@ function HeroSpark({ data }: { data: number[] }) {
           strokeWidth={2.2}
           strokeLinecap="round"
           fill="url(#mhHeroGradient)"
-          dot={{ r: 2.2, fill: "#fff", stroke: patientTheme.colors.primaryGreen, strokeWidth: 1.7 }}
+          /* No dots: with a reading every few minutes the points crowd into a
+             string of beads and the line stops reading as a line. */
+          dot={false}
           activeDot={false}
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={900}
+          animationEasing="ease-out"
           className="mh-chart-line"
         />
       </AreaChart>
@@ -114,7 +144,8 @@ function MetricCard({
         </p>
       </div>
       <div className="flex items-baseline gap-1 mt-2.5">
-        <span
+        <FluidText
+          value={String(value)}
           style={{
             fontSize: 28,
             fontWeight: 700,
@@ -123,9 +154,7 @@ function MetricCard({
             color: patientTheme.colors.textPrimary,
             fontVariantNumeric: "tabular-nums",
           }}
-        >
-          {value}
-        </span>
+        />
         <span className="text-[12px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
           {unit}
         </span>
@@ -188,10 +217,14 @@ export default function Home() {
 
   const hrInRange = heartRate != null && heartRate >= BANDS.heartRate[0] && heartRate <= BANDS.heartRate[1];
 
-  const heroSeries = useMemo(
-    () => buildSeries(sourceVitals, "day", (v: any) => v.heartRate, 24).map((p) => p.value),
+  /* The hero series keeps its timestamps — the chart is read as "over the day",
+     so it needs to say which day-part it is showing. */
+  const heroPoints = useMemo(
+    () => buildSeries(sourceVitals, "day", (v: any) => v.heartRate, 24),
     [sourceVitals]
   );
+  const heroSeries = useMemo(() => heroPoints.map((p) => p.value), [heroPoints]);
+  const heroDomain = useMemo(() => sparkDomain(heroSeries), [heroSeries]);
 
   const topInsight = insights[0];
   const nextAppt = dashboard?.nextAppointment || appointments[0];
@@ -255,7 +288,6 @@ export default function Home() {
   if (loading || dataLoading) return <Loading />;
   if (error || dataError) return <ErrorState message={error || dataError || "Failed to load"} />;
 
-  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "?";
 
   return (
     <motion.div
@@ -289,10 +321,8 @@ export default function Home() {
         <button
           onClick={() => navigate("/patient/profile")}
           aria-label="Your profile"
-          className="mh-avatar mh-avatar-raised flex items-center justify-center flex-shrink-0 text-[15px] font-semibold"
-          style={{ width: 46, height: 46, color: patientTheme.colors.primaryDark }}
         >
-          {initials}
+          <Avatar seed={user?.profile?.id ?? user?.email} name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`} size={46} />
         </button>
       </div>
 
@@ -322,7 +352,8 @@ export default function Home() {
             <StatusBadge status={hrInRange ? "inrange" : "high"} variant="pill" />
           </div>
           <div className="flex items-baseline gap-1.5 mt-2">
-            <span
+            <FluidText
+              value={String(heartRate)}
               style={{
                 fontSize: 40,
                 fontWeight: 700,
@@ -331,9 +362,7 @@ export default function Home() {
                 color: patientTheme.colors.textPrimary,
                 fontVariantNumeric: "tabular-nums",
               }}
-            >
-              {heartRate}
-            </span>
+            />
             <span className="text-[13px] font-medium" style={{ color: patientTheme.colors.textSecondary }}>
               BPM
             </span>
@@ -341,9 +370,29 @@ export default function Home() {
           <p className="text-[12px] mt-1.5 font-medium" style={{ color: patientTheme.colors.textSecondary }}>
             Normal range: {BANDS.heartRate[0]} – {BANDS.heartRate[1]}
           </p>
-          <div className="mt-1 -mx-1">
-            <HeroSpark data={heroSeries} />
+          <div className="mt-1 -mx-1 flex items-stretch gap-1">
+            <div className="flex flex-col justify-between flex-shrink-0" style={{ width: HERO_AXIS_W, paddingTop: 6, paddingBottom: 6 }}>
+              <span className="text-[10px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+                {heroDomain[1]}
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+                {heroDomain[0]}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <HeroSpark data={heroSeries} domain={heroDomain} />
+            </div>
           </div>
+          {heroPoints.length > 1 && (
+            <div className="flex justify-between mt-0.5" style={{ marginLeft: HERO_AXIS_W + 4 }}>
+              <span className="text-[10px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+                {clockTime(new Date(heroPoints[0].at).toISOString())}
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+                {clockTime(new Date(heroPoints[heroPoints.length - 1].at).toISOString())}
+              </span>
+            </div>
+          )}
         </motion.button>
       )}
 

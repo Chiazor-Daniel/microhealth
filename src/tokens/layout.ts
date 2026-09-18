@@ -7,8 +7,23 @@
 
 export const typography = {
   fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  /** RN: pass a font family name registered with expo-font instead. */
-  fontFamilyRN: "Inter",
+  /**
+   * React Native resolves a custom font by *family*, not by weight — there is
+   * no font-weight axis to pick a face from. So each weight is registered as
+   * its own family (see the `useFonts` call in mobile/app/_layout.tsx) and a
+   * weight is selected by naming the family. The web build ignores this and
+   * uses `fontFamily` + `fontWeight` as usual.
+   *
+   * Getting this wrong is invisible in code but glaring on screen: text falls
+   * back to the system face, which is a different width, so every screen
+   * renders at the right size and the wrong shape.
+   */
+  familiesRN: {
+    400: "Inter_400Regular",
+    500: "Inter_500Medium",
+    600: "Inter_600SemiBold",
+    700: "Inter_700Bold",
+  },
   weights: {
     regular: 400,
     medium: 500,
@@ -39,9 +54,18 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 40,
-  /** Layout rhythm */
+  /**
+   * The step between the blocks of a screen.
+   *
+   * 20 is the rhythm the web build lands on (`space-y-5`), and it sits between
+   * `md` and `lg` — so it is a token rather than something a screen rounds to
+   * one side or the other. Native screens use it for the same gap; without it
+   * every screen's content drifts upward by a few pixels a block.
+   */
+  blockGap: 20,
+  /** Layout rhythm. Screens pad 20 on every side of the content column. */
   pageX: 20,
-  pageY: 16,
+  pageY: 20,
   cardPadding: 18,
   sectionGap: 24,
   itemGap: 12,

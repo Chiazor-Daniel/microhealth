@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { getToken } from "../services/api";
-
-const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
+import { platform } from "../services/platform";
 
 let globalSocket: Socket | null = null;
 
@@ -18,7 +17,7 @@ export function useSocket() {
     if (!token) return;
 
     if (!globalSocket?.connected) {
-      globalSocket = io(SOCKET_URL, {
+      globalSocket = io(platform().socketUrl, {
         auth: { token },
         transports: ["websocket", "polling"],
       });

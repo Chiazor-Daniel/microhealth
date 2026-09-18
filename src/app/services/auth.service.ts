@@ -34,6 +34,19 @@ export const authService = {
     return res;
   },
 
+  /**
+   * Create a patient account.
+   *
+   * The server returns tokens with the new account, so signing up signs you
+   * in — no second trip through the login screen to retype what was just
+   * chosen.
+   */
+  async register(input: { email: string; password: string; firstName: string; lastName?: string }): Promise<LoginResponse> {
+    const res = await api.post<LoginResponse>("/auth/register", input);
+    setToken(res.token);
+    return res;
+  },
+
   async forgotPassword(email: string) {
     return api.post("/auth/forgot-password", { email });
   },

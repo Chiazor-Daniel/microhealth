@@ -150,7 +150,7 @@ export const patientTheme = {
     tileSlate: gradientToCSS(gradientTokens.tileSlate),
     iconGreen: gradientToCSS(gradientTokens.iconGreen),
     surfaceRaise: gradientToCSS(gradientTokens.surfaceRaise),
-    nav: "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(250,253,251,0.97) 100%)",
+    nav: gradientToCSS(gradientTokens.navBar),
   },
 
   motion: {

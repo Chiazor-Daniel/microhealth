@@ -136,9 +136,27 @@ export const gradients = {
     start: { x: 0.2, y: 0 },
     end: { x: 0.8, y: 1 },
   },
+  /** The selected capsule in a segmented switch. Sits a shade above iconGreen. */
+  tabActive: {
+    colors: ["#22B457", "#16A34A", "#15873F"],
+    locations: [0, 0.6, 1],
+    angleCSS: "180deg",
+    start: { x: 0.5, y: 0 },
+    end: { x: 0.5, y: 1 },
+  },
   /** Raise-from-white for secondary buttons and inputs. */
   surfaceRaise: {
     colors: ["#FFFFFF", "#FAFDFB"],
+    angleCSS: "180deg",
+    start: { x: 0.5, y: 0 },
+    end: { x: 0.5, y: 1 },
+  },
+  /**
+   * The floating nav bar's surface — near-opaque white so content scrolling
+   * beneath it stays hidden, with a touch of lift at the top edge.
+   */
+  navBar: {
+    colors: ["rgba(255,255,255,0.99)", "rgba(250,253,251,0.97)"],
     angleCSS: "180deg",
     start: { x: 0.5, y: 0 },
     end: { x: 0.5, y: 1 },
@@ -164,4 +182,33 @@ export function gradientToCSS(g: GradientToken): string {
     .map((c, i) => (g.locations ? `${c} ${Math.round(g.locations[i] * 100)}%` : c))
     .join(", ");
   return `linear-gradient(${g.angleCSS ?? "180deg"}, ${stops})`;
+}
+
+/**
+ * Native: a gradient token as the start/end pair `expo-linear-gradient` wants.
+ *
+ * Derived from `angleCSS` rather than read from the stored `start`/`end`, so
+ * the two platforms cannot disagree. A CSS angle points the gradient line N°
+ * clockwise from "toward the top", giving the direction (sin N, −cos N); the
+ * points are then placed on that line across the unit square.
+ *
+ * The stored vectors were hand-eyeballed and every diagonal one was 12–16° off
+ * its own declared angle — invisible in isolation, but it meant a card that
+ * leaned one way on web leaned another on native.
+ */
+export function gradientVector(g: GradientToken): { start: { x: number; y: number }; end: { x: number; y: number } } {
+  if (!g.angleCSS) return { start: g.start, end: g.end };
+
+  const rad = (parseFloat(g.angleCSS) * Math.PI) / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+
+  /* Half the line's length across a unit square, scaled to stay inside it —
+     the dominant axis always spans the full 0–1 range. */
+  const half = 0.5 / Math.max(Math.abs(dx), Math.abs(dy));
+
+  return {
+    start: { x: 0.5 - dx * half, y: 0.5 - dy * half },
+    end: { x: 0.5 + dx * half, y: 0.5 + dy * half },
+  };
 }

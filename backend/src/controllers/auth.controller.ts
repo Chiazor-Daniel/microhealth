@@ -30,6 +30,60 @@ export async function verifyOtp(_req: Request, _res: Response, _next: NextFuncti
   throw new AppError("OTP flow is disabled", 400);
 }
 
+/**
+ * Create a patient account.
+ *
+ * A signed-up patient starts genuinely empty — no vitals, no appointments —
+ * which is the state the app has to be able to present well, so nothing is
+ * fabricated here to make the screen look busier.
+ *
+ * Tokens come back in the same shape as `login`, so the client can drop the
+ * person straight into the app rather than bouncing them to a sign-in screen
+ * to retype what they just chose.
+ */
+export async function register(req: Request, res: Response, next: NextFunction) {
+  try {
+    const email = String(req.body.email).trim().toLowerCase();
+    const { password } = req.body;
+    const firstName = String(req.body.firstName).trim();
+    const lastName = String(req.body.lastName ?? "").trim();
+
+    const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
+    if (existing) {
+      throw new AppError("An account with that email already exists", 409, "EMAIL_TAKEN");
+    }
+
+    /* Matches the cost factor the seed uses, so a registered account and a
+       seeded one are indistinguishable to the login path. */
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const [user] = await db
+      .insert(users)
+      .values({ email, passwordHash, role: "patient", firstName, lastName })
+      .returning();
+
+    /* Every patient needs a record — it is what vitals, appointments and
+       insights hang off — so it is created with the account rather than left
+       for later. The code is derived from the id, which is already unique, so
+       there is no counter to race on. */
+    await db.insert(patients).values({
+      userId: user.id,
+      patientCode: `MH-${user.id.slice(0, 6).toUpperCase()}`,
+      status: "active",
+    });
+
+    const tokens = generateTokens({ userId: user.id, role: user.role });
+    res.cookie("token", tokens.access, { httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400000 });
+    res.status(201).json({
+      token: tokens.access,
+      refreshToken: tokens.refresh,
+      user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function patientLogin(req: Request, res: Response, next: NextFunction) {
   try {
     const rawPhone = req.body.phone || "";

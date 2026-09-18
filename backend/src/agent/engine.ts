@@ -266,6 +266,7 @@ export async function respondToChat(
     event: { type: "chat", priority: "info", title: "Chat", message: userMessage },
     conversationHistory,
     userMessage,
+    task: "chat",
   });
 
   return {
@@ -291,6 +292,7 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
     patientContext,
     medicalKnowledge,
     event,
+    task: "insight",
   });
 
   const elements = response.elements || [];

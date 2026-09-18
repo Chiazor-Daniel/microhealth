@@ -12,7 +12,16 @@ import { aiService, type Insight } from "../../services/ai.service";
 interface Message {
   id: string;
   role: "agent" | "user";
+  /** What goes on the wire to the backend. */
   text: string;
+  /**
+   * What the bubble shows, when the two differ.
+   *
+   * Tapping a card sends a machine-readable payload — `slot:{"doctorId":…}` —
+   * because that is what the agent engine parses. Showing that back to the
+   * patient as their own message is not a sentence anyone wrote.
+   */
+  display?: string;
   insight?: Insight;
 }
 
@@ -35,8 +44,8 @@ export default function AI() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing]);
 
-  const send = async (text: string) => {
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text };
+  const send = async (text: string, display?: string) => {
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text, display };
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setTyping(true);
@@ -44,7 +53,7 @@ export default function AI() {
     const history = messages
       .filter((m) => m.role === "user" || m.role === "agent")
       .slice(-6)
-      .map((m) => `${m.role === "user" ? "Patient" : "Agent"}: ${m.text}`)
+      .map((m) => `${m.role === "user" ? "Patient" : "Agent"}: ${m.display ?? m.text}`)
       .join("\n");
 
     try {
@@ -72,9 +81,9 @@ export default function AI() {
 
   const handleGenUIAction = (action: string, payload?: any) => {
     if (action === "select_appointment" && payload?.metadata) {
-      send(`slot:${JSON.stringify(payload.metadata)}`);
+      send(`slot:${JSON.stringify(payload.metadata)}`, `Book: ${payload.label}`);
     } else if (action === "triage_answer") {
-      send(`Severity: ${payload?.value}`);
+      send(`Severity: ${payload?.value}`, payload?.label ?? `Severity: ${payload?.value}`);
     } else if (action === "message_team") {
       navigate("/patient/care/messages");
     } else if (action === "book_appointment") {
@@ -91,7 +100,7 @@ export default function AI() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col space-y-4"
+      className="flex flex-col flex-1 space-y-4"
     >
       {/* Header — the agent introduces itself rather than being labelled */}
       <div className="relative flex flex-col items-center pt-1">
@@ -177,7 +186,7 @@ export default function AI() {
                 padding: "12px 14px",
               }}
             >
-              <p className="text-sm leading-relaxed">{msg.text}</p>
+              <p className="text-sm leading-relaxed">{msg.display ?? msg.text}</p>
               {msg.role === "agent" && msg.insight?.context?.elements && (
                 <GenUI elements={msg.insight.context.elements as GenUIElement[]} onAction={handleGenUIAction} />
               )}
@@ -213,8 +222,19 @@ export default function AI() {
         <div ref={scrollRef} />
       </div>
 
-      {/* Input bar */}
-      <div className="flex items-center gap-2 pt-1 pb-2">
+      {/* Input bar — stuck to the bottom of the scroll container rather than
+          sitting at the end of the conversation, so it never drifts off-screen
+          behind a long reply. The tint is the page's own bottom colour, so the
+          messages scroll under it rather than into it. */}
+      <div
+        className="flex items-center gap-2 pt-2 pb-2 -mx-5 px-5"
+        style={{
+          position: "sticky",
+          bottom: 0,
+          marginTop: "auto",
+          background: "linear-gradient(180deg, rgba(242,248,244,0) 0%, rgba(242,248,244,0.92) 22%, rgba(242,248,244,0.98) 100%)",
+        }}
+      >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
