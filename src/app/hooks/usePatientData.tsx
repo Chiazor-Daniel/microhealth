@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useAuth } from "./useAuth";
 import { appointmentService, type Appointment } from "../services/appointment.service";
-import { vitalService, type Vital } from "../services/vital.service";
+import { vitalService, type Vital, type MetricRecord } from "../services/vital.service";
 import { labService, type LabTest } from "../services/lab.service";
 import { prescriptionService, type Prescription } from "../services/prescription.service";
 import { familyService, type FamilyMember } from "../services/family.service";
@@ -10,6 +10,8 @@ import { messageService } from "../services/message.service";
 export interface PatientData {
   appointments: Appointment[];
   vitals: Vital[];
+  /** Episodic readings — sleep, ECG, composition, glucose, labs. */
+  metricRecords: MetricRecord[];
   labs: LabTest[];
   prescriptions: Prescription[];
   family: FamilyMember[];
@@ -27,6 +29,7 @@ export function PatientDataProvider({ children }: { children: ReactNode }) {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [vitals, setVitals] = useState<Vital[]>([]);
+  const [metricRecords, setMetricRecords] = useState<MetricRecord[]>([]);
   const [labs, setLabs] = useState<LabTest[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [family, setFamily] = useState<FamilyMember[]>([]);
@@ -42,6 +45,7 @@ export function PatientDataProvider({ children }: { children: ReactNode }) {
       const [
         appts,
         vitalsData,
+        metricData,
         labsData,
         rxData,
         familyData,
@@ -49,6 +53,7 @@ export function PatientDataProvider({ children }: { children: ReactNode }) {
       ] = await Promise.all([
         appointmentService.listByPatient(patientId),
         vitalService.getByPatient(patientId),
+        vitalService.getMetricReadings(patientId),
         labService.getByPatient(patientId),
         prescriptionService.getByPatient(patientId),
         familyService.listByPatient(patientId),
@@ -56,6 +61,7 @@ export function PatientDataProvider({ children }: { children: ReactNode }) {
       ]);
       setAppointments(appts);
       setVitals(vitalsData);
+      setMetricRecords(metricData);
       setLabs(labsData);
       setPrescriptions(rxData);
       setFamily(familyData);
@@ -77,6 +83,7 @@ export function PatientDataProvider({ children }: { children: ReactNode }) {
       value={{
         appointments,
         vitals,
+        metricRecords,
         labs,
         prescriptions,
         family,

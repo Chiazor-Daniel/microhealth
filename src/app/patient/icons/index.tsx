@@ -80,6 +80,19 @@ const bind = (name: GlyphName) =>
     return <Glyph name={name} {...props} />;
   };
 
+/**
+ * A glyph by name, for call sites that get the name from data rather than
+ * from the source — the metric registry holds a `GlyphName` per metric, and a
+ * screen rendering the registry cannot know at build time which ones it will
+ * be handed.
+ *
+ * Prefer the bound exports (`HeartIcon`) wherever the glyph is known. This
+ * exists so a data-driven list does not need a 40-entry lookup table.
+ */
+export function GlyphIcon({ name, ...props }: GlyphProps & { name: GlyphName }) {
+  return <Glyph name={name} {...props} />;
+}
+
 export const HeartIcon = bind("heart");
 export const DropletIcon = bind("droplet");
 export const OxygenIcon = bind("oxygen");
