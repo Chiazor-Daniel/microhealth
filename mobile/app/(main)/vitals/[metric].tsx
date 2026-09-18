@@ -8,6 +8,7 @@ import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { axisLabel, buildSeries, distinctTicks } from "@app/patient/lib/timeSeries";
+import { metricOf } from "@metrics/registry";
 
 import { Screen } from "@/ui/Screen";
 import { ErrorState } from "@/ui/ErrorState";
@@ -19,6 +20,7 @@ import {
   ArrowUpIcon,
   ChevronLeftIcon,
   DropletIcon,
+  GlyphIcon,
   HeartIcon,
   MinusIcon,
   MoreIcon,
@@ -109,14 +111,45 @@ export default function VitalsDetail() {
   const { metric = "heartRate" } = useLocalSearchParams<{ metric?: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { vitals: existingVitals, loading, error, refresh } = usePatientData();
+  const { vitals: existingVitals, metricRecords, loading, error, refresh } = usePatientData();
   const { latest: wearableLatest } = useWearable(user?.profile?.id, true);
   const { width } = useWindowDimensions();
   const [range, setRange] = useState<RangeValue>("day");
 
-  /* A metric the URL does not name falls back to heart rate rather than
-     drawing an empty screen. */
-  const def = METRICS[metric] ?? METRICS.heartRate;
+  /* The registry is the source of truth for what a metric *is* — its label,
+     unit, healthy band, glyph and how to read it. The local table below is now
+     only a fallback for a key the registry does not know.
+
+     Without this, every card on Vitals opened Heart Rate: the screen keys off
+     the URL, and a key it had no entry for fell back silently. */
+  const registry = metricOf(metric);
+  const fallback = METRICS[metric] ?? METRICS.heartRate;
+  const def = registry
+    ? {
+        ...fallback,
+        label: registry.label,
+        unit: registry.unit,
+        baseline: [registry.band.low, registry.band.high] as [number, number],
+        read: registry.read ?? fallback.read,
+        Icon: ({ size, color }: { size?: number; color?: string }) => (
+          <GlyphIcon name={registry.icon} size={size} color={color} />
+        ),
+      }
+    : fallback;
+
+  /* Where this metric's readings actually live.
+     The band reports several measures in one packet; everything episodic —
+     a night of sleep, a day's steps, a lab draw — is its own record. Reading
+     the second kind out of the packet would chart nothing. */
+  const isRecord = registry?.source === "record";
+  const recordSeries = useMemo(
+    () =>
+      metricRecords
+        .filter((r) => r.metricKey === metric && r.value != null)
+        .map((r) => ({ recordedAt: r.recordedAt, value: r.value as number }))
+        .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()),
+    [metricRecords, metric],
+  );
 
   const vitals = useMemo(() => {
     const list = [...existingVitals];
@@ -135,20 +168,29 @@ export default function VitalsDetail() {
     return list;
   }, [existingVitals, wearableLatest]);
 
-  const series = useMemo(
-    () =>
-      buildSeries(vitals, range, def.read).map((p) => ({
+  const series = useMemo(() => {
+    /* An episodic metric is charted from its own records; a wide-packet one
+       from the vitals history. The two are different stores and reading the
+       wrong one charts nothing. */
+    if (isRecord) {
+      return buildSeries(recordSeries, range, (r) => r.value).map((p) => ({
         label: axisLabel(p.at, range),
         value: p.value,
-      })),
-    [vitals, range, def],
-  );
+      }));
+    }
+    return buildSeries(vitals, range, def.read).map((p) => ({
+      label: axisLabel(p.at, range),
+      value: p.value,
+    }));
+  }, [vitals, recordSeries, isRecord, range, def]);
 
   /* Distinct tick labels — a minute can hold several readings, and forcing a
      tick at each of them prints the same time more than once. */
   const xTicks = useMemo(() => distinctTicks(series.map((p) => p.label)), [series]);
 
-  const current = def.read(vitals[0]);
+  const current = isRecord
+    ? (recordSeries.length ? recordSeries[recordSeries.length - 1].value : null)
+    : def.read(vitals[0]);
   /* Movement across the window, not against the reading 3 seconds ago. */
   const windowStart = series.length > 1 ? series[0].value : null;
   const delta = current != null && windowStart != null ? Math.round((current - windowStart) * 10) / 10 : null;

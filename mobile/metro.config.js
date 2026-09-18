@@ -35,6 +35,9 @@ const aliases = {
   "@tokens": path.resolve(sharedRoot, "tokens"),
   "@rn": path.resolve(sharedRoot, "rn"),
   "@glyphs": path.resolve(sharedRoot, "icons", "geometry"),
+  /* The metric registry and its read-time resolution. Framework-free, so the
+     two platforms cannot disagree about what a reading means. */
+  "@metrics": path.resolve(sharedRoot, "metrics"),
   "@app": path.resolve(sharedRoot, "app"),
   /* Bundled images live with the shared assets so both platforms use one file. */
   "@assets": path.resolve(sharedRoot, "assets"),

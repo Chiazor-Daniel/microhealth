@@ -1,25 +1,24 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { colors, metricTint, semantic, spacing } from "@tokens";
-import { linearGradient, text, font } from "@rn/theme";
+import { colors, semantic, spacing } from "@tokens";
+import { font } from "@rn/theme";
 import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { buildSeries } from "@app/patient/lib/timeSeries";
+import { CATEGORY_LABEL, CATEGORY_ORDER, metricsIn, type Metric } from "@metrics/registry";
+import { resolveAll, type MetricValue } from "@metrics/readings";
 
 import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
 import { ErrorState } from "@/ui/ErrorState";
 import { SegmentedTabs } from "@/ui/SegmentedTabs";
-import { StatusBadge } from "@/ui/StatusBadge";
-import { Sparkline } from "@/ui/Sparkline";
 import { EmptyState } from "@/ui/EmptyState";
+import { MetricTile } from "@/ui/MetricTile";
+import { GlyphIcon, WatchIcon, ChevronRightIcon } from "@/icons";
+import { card, tabular } from "@/ui/styles";
 import { useBandConnected } from "@/lib/band";
-import { FluidText } from "@/ui/FluidText";
-import { card, iconTile, iconTileBorder, tabular } from "@/ui/styles";
-import { ChevronRightIcon, DropletIcon, HeartIcon, OxygenIcon, ThermometerIcon, WatchIcon } from "@/icons";
 
 const tabs = [
   { value: "today", label: "Day" },
@@ -30,54 +29,128 @@ const tabs = [
 
 type TabValue = (typeof tabs)[number]["value"];
 
-/** The healthy band for each metric, and how it is written out. */
-const RANGES: Record<string, { lo: number; hi: number; label: string }> = {
-  heartRate: { lo: 60, hi: 100, label: "60 – 100 bpm" },
-  bloodPressure: { lo: 90, hi: 120, label: "90/60 – 120/80 mmHg" },
-  spo2: { lo: 95, hi: 100, label: "95 – 100 %" },
-  temperature: { lo: 36.1, hi: 37.2, label: "36.1 – 37.2 °C" },
-};
+/**
+ * The three resolutions a heart rate is actually read at.
+ *
+ * "Real-time" is the latest packet; the other two are the mean over the
+ * trailing window. A number sampled every few seconds is unreadable on its
+ * own — the averages are what say whether 78 right now is a blip or a trend.
+ */
+function HeartRateWindows({ vitals, latest }: { vitals: any[]; latest: number | null }) {
+  const windows = useMemo(() => {
+    const now = Date.now();
+    const mean = (minutes: number) => {
+      const cutoff = now - minutes * 60_000;
+      const inWindow = vitals
+        .filter((v) => v?.heartRate != null && v.recordedAt && new Date(v.recordedAt).getTime() >= cutoff)
+        .map((v) => v.heartRate as number);
+      if (!inWindow.length) return null;
+      return Math.round(inWindow.reduce((a, b) => a + b, 0) / inWindow.length);
+    };
+    return [
+      { label: "Now", value: latest },
+      { label: "5 min", value: mean(5) },
+      { label: "30 min", value: mean(30) },
+    ];
+  }, [vitals, latest]);
 
-function interpretValue(metric: string, value: number) {
-  switch (metric) {
-    case "heartRate":
-      if (value < 55) return { status: "low", text: "Low" };
-      if (value > 100) return { status: "high", text: "High" };
-      if (value > 85) return { status: "attention", text: "Elevated" };
-      return { status: "normal", text: "Normal" };
-    case "bloodPressure":
-      if (value > 140) return { status: "high", text: "High" };
-      if (value > 125) return { status: "attention", text: "Elevated" };
-      return { status: "normal", text: "Normal" };
-    case "spo2":
-      if (value < 95) return { status: "low", text: "Low" };
-      return { status: "normal", text: "Normal" };
-    case "temperature":
-      if (value > 37.6) return { status: "high", text: "Fever" };
-      if (value > 37.2) return { status: "attention", text: "Elevated" };
-      return { status: "normal", text: "Normal" };
-    default:
-      return { status: "normal", text: "Normal" };
-  }
+  return (
+    <View style={styles.windows}>
+      {windows.map((w) => (
+        <View key={w.label} style={styles.window}>
+          <Text style={styles.windowLabel}>{w.label}</Text>
+          <Text style={[styles.windowValue, tabular]}>
+            {w.value ?? "—"}
+            <Text style={styles.windowUnit}> bpm</Text>
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
-/** Metric key → the tile token and border tone its icon container takes. */
-const METRIC_TILE: Record<string, { gradient: any; tone: string }> = {
-  heartRate: { gradient: "tileRose", tone: "rose" },
-  bloodPressure: { gradient: "tile", tone: "green" },
-  spo2: { gradient: "tileTeal", tone: "teal" },
-  temperature: { gradient: "tileAmber", tone: "amber" },
-};
+/**
+ * Everything the registry knows but nothing is recording yet.
+ *
+ * Collapsed into one row rather than a section each, so a category with no
+ * data does not get a header announcing emptiness — but the names still show,
+ * because a patient should be able to see what the product is *going* to
+ * measure, not just what it measures today.
+ */
+function NotRecording({ metrics, onOpen }: { metrics: Metric[]; onOpen: (m: Metric) => void }) {
+  const [open, setOpen] = useState(false);
+  if (!metrics.length) return null;
+
+  return (
+    <View style={[card, { padding: spacing.md }]}>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={styles.notRecordingHead}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.notRecordingTitle}>
+            {metrics.length} more {metrics.length === 1 ? "measure" : "measures"} not recording yet
+          </Text>
+          {/* The names, so the breadth is visible without expanding. One line,
+              because this is a hint rather than an inventory. */}
+          <Text style={styles.notRecordingNames} numberOfLines={1}>
+            {metrics.map((m) => m.label).join(" · ")}
+          </Text>
+        </View>
+        <ChevronRightIcon size={16} color={semantic.textMuted} />
+      </Pressable>
+
+      {open && (
+        <View style={styles.notRecordingList}>
+          {metrics.map((m) => (
+            <Pressable key={m.key} onPress={() => onOpen(m)} style={styles.notRecordingRow}>
+              <GlyphIcon name={m.icon} size={16} color={semantic.textMuted} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.notRecordingLabel} numberOfLines={1}>
+                  {m.label}
+                </Text>
+                <Text style={styles.notRecordingMeta}>
+                  {CATEGORY_LABEL[m.category]} · {m.cadence === "interval" ? "on demand" : m.cadence}
+                </Text>
+              </View>
+              <Text style={styles.notRecordingNone}>No readings</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Lay a section's cards out as rows.
+ *
+ * The first metric of a section carries it, so it gets the full width. After
+ * that the cards pair up — and when what remains is an odd number, the last
+ * one takes the full width too, rather than leaving a gap beside it. React
+ * Native has no grid, so the rows are built here and each is a flex row.
+ */
+function rowsOf(values: MetricValue[]): MetricValue[][] {
+  if (!values.length) return [];
+  const rows: MetricValue[][] = [[values[0]]];
+  const rest = values.slice(1);
+  for (let i = 0; i < rest.length; i += 2) rows.push(rest.slice(i, i + 2));
+  return rows;
+}
 
 export default function Vitals() {
   const { user } = useAuth();
-  const { vitals: existingVitals, loading, error, refresh } = usePatientData();
+  const { vitals: existingVitals, metricRecords, loading, error, refresh } = usePatientData();
   const bandConnected = useBandConnected(user?.profile?.id, existingVitals.length > 0);
   const { latest: wearableLatest } = useWearable(user?.profile?.id, bandConnected);
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const [tab, setTab] = useState<TabValue>("today");
 
+  /* The band's newest packet first, then the stored history — the same shape
+     every screen reads from, so Home and Vitals cannot disagree about what the
+     current heart rate is. */
   const vitals = useMemo(() => {
     const list = [...existingVitals];
     if (wearableLatest) {
@@ -89,6 +162,11 @@ export default function Vitals() {
         temperature: wearableLatest.temperature,
         bloodPressureSystolic: wearableLatest.systolic,
         bloodPressureDiastolic: wearableLatest.diastolic,
+        respiratoryRate: wearableLatest.respiratoryRate,
+        hrv: wearableLatest.hrv,
+        stress: wearableLatest.stress,
+        fatigue: wearableLatest.fatigue,
+        gsr: wearableLatest.gsr,
         recordedAt: wearableLatest.timestamp,
       } as any);
     }
@@ -97,37 +175,31 @@ export default function Vitals() {
 
   const current: any = vitals[0];
 
-  const metrics = useMemo(() => {
-    const bpSys = current?.bloodPressureSystolic ?? current?.systolic ?? null;
-    const bpDia = current?.bloodPressureDiastolic ?? current?.diastolic ?? null;
-    return [
-      { key: "heartRate", label: "Heart Rate", display: current?.heartRate ?? null, unit: "bpm", reading: current?.heartRate },
-      {
-        key: "bloodPressure",
-        label: "Blood Pressure",
-        display: bpSys == null ? null : bpDia == null ? bpSys : `${bpSys}/${bpDia}`,
-        unit: "mmHg",
-        reading: bpSys,
-      },
-      { key: "spo2", label: "Blood Oxygen", display: current?.spo2 ?? null, unit: "%", reading: current?.spo2 },
-      { key: "temperature", label: "Temperature", display: current?.temperature ?? null, unit: "°C", reading: current?.temperature },
-    ];
-  }, [current]);
+  /* Every metric the registry defines, resolved against the packet and the
+     patient's episodic records. Metrics with nothing yet come back empty
+     rather than missing, which is what lets the sections below say so. */
+  const allValues = useMemo(() => resolveAll(current, metricRecords), [current, metricRecords]);
+  const byKey = useMemo(() => new Map(allValues.map((v) => [v.metric.key, v])), [allValues]);
 
-  const sparkFor = (key: string) =>
-    buildSeries(vitals, tab, (v: any) => (key === "bloodPressure" ? (v.bloodPressureSystolic ?? v.systolic) : v[key])).map(
-      (p) => p.value,
-    );
+  const sparkFor = (metric: Metric) => {
+    if (!metric.read) return undefined;
+    return buildSeries(vitals, tab, (v) => metric.read!(v)).map((p) => p.value as number);
+  };
 
-  /* The chart spans the page width minus the page gutter, the card's own
-     padding, the chevron column and the gap before it. */
-  const sparkWidth = width - spacing.pageX * 2 - 32 - 17 - 4;
+  const openMetric = (metric: Metric) => {
+    if (metric.category === "labs") router.push("/care");
+    else router.push(`/vitals/${metric.key}`);
+  };
+
+  /* Everything the registry defines that has nothing to show yet, gathered
+     across every category so it can be one row at the foot of the screen. */
+  const allMissing = useMemo(() => allValues.filter((v) => v.value == null).map((v) => v.metric), [allValues]);
 
   if (loading && !vitals.length) {
     return (
       <Screen>
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.green600} />
+          <ActivityIndicator color={semantic.brand} />
         </View>
       </Screen>
     );
@@ -155,11 +227,11 @@ export default function Vitals() {
         <SegmentedTabs options={tabs as unknown as { value: TabValue; label: string }[]} value={tab} onChange={setTab} fill />
       </View>
 
-      {/* Four cards of em dashes is what a new account would otherwise see,
-          and it reads as broken rather than as empty. */}
+      {/* A screen of em dashes is what a new account would otherwise see, and
+          it reads as broken rather than as empty. */}
       {!vitals.length ? (
         <EmptyState
-          icon={<WatchIcon size={22} color={semantic.accentDeep} />}
+          icon={<WatchIcon size={22} color={semantic.brand} />}
           title="No vitals yet"
           body="Your band sends heart rate, blood pressure, oxygen and temperature here automatically. You can also add a reading by hand."
           action="Connect a band"
@@ -167,93 +239,115 @@ export default function Vitals() {
         />
       ) : null}
 
-      {/* Every metric gets its own full-width card and its own sparkline, so
-          the screen can be read top to bottom without picking one first. */}
-      {vitals.length ? (
-      <View style={{ marginTop: spacing.blockGap, gap: spacing.sm }}>
-        {metrics.map((m, i) => {
-          const interp = interpretValue(m.key, Number(m.reading));
-          const tint = metricTint(m.key);
-          const range = RANGES[m.key];
-          const series = sparkFor(m.key);
-          const tile = METRIC_TILE[m.key];
+      {/* Sections, in the registry's own order, so adding a category is a
+          registry change rather than a screen change. */}
+      {vitals.length
+        ? CATEGORY_ORDER.map((category) => {
+            const inCategory = metricsIn(category).map((m) => byKey.get(m.key)!).filter(Boolean);
+            if (!inCategory.length) return null;
 
-          return (
-            <Reveal key={m.key} index={i}>
-            <TapScale
-              onPress={() => router.push(`/vitals/${m.key}`)}
-              accessibilityLabel={`${m.label}, ${m.display ?? "no reading"} ${m.unit}`}
-            >
-              <View style={[card, { padding: spacing.md }]}>
-                <View style={styles.metricTop}>
-                  <View style={styles.metricTitleRow}>
-                    <LinearGradient
-                      {...linearGradient(tile.gradient)}
-                      style={[iconTile, { width: 44, height: 44, borderColor: iconTileBorder[tile.tone] }]}
-                    >
-                      <MetricIcon metric={m.key} color={tint.fg} />
-                    </LinearGradient>
-                    <Text style={styles.metricLabel}>{m.label}</Text>
+            const present = inCategory.filter((v) => v.value != null);
+            /* A category with nothing recorded gets no header — announcing an
+               empty section is worse than saying nothing. */
+            if (!present.length) return null;
+
+            return (
+              <View key={category} style={styles.section}>
+                <View style={styles.sectionHead}>
+                  <Text style={styles.sectionTitle}>{CATEGORY_LABEL[category]}</Text>
+                  {category === "labs" && (
+                    <Pressable onPress={() => router.push("/care")}>
+                      <Text style={styles.sectionAction}>View results</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {rowsOf(present).map((row, r) => (
+                  <View key={row[0].metric.key} style={styles.row}>
+                    {row.map((mv, i) => (
+                      <View key={mv.metric.key} style={{ flex: 1 }}>
+                        <Reveal index={Math.min(r * 2 + i, 6)}>
+                          <TapScale
+                            onPress={() => openMetric(mv.metric)}
+                            accessibilityLabel={`${mv.metric.label}, ${mv.display} ${mv.unit}`}
+                          >
+                            <MetricTile
+                              mv={mv}
+                              size={row.length === 1 ? "hero" : "tile"}
+                              series={sparkFor(mv.metric)}
+                              /* Vitals compares cards side by side, so every
+                                 one states its range state — including
+                                 "Normal". Home does not. */
+                              alwaysStatus
+                              extra={
+                                mv.metric.key === "heartRate" ? (
+                                  <HeartRateWindows vitals={vitals} latest={mv.value} />
+                                ) : undefined
+                              }
+                            />
+                          </TapScale>
+                        </Reveal>
+                      </View>
+                    ))}
                   </View>
-                  {/* On this screen every metric states its status as a capsule —
-                      there is room for it, and the cards are compared side by
-                      side. Home's compact pair states it as plain text instead. */}
-                  <StatusBadge status={m.key === "heartRate" ? "inrange" : interp.status} variant="pill" />
-                </View>
-
-                <View style={styles.metricValueRow}>
-                  <FluidText value={m.display === null ? "—" : String(m.display)} style={[styles.metricValue, tabular]} />
-                  <Text style={styles.metricUnit}>{m.unit}</Text>
-                </View>
-
-                <Text style={styles.metricRange}>Normal range: {range.label}</Text>
-
-                {/* The card opens a detail screen, so it says so — the chevron
-                    gets its own column rather than sitting on the last point. */}
-                <View style={styles.sparkRow}>
-                  <View style={{ flex: 1 }}>
-                    <Sparkline data={series} width={sparkWidth} height={46} dot={false} />
-                  </View>
-                  <ChevronRightIcon size={17} color={semantic.textMuted} />
-                </View>
+                ))}
               </View>
-            </TapScale>
-            </Reveal>
-          );
-        })}
-      </View>
+            );
+          })
+        : null}
+
+      {/* One row for everything the registry knows and nothing is recording. */}
+      {vitals.length ? (
+        <View style={styles.section}>
+          <NotRecording metrics={allMissing} onOpen={openMetric} />
+        </View>
       ) : null}
     </Screen>
   );
 }
 
-function MetricIcon({ metric, color }: { metric: string; color: string }) {
-  switch (metric) {
-    case "heartRate":
-      return <HeartIcon size={20} color={color} />;
-    case "bloodPressure":
-      return <DropletIcon size={20} color={color} />;
-    case "spo2":
-      return <OxygenIcon size={20} color={color} />;
-    default:
-      return <ThermometerIcon size={20} color={color} />;
-  }
-}
-
 const styles = StyleSheet.create({
-  loading: { paddingVertical: 80, alignItems: "center" },
-  header: { alignItems: "center", justifyContent: "center" },
-  /* The screen title is set at 22/600 rather than the theme's 23/700 — that is
-     what the web build's heading uses, and the two must not drift. */
-  title: { fontSize: 22, ...font(600), lineHeight: 33, letterSpacing: -0.02 * 22, color: semantic.textPrimary },
-  headerAction: { position: "absolute", right: 0, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: spacing.xxl },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "center", minHeight: 40 },
+  title: { fontSize: 22, ...font(600), color: semantic.textPrimary, letterSpacing: -0.02 * 22 },
+  headerAction: {
+    position: "absolute",
+    right: 0,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  metricTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.xs },
-  metricTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
-  metricLabel: { ...text.cardLabel, color: semantic.textPrimary },
-  metricValueRow: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: spacing.sm },
-  metricValue: { fontSize: 34, ...font(700), lineHeight: 36, letterSpacing: -0.035 * 34, color: semantic.textPrimary },
-  metricUnit: { ...text.cardLabel, color: semantic.textSecondary },
-  metricRange: { ...text.caption, color: semantic.textMuted, marginTop: 4 },
-  sparkRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.xs },
+  section: { marginTop: spacing.sectionGap, gap: spacing.sm },
+  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionTitle: { fontSize: 15, ...font(600), color: semantic.textPrimary, letterSpacing: -0.01 * 15 },
+  sectionAction: { fontSize: 12.5, ...font(600), color: semantic.brandDeep },
+
+  row: { flexDirection: "row", gap: spacing.sm, alignItems: "stretch" },
+
+  /* Heart-rate windows */
+  windows: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.sm },
+  window: {
+    flex: 1,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(196,224,233,0.7)",
+  },
+  windowLabel: { fontSize: 10.5, ...font(500), color: semantic.textMuted },
+  windowValue: { fontSize: 15, ...font(700), color: semantic.textPrimary, marginTop: 2 },
+  windowUnit: { fontSize: 10, ...font(500), color: semantic.textSecondary },
+
+  /* Not recording */
+  notRecordingHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  notRecordingTitle: { fontSize: 12.5, ...font(500), color: semantic.textSecondary },
+  notRecordingNames: { fontSize: 11, ...font(400), color: semantic.textMuted, marginTop: 2 },
+  notRecordingList: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.hairlineSoft },
+  notRecordingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 10 },
+  notRecordingLabel: { fontSize: 12.5, ...font(400), color: semantic.textSecondary },
+  notRecordingMeta: { fontSize: 10.5, ...font(400), color: semantic.textMuted, marginTop: 1 },
+  notRecordingNone: { fontSize: 11, ...font(400), color: semantic.textMuted },
 });

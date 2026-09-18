@@ -10,6 +10,9 @@ import { useInsights } from "@app/patient/hooks/useInsights";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { dashboardService } from "@app/services/dashboard.service";
 import { buildSeries } from "@app/patient/lib/timeSeries";
+import { resolveAll, toScoreReadings, type MetricValue } from "@metrics/readings";
+import { computeHealthScore } from "@metrics/healthScore";
+import type { Metric } from "@metrics/registry";
 
 import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
@@ -20,10 +23,13 @@ import { Avatar } from "@/ui/Avatar";
 import { EmptyState } from "@/ui/EmptyState";
 import { useBandConnected } from "@/lib/band";
 import { FluidText } from "@/ui/FluidText";
+import { MetricTile } from "@/ui/MetricTile";
+import { HealthScoreRing, ScoreBandChip, ScoreScale, scoreExplanation } from "@/ui/HealthScoreRing";
 import { card, iconGreen, iconTile, iconTileBorder, tabular } from "@/ui/styles";
 import { formatClock, formatShortDate, greeting, relativeTime } from "@/ui/dates";
 import {
   CalendarIcon,
+  ChevronRightIcon,
   DropletIcon,
   HeartIcon,
   OxygenIcon,
@@ -47,7 +53,7 @@ const BANDS: Record<string, [number, number]> = {
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
-  const { vitals: existingVitals, appointments, loading: dataLoading } = usePatientData();
+  const { vitals: existingVitals, appointments, metricRecords, loading: dataLoading } = usePatientData();
   const patientId = user?.profile?.id;
   /* The feed stands in for a band, so it only runs when there is one — see
      useBandConnected. Without this a brand-new account is handed invented
@@ -83,41 +89,33 @@ export default function Home() {
   );
 
   const latest: any = sourceVitals[0];
-  const heartRate = latest?.heartRate ?? null;
-  const bpSys = latest?.systolic ?? latest?.bloodPressureSystolic ?? null;
-  const bpDia = latest?.diastolic ?? latest?.bloodPressureDiastolic ?? null;
-  const spo2 = latest?.spo2 ?? null;
-
-  const status: "stable" | "watch" | "attention" = useMemo(() => {
-    if (!latest) return "stable";
-    if ((bpSys && bpSys > 140) || (spo2 && spo2 < 95) || (heartRate && (heartRate > 100 || heartRate < 55))) return "attention";
-    if ((bpSys && bpSys > 125) || (heartRate && heartRate > 85)) return "watch";
-    return "stable";
-  }, [latest, bpSys, spo2, heartRate]);
 
   const hasReadings = sourceVitals.length > 0;
 
-  /* With no readings at all there is no status to report, and claiming "looks
-     stable today" to someone who has never taken a reading is worse than
-     saying nothing. */
-  const statusSubtext = !hasReadings
-    ? "Let's get you set up"
-    : status === "stable"
-      ? "Your health looks stable today"
-      : status === "watch"
-        ? "Some vitals are trending up"
-        : "A few vitals need attention";
+  /* Every metric the registry defines, resolved against the packet and the
+     patient's episodic records — the same call the Vitals screen makes, so the
+     two can never disagree about what the current heart rate is. */
+  const allValues = useMemo(() => resolveAll(latest, metricRecords), [latest, metricRecords]);
+  const byKey = useMemo(() => new Map(allValues.map((v) => [v.metric.key, v])), [allValues]);
 
-  const hrInRange = heartRate != null && heartRate >= BANDS.heartRate[0] && heartRate <= BANDS.heartRate[1];
+  const score = useMemo(() => computeHealthScore(toScoreReadings(allValues)), [allValues]);
 
-  /* The hero series keeps its timestamps — the chart is read as "over the day",
-     so it needs to say which day-part it is showing. */
-  const heroPoints = useMemo(
-    () => buildSeries(sourceVitals, "day", (v: any) => v.heartRate, 24),
-    [sourceVitals],
-  );
-  const heroSeries = useMemo(() => heroPoints.map((p) => p.value), [heroPoints]);
-  const heroDomain = useMemo(() => sparkDomain(heroSeries), [heroSeries]);
+  const heartRate = byKey.get("heartRate");
+  /* Blood pressure, oxygen and respiration — what the band is reading right
+     now, beside the heart rate. */
+  const live = ["bloodPressure", "spo2", "respiratoryRate"]
+    .map((k) => byKey.get(k))
+    .filter((v): v is MetricValue => !!v && v.value != null);
+  /* The day's rollups, which accumulate rather than being sampled. */
+  const today = ["steps", "calories", "sleep"]
+    .map((k) => byKey.get(k))
+    .filter((v): v is MetricValue => !!v && v.value != null);
+
+  /** The day's series for any metric the registry can read out of the packet. */
+  const sparkFor = (metric: Metric) => {
+    if (!metric.read) return undefined;
+    return buildSeries(sourceVitals, "day", (v) => metric.read!(v)).map((p) => p.value as number);
+  };
 
   const topInsight = insights[0];
   const nextAppt = dashboard?.nextAppointment || appointments[0];
@@ -191,13 +189,12 @@ export default function Home() {
     return (
       <Screen>
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.green600} />
+          <ActivityIndicator color={semantic.brand} />
         </View>
       </Screen>
     );
   }
 
-  const heroWidth = width - spacing.pageX * 2 - 32;
 
   return (
     <Screen>
@@ -207,11 +204,10 @@ export default function Home() {
           <Text style={styles.greeting}>
             {greeting()}, {user?.firstName || "there"}
           </Text>
-          <Text style={styles.statusLine}>{statusSubtext}</Text>
           {hasReadings ? (
             <View style={styles.updatedRow}>
               <View
-                style={[styles.dot, { backgroundColor: wearableConnected ? colors.green600 : semantic.textMuted }]}
+                style={[styles.dot, { backgroundColor: wearableConnected ? semantic.signal : semantic.textMuted }]}
               />
               <Text style={text.caption}>Last updated {relativeTime(updatedAt)}</Text>
             </View>
@@ -238,88 +234,100 @@ export default function Home() {
         </Reveal>
       ) : null}
 
-      {/* Heart rate — the headline reading, on its own mint surface */}
-      {heartRate !== null ? (
+      {/* The one number that answers "am I okay". The ring carries the value,
+          the chip the verdict, the scale the position — a ring alone cannot
+          say where a high score sits. */}
+      {hasReadings ? (
         <Reveal index={1}>
-        <TapScale
-          onPress={() => router.push("/vitals/heartRate")}
-          accessibilityLabel={`Heart rate, ${heartRate} BPM, ${hrInRange ? "in range" : "out of range"}`}
-          style={styles.block}
-        >
-          <LinearGradient
-            {...linearGradient("mint")}
-            style={[card, { padding: spacing.md, borderRadius: radii.card }]}
+          <TapScale
+            onPress={() => router.push("/vitals")}
+            accessibilityLabel={`Health score ${score.score ?? "unavailable"}, ${score.band ?? "no data"}`}
+            style={styles.block}
           >
-            <View style={styles.heroTop}>
-              <View style={styles.heroLeft}>
-                {/* On the hero the mark inverts: a solid green disc carrying a
-                    white heart, rather than a tinted tile like the small cards. */}
-                <LinearGradient {...linearGradient("iconGreen")} style={[iconGreen, { width: 40, height: 40 }]}>
-                  <HeartIcon size={20} color={colors.onGreen} />
-                </LinearGradient>
-                <Text style={styles.heroLabel}>Heart Rate</Text>
+            <View style={[card, { padding: spacing.md }]}>
+              <View style={styles.scoreRow}>
+                <HealthScoreRing result={score} size={96} />
+                <View style={styles.scoreText}>
+                  <View style={styles.scoreTitleRow}>
+                    <Text style={styles.scoreTitle}>Health Score</Text>
+                    <ScoreBandChip band={score.band} />
+                  </View>
+                  <Text style={styles.scoreBody}>{scoreExplanation(score)}</Text>
+                </View>
+                <ChevronRightIcon size={17} color={semantic.textMuted} />
               </View>
-              <StatusBadge status={hrInRange ? "inrange" : "high"} variant="pill" />
+              <ScoreScale score={score.score} />
+              <Text style={styles.scoreFoot}>
+                Based on {score.scoredCount} of {score.scorableCount} measures
+              </Text>
             </View>
-
-            <View style={styles.heroValueRow}>
-              <FluidText value={String(heartRate)} style={[styles.heroValue, tabular]} />
-              <Text style={styles.heroUnit}>BPM</Text>
-            </View>
-            <Text style={styles.heroRange}>
-              Normal range: {BANDS.heartRate[0]} – {BANDS.heartRate[1]}
-            </Text>
-            {/* The chart is scaled to its own min and max and labelled with
-                both, so the wave is readable as a number and not just a shape.
-                Without the labels an auto-scaled line exaggerates a three-beat
-                wobble into a mountain range. */}
-            <View style={styles.chartRow}>
-              <View style={styles.chartAxis}>
-                <Text style={styles.axisLabel}>{heroDomain[1]}</Text>
-                <Text style={styles.axisLabel}>{heroDomain[0]}</Text>
-              </View>
-              <Sparkline data={heroSeries} width={heroWidth + 8 - AXIS_W} domain={heroDomain} dot={false} />
-            </View>
-            {heroPoints.length > 1 ? (
-              <View style={[styles.timeRow, { marginLeft: AXIS_W }]}>
-                <Text style={styles.axisLabel}>{formatClock(new Date(heroPoints[0].at).toISOString())}</Text>
-                <Text style={styles.axisLabel}>
-                  {formatClock(new Date(heroPoints[heroPoints.length - 1].at).toISOString())}
-                </Text>
-              </View>
-            ) : null}
-          </LinearGradient>
-        </TapScale>
+          </TapScale>
         </Reveal>
       ) : null}
 
-      {/* Blood pressure and oxygen — a pair */}
-      <Reveal index={2}>
-      <View style={styles.pair}>
-        {bpSys !== null ? (
-          <MetricCard
-            label="Blood Pressure"
-            value={`${bpSys}/${bpDia ?? "—"}`}
-            unit="mmHg"
-            status={bpSys > 140 || (bpDia ?? 0) > 90 ? "high" : bpSys > 125 ? "attention" : "normal"}
-            metric="bloodPressure"
-            icon={<DropletIcon size={19} color={metricTint("bloodPressure").fg} />}
-            onPress={() => router.push("/vitals/bloodPressure")}
-          />
-        ) : null}
-        {spo2 !== null ? (
-          <MetricCard
-            label="Blood Oxygen"
-            value={String(spo2)}
-            unit="%"
-            status={spo2 < 95 ? "low" : "normal"}
-            metric="spo2"
-            icon={<OxygenIcon size={19} color={metricTint("spo2").fg} />}
-            onPress={() => router.push("/vitals/spo2")}
-          />
-        ) : null}
-      </View>
-      </Reveal>
+      {/* Heart rate — the headline live reading */}
+      {heartRate ? (
+        <Reveal index={1}>
+          <View style={styles.block}>
+            <MetricTile
+              mv={heartRate}
+              size="hero"
+              series={sparkFor(heartRate.metric)}
+              onPress={() => router.push("/vitals/heartRate")}
+            />
+          </View>
+        </Reveal>
+      ) : null}
+
+      {/* The rest of what is live right now. An odd count would leave the last
+          tile with a gap beside it, so it takes the full width instead. */}
+      {live.length ? (
+        <Reveal index={2}>
+          <View style={styles.liveGrid}>
+            {live.map((mv, i) => (
+              <View
+                key={mv.metric.key}
+                style={[
+                  styles.liveCell,
+                  live.length % 2 === 1 && i === live.length - 1 ? styles.liveCellFull : null,
+                ]}
+              >
+                <MetricTile
+                  mv={mv}
+                  size="tile"
+                  series={sparkFor(mv.metric)}
+                  onPress={() => router.push(`/vitals/${mv.metric.key}`)}
+                />
+              </View>
+            ))}
+          </View>
+        </Reveal>
+      ) : null}
+
+      {/* Today's rollups. Deliberately a separate row from the live strip: a
+          step count accumulates across a day while a heart rate is sampled
+          right now, and showing them as the same kind of tile invites reading
+          them as the same kind of fact. */}
+      {today.length ? (
+        <Reveal index={3}>
+          <View style={{ marginTop: spacing.blockGap }}>
+            <View style={styles.sectionHeader}>
+              <Text style={text.sectionTitle}>Today</Text>
+            </View>
+            <View style={styles.todayRow}>
+              {today.map((mv) => (
+                <View key={mv.metric.key} style={{ flex: 1 }}>
+                  <MetricTile
+                    mv={mv}
+                    size="mini"
+                    onPress={() => router.push(`/vitals/${mv.metric.key}`)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        </Reveal>
+      ) : null}
 
       {/* Your Health Agent — what the agent noticed, and the two ways to reply */}
       <Reveal index={3}>
@@ -626,4 +634,23 @@ const styles = StyleSheet.create({
   apptRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md },
   apptTitle: { ...text.body, ...font(600), color: semantic.textPrimary },
   apptMeta: { ...text.caption, color: semantic.textSecondary, marginTop: 2 },
+  /* ---- Health score ---- */
+  scoreRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  scoreText: { flex: 1, minWidth: 0 },
+  scoreTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
+  scoreTitle: { fontSize: 13.5, ...font(600), color: semantic.textPrimary },
+  scoreBody: { fontSize: 12.5, ...font(400), color: semantic.textSecondary, lineHeight: 18, marginTop: 6 },
+  scoreFoot: { fontSize: 10.5, ...font(400), color: semantic.textMuted, marginTop: 8 },
+
+  /* ---- The live strip, two to a row ---- */
+  liveGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.blockGap },
+  liveCell: { width: "48%", flexGrow: 1 },
+  /* An odd count would leave the last tile with a gap beside it, so it takes
+     the full width instead. */
+  liveCellFull: { width: "100%" },
+
+  /* ---- Today's rollups, three to a row ---- */
+  todayRow: { flexDirection: "row", gap: spacing.xs, alignItems: "stretch" },
+
+
 });
