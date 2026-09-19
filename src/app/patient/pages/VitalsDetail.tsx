@@ -210,9 +210,6 @@ export default function VitalsDetail() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-5"
     >
       {/* Header — bare controls, the title is the axis of the screen */}

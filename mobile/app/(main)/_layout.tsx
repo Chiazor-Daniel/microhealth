@@ -74,10 +74,18 @@ function AuthedContent({ authenticated, loading }: { authenticated: boolean; loa
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: semantic.pageBackground },
-        /* Screens carry their own atmosphere and the nav is translucent, so a
-           push should read as one surface replacing another rather than a
-           panel sliding over the page. */
-        animation: "slide_from_right",
+        /* No transition on navigation.
+
+           This used to slide in from the right, which meant every tab switch
+           and every drill-in spent a beat sliding a screen you had already
+           asked for. On a set of tabs a patient flips between twenty times a
+           day that reads as the app being slow to respond, not as polish —
+           and the web build has no route transition at all, so the two felt
+           different in the hand for no reason.
+
+           `none`, not a shorter duration: the point is that the screen is
+           simply there when you arrive. */
+        animation: "none",
       }}
     />
   );

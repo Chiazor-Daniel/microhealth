@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { AreaChart, Area, Tooltip, ResponsiveContainer, YAxis } from "recharts";
 import { patientTheme } from "../theme";
@@ -40,18 +40,62 @@ import type { MetricValue } from "../../../metrics/readings";
 
 export type TileSize = "hero" | "tile" | "mini";
 
+/**
+ * Below this width, half-width tiles run out of room for a full metric name.
+ *
+ * At 320px a two-up tile leaves about 66px for its label, and a name like
+ * "Triglycerides" cannot wrap — it is one word — so it would be clipped
+ * mid-word. The registry already carries a short name for exactly this, and
+ * a small screen is where it earns its place.
+ *
+ * 375 — an iPhone SE — is the smallest phone worth designing for and sits
+ * comfortably above this; only genuinely tiny viewports take the short name.
+ */
+const NARROW = 360;
+
+function useNarrow() {
+  const [narrow, setNarrow] = useState(
+    typeof window !== "undefined" ? window.innerWidth < NARROW : false
+  );
+  useEffect(() => {
+    const on = () => setNarrow(window.innerWidth < NARROW);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return narrow;
+}
+
 /** Compact is a shorthand: no disc, no parts, no status — value and name only. */
 const SPEC: Record<
   TileSize,
-  { pad: number; icon: number; disc: number; label: number; value: number; unit: number; spark: number; gap: number; chip: number }
+  { pad: number; icon: number; disc: number; label: number; value: number; unit: number; spark: number; gap: number; chip: number; headGap: number }
 > = {
   /* The lead card of a section — full width, room for a chart and its parts. */
-  hero: { pad: 16, icon: 20, disc: 44, label: 13, value: 34, unit: 12.5, spark: 46, gap: 12, chip: 11 },
+  hero: { pad: 16, icon: 20, disc: 44, label: 13, value: 34, unit: 12.5, spark: 46, gap: 12, chip: 11, headGap: 8 },
   /* The standard card: two to a row. */
-  tile: { pad: 13, icon: 16, disc: 34, label: 11.5, value: 22, unit: 11, spark: 32, gap: 9, chip: 10 },
+  tile: { pad: 13, icon: 16, disc: 34, label: 11.5, value: 22, unit: 11, spark: 32, gap: 9, chip: 10, headGap: 8 },
   /* Today's rollups — three to a row, so only the essentials survive. */
-  mini: { pad: 12, icon: 17, disc: 0, label: 10.5, value: 19, unit: 10, spark: 0, gap: 8, chip: 0 },
+  mini: { pad: 12, icon: 17, disc: 0, label: 10.5, value: 19, unit: 10, spark: 0, gap: 8, chip: 0, headGap: 8 },
 };
+
+/**
+ * The header on a genuinely small screen.
+ *
+ * A three-up row at 320px leaves a mini tile ~33px for its label after the
+ * glyph and the gap, and "Energy" needs 35 — it clipped by two pixels, with no
+ * ellipsis and no second line, because it is a single word.
+ *
+ * The label cannot give here. `Energy` is already the registry's `short` for a
+ * metric whose full name is longer, so there is no shorter word to fall back
+ * to, and a metric name that stops mid-word ("Energ") fails the one job this
+ * row has. The glyph can give: it is decoration at this size — the label is
+ * what names the tile — and a 14px mark still reads where 17px did. Closing
+ * the gap costs nothing either; 8px was tuned for a 34px disc that `mini`
+ * does not have.
+ *
+ * So the six reclaimed pixels come out of the icon, not the word.
+ */
+const MINI_NARROW = { icon: 14, headGap: 5 } as const;
 
 /**
  * The reading's own sparkline — a single luminous line with a whisper of fill.
@@ -171,9 +215,12 @@ export function MetricTile({
   alwaysStatus?: boolean;
   onClick?: () => void;
 }) {
-  const s = SPEC[size];
+  const narrow = useNarrow();
+  const s = size === "mini" && narrow ? { ...SPEC.mini, ...MINI_NARROW } : SPEC[size];
   const { metric } = mv;
   const compact = size === "mini";
+  /* The hero always has room for the full name; a cramped tile does not. */
+  const label = (compact || (narrow && size === "tile")) && metric.short ? metric.short : metric.label;
   const showStatus = !compact && (alwaysStatus || mv.status !== "normal");
   const hasChart = !extra && !!series && series.length > 1 && s.spark > 0;
   const hasParts = !compact && mv.parts.length > 0 && mv.parts.some((p) => p.value != null);
@@ -187,7 +234,7 @@ export function MetricTile({
       aria-label={`${metric.label}, ${mv.display} ${mv.unit}, ${mv.statusText}`}
     >
       {/* Header — the label owns this line, so it always names the metric. */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center" style={{ gap: s.headGap }}>
         {s.disc > 0 ? (
           <div
             className="mh-icon flex-shrink-0"
@@ -200,21 +247,42 @@ export function MetricTile({
             <GlyphIcon name={metric.icon} size={s.icon} />
           </span>
         )}
+        {/* Two lines, not one. A truncated label stops naming the metric —
+            "Blood O…" is worse than a label that takes a second line, and on a
+            narrow phone the half-width tiles cannot fit "Blood Oxygen" on one
+            line at any size. It only wraps when it has to: at a normal phone
+            width every label still sits on a single line. */}
         <p
-          className="font-medium leading-tight truncate min-w-0"
-          style={{ fontSize: s.label, color: patientTheme.colors.textPrimary }}
+          className="font-medium leading-tight min-w-0"
+          style={{
+            fontSize: s.label,
+            color: patientTheme.colors.textPrimary,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
         >
-          {compact ? (metric.short || metric.label) : metric.label}
+          {label}
         </p>
       </div>
 
-      {/* Value, with the status at the far end of the same line. */}
+      {/* Value, with the status at the far end of the same line.
+          The row wraps: a narrow tile cannot hold "122/75" + "mmHg" +
+          "Elevated" on one line, and without wrapping they simply overprinted
+          each other. The status keeps `ml-auto` so it stays right-aligned
+          whether it lands beside the value or below it. */}
       <div
-        className="flex items-baseline justify-between gap-2 whitespace-nowrap"
+        className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5"
         style={{ marginTop: s.gap }}
       >
-        <span className="flex items-baseline gap-1.5 min-w-0">
+        {/* The number never breaks — "116/74" is one token. The unit does,
+            dropping to a second line when the tile is too narrow for both.
+            Keeping the group itself `nowrap` pushed "mmHg" off the edge
+            instead, and it was clipped rather than moved. */}
+        <span className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
           <span
+            className="whitespace-nowrap"
             style={{
               fontSize: s.value,
               fontWeight: 700,

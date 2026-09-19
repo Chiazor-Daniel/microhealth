@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, G, LinearGradient, Stop } from "react-native-svg";
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -122,8 +122,14 @@ export function ScoreRing({ result, size = 104 }: { result: HealthScore; size?: 
   const locs = gradients.scoreRing.locations ?? stops.map((_, i) => i / (stops.length - 1));
 
   return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size}>
+    /* The number is centred by the *parent*, and the SVG is absolutely
+       positioned behind it. The first version had it the other way round — an
+       absolutely-positioned overlay on top of an SVG in normal flow — and on
+       device the text fell out of the ring entirely and landed below it.
+       Centring with flexbox and taking the SVG out of flow cannot fail that
+       way: the layout engine does the centring, not an offset. */
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg style={{ position: "absolute", top: 0, left: 0 }} width={size} height={size}>
         <Defs>
           {/* userSpaceOnUse so the sweep spans the circle rather than each
               path's own bounding box — the latter would restart the gradient
@@ -137,26 +143,28 @@ export function ScoreRing({ result, size = 104 }: { result: HealthScore; size?: 
 
         <Circle cx={c} cy={c} r={r} fill="none" stroke={colors.scoreTrack} strokeWidth={sw} />
 
-        {/* SVG starts an arc at 3 o'clock; the ring reads from 12. */}
-        <AnimatedCircle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          stroke="url(#mhScoreRing)"
-          strokeWidth={sw}
-          strokeLinecap="round"
-          rotation={-90}
-          origin={`${c}, ${c}`}
-          strokeDasharray={`${circumference} ${circumference}`}
-          animatedProps={arcProps}
-        />
+        {/* SVG starts an arc at 3 o'clock; the ring reads from 12.
+            Rotation goes on a wrapping <G> with an explicit transform string.
+            The `rotation`/`origin` props on the shape itself did not apply on
+            device — the arc swept from 3 o'clock, which is what made it read
+            as a "C" opening sideways rather than a ring filling from the top. */}
+        <G transform={`rotate(-90 ${c} ${c})`}>
+          <AnimatedCircle
+            cx={c}
+            cy={c}
+            r={r}
+            fill="none"
+            stroke="url(#mhScoreRing)"
+            strokeWidth={sw}
+            strokeLinecap="round"
+            strokeDasharray={`${circumference} ${circumference}`}
+            animatedProps={arcProps}
+          />
+        </G>
       </Svg>
 
-      <View style={styles.centre} pointerEvents="none">
-        <Text style={[styles.value, { fontSize: size * 0.32 }]}>{shown ?? "—"}</Text>
-        <Text style={[styles.denom, { fontSize: size * 0.095 }]}>/100</Text>
-      </View>
+      <Text style={[styles.value, { fontSize: size * 0.32 }]}>{shown ?? "—"}</Text>
+      <Text style={[styles.denom, { fontSize: size * 0.095 }]}>/100</Text>
     </View>
   );
 }

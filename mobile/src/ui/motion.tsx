@@ -1,13 +1,6 @@
-import { forwardRef, useEffect, type ReactNode } from "react";
-import { Pressable, StyleSheet, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
+import { forwardRef, type ReactNode } from "react";
+import { Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { motion } from "@tokens";
 
 /**
@@ -24,69 +17,46 @@ const STANDARD = Easing.bezier(...motion.easing.standard);
 
 export interface RevealProps {
   children: ReactNode;
-  /** Position in a stack. Each step adds a beat, so a column arrives in order. */
+  /** Kept for call-site compatibility. Unused — see below. */
   index?: number;
-  /** Distance travelled, in points. */
+  /** Kept for call-site compatibility. Unused — see below. */
   distance?: number;
-  /** Turns the entrance off for an item that should already be on screen. */
+  /** Kept for call-site compatibility. Unused — see below. */
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Fade-and-rise on mount.
+ * Renders its children. No entrance animation.
  *
- * Stagger by passing the item's `index`: a screen of five cards reads as a
- * column assembling itself rather than one flat sheet appearing. The cap keeps
- * a long list — a chat, say — from taking seconds to finish arriving.
+ * This used to fade-and-rise each item with a stagger by `index`, so a screen
+ * assembled itself as a column of cards arriving in order. It is gone on
+ * purpose: navigating to a screen should show the screen, not a performance.
+ * The stagger meant every tab switch and every drill-in cost a beat before the
+ * content was readable, and on a screen the patient opens twenty times a day
+ * that beat is the app feeling slow rather than feeling polished.
  *
- * Deliberately driven by an animated `transform`/`opacity` rather than
- * Reanimated's `entering` prop. `entering` makes the view `position: absolute`
- * while it plays — on web it can stay that way — which takes it *out of the
- * flow*: the parent collapses to nothing and the scroll view's bottom padding
- * stops being trailing space, so the last content can never be scrolled clear
- * of the floating nav. Transform and opacity are painted, not laid out, so the
- * element keeps its place the whole time.
+ * The props are kept so the ~20 call sites do not have to change, but nothing
+ * reads them. Motion in this app is now limited to what answers a *touch* —
+ * `TapScale` below, and the switching of a control's own state.
+ *
+ * A plain `View` rather than `Animated.View`: with no animated style there is
+ * nothing for a Reanimated node to do, and leaving one in the tree would keep
+ * every card subscribed to the UI thread for no reason.
  */
-export function Reveal({ children, index = 0, distance = 12, disabled = false, style }: RevealProps) {
-  /* Starts settled when disabled, so the effect below is the only path that
-     ever animates. */
-  const progress = useSharedValue(disabled ? 1 : 0);
-
-  useEffect(() => {
-    if (disabled) return;
-    progress.value = withDelay(
-      Math.min(index, 8) * 45,
-      withTiming(1, { duration: motion.duration.slow, easing: STANDARD }),
-    );
-  }, [disabled, index, progress]);
-
-  const animated = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * distance }],
-  }));
-
-  return <Animated.View style={[style, animated]}>{children}</Animated.View>;
+export function Reveal({ children, style }: RevealProps) {
+  return <View style={style}>{children}</View>;
 }
 
 /**
- * A softer arrival for something that appears inside an existing screen —
- * a chat bubble, a newly loaded row. No travel, just a fade, because a message
- * sliding in from off-axis reads as an error rather than as a reply.
+ * Renders its children. No entrance animation.
  *
- * A fade alone still animates `opacity` rather than using `entering`, for the
- * same layout reason as `Reveal`.
+ * Was a fade for things appearing inside an existing screen. Removed with
+ * `Reveal` and for the same reason — an arriving chat bubble is not worth a
+ * transition, and the fade fired on every load of every list.
  */
 export function SoftIn({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    progress.value = withTiming(1, { duration: motion.duration.base, easing: STANDARD });
-  }, [progress]);
-
-  const animated = useAnimatedStyle(() => ({ opacity: progress.value }));
-
-  return <Animated.View style={[style, animated]}>{children}</Animated.View>;
+  return <View style={style}>{children}</View>;
 }
 
 /**
