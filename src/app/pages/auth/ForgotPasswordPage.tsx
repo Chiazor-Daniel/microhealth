@@ -13,10 +13,7 @@ function ForgotPasswordPage() {
     <div className="flex items-center justify-center min-h-dvh h-dvh bg-background" style={{ fontFamily: "'Work Sans', sans-serif" }}>
       <div className="w-full max-w-sm mx-4">
         <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)" }}>
-            <Heart size={20} color="#fff" />
-          </div>
-          <span className="text-xl font-bold text-foreground">MicroHealth</span>
+          <BrandLogo variant="horizontal" height={30} />
         </div>
         <div className="bg-card rounded-2xl p-6" style={{ boxShadow: CARD_SHADOW }}>
           {step === "email" && (<>

@@ -17,7 +17,7 @@ import { colors, radii, semantic, spacing } from "@tokens";
 import { font, linearGradient, text } from "@rn/theme";
 
 import { Atmosphere } from "./Atmosphere";
-import { BrandMark } from "./BrandMark";
+import { BrandLogo } from "./BrandLogo";
 
 /**
  * The chrome shared by sign-in and sign-up.
@@ -57,9 +57,7 @@ export function AuthShell({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <LinearGradient {...linearGradient("iconGreen")} style={styles.mark}>
-            <BrandMark size={28} color={colors.onGreen} />
-          </LinearGradient>
+          <BrandLogo variant="horizontal" height={30} style={styles.mark} />
 
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>

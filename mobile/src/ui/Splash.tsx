@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,9 +10,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { colors, radii, semantic, spacing } from "@tokens";
-import { font, linearGradient } from "@rn/theme";
+import { font } from "@rn/theme";
 
-import { BrandMark } from "./BrandMark";
+import { BrandLogo } from "./BrandLogo";
 
 /**
  * What is on screen while the app boots.
@@ -58,12 +57,8 @@ export function Splash() {
     <View style={styles.root}>
       <Animated.View style={[styles.glow, glowStyle]} />
       <Animated.View style={markStyle}>
-        <LinearGradient {...linearGradient("iconGreen")} style={styles.mark}>
-          <BrandMark size={34} color={colors.onGreen} />
-        </LinearGradient>
+        <BrandLogo variant="stacked" height={104} />
       </Animated.View>
-
-      <Animated.Text style={[styles.name, markStyle]}>MicroHealth</Animated.Text>
       <Animated.Text style={[styles.tagline, markStyle]}>Your health, watched over</Animated.Text>
     </View>
   );

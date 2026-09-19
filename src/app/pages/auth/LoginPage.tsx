@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
+import { BrandLogo } from "../../components/shared/BrandLogo";
 import { Heart, Loader2 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { success } from "../../components/shared/SweetAlert";
@@ -34,9 +35,7 @@ function LoginPage() {
       <div className="hidden lg:flex flex-col w-[480px] flex-shrink-0 p-10 relative overflow-hidden"
         style={{ background: "linear-gradient(145deg, #0A5E5C 0%, #0F7D7A 50%, #131E33 100%)" }}>
         <div className="flex items-center gap-3 mb-auto">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}>
-            <Heart size={18} color="#fff" />
-          </div>
+          <BrandLogo variant="mark" height={24} onDark />
           <span className="text-white font-bold text-xl tracking-tight">MicroHealth</span>
         </div>
         <div className="mb-auto">
@@ -60,6 +59,9 @@ function LoginPage() {
             <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-all mb-4">
               ← Back to home
             </button>
+            <div className="mb-5">
+              <BrandLogo variant="horizontal" height={26} />
+            </div>
             <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="text-sm text-muted-foreground mt-1">Sign in to your staff portal</p>
           </div>

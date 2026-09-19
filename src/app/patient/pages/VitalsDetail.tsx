@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
 import {
   HeartIcon, DropletIcon, OxygenIcon, ThermometerIcon,
-  ChevronLeftIcon, MoreIcon, ArrowUpIcon, ArrowDownIcon, MinusIcon,
+  ChevronLeftIcon,
+  GlyphIcon, MoreIcon, ArrowUpIcon, ArrowDownIcon, MinusIcon,
 } from "../icons";
 import {
   AreaChart,
@@ -22,6 +23,7 @@ import { ErrorState } from "../../components/shared/ErrorState";
 import { patientTheme, metricTint } from "../theme";
 import { SegmentedTabs } from "../components/SegmentedTabs";
 import { buildSeries, axisLabel, distinctTicks } from "../lib/timeSeries";
+import { metricOf } from "../../../metrics/registry";
 
 /**
  * Per-metric definition: label, unit, the healthy band, and the value reader.
@@ -71,6 +73,14 @@ const RANGES = [
   { value: "quarter", label: "3 Months" },
 ];
 
+/**
+ * How the delta is described, per time range.
+ *
+ * "Earlier today" is right for something the band samples continuously and
+ * wrong for everything else: a night's sleep has no "earlier today", and a
+ * lab draw has no day at all. The cadence decides the wording, so the card
+ * under a nightly metric does not claim a comparison it cannot make.
+ */
 const PERIOD_LABEL: Record<string, string> = {
   day: "Compared to earlier today",
   week: "Compared to last week",
@@ -78,15 +88,62 @@ const PERIOD_LABEL: Record<string, string> = {
   quarter: "Compared to last quarter",
 };
 
+const PERIOD_LABEL_BY_CADENCE: Record<string, Record<string, string>> = {
+  nightly: { day: "Compared to the night before", week: "Compared to last week" },
+  daily: { day: "Compared to yesterday", week: "Compared to last week" },
+  interval: {
+    day: "Compared to your last reading",
+    week: "Compared to your last reading",
+    month: "Compared to last month",
+  },
+  spot: { day: "Compared to your last reading" },
+};
+
+function periodLabel(cadence: string | undefined, range: string): string {
+  const byCadence = cadence ? PERIOD_LABEL_BY_CADENCE[cadence] : undefined;
+  return byCadence?.[range] ?? PERIOD_LABEL[range];
+}
+
 export default function VitalsDetail() {
   const { metric = "heartRate" } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { vitals: existingVitals, loading, error, refresh } = usePatientData();
+  const { vitals: existingVitals, metricRecords, loading, error, refresh } = usePatientData();
   const { latest: wearableLatest } = useWearable(user?.profile?.id, true);
   const [range, setRange] = useState<"day" | "week" | "month" | "quarter">("day");
 
-  const def = METRICS[metric] ?? METRICS.heartRate;
+  /* The registry is the source of truth for what a metric *is* — its label,
+     unit, healthy band, glyph and how to read it. The local table is now only
+     a fallback for a key the registry does not know.
+
+     Without this, every card on Vitals opened Heart Rate: this screen keys off
+     the URL, and a key it had no entry for fell back silently. */
+  const registry = metricOf(metric);
+  const fallback = METRICS[metric] ?? METRICS.heartRate;
+  const def = registry
+    ? {
+        ...fallback,
+        label: registry.label,
+        unit: registry.unit,
+        baseline: [registry.band.low, registry.band.high] as [number, number],
+        read: registry.read ?? fallback.read,
+        icon: <GlyphIcon name={registry.icon} size={21} />,
+      }
+    : fallback;
+
+  /* Where this metric's readings actually live. The band reports several
+     measures in one packet; everything episodic — a night of sleep, a day's
+     steps, a lab draw — is its own record. Reading the second kind out of the
+     packet charts nothing. */
+  const isRecord = registry?.source === "record";
+  const recordSeries = useMemo(
+    () =>
+      metricRecords
+        .filter((r) => r.metricKey === metric && r.value != null)
+        .map((r) => ({ recordedAt: r.recordedAt, value: r.value as number }))
+        .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()),
+    [metricRecords, metric],
+  );
 
   const vitals = useMemo(() => {
     const list = [...existingVitals];
@@ -106,7 +163,7 @@ export default function VitalsDetail() {
 
   const series = useMemo(
     () =>
-      buildSeries(vitals, range, def.read).map((p) => ({
+      (isRecord ? buildSeries(recordSeries, range, (r: any) => r.value) : buildSeries(vitals, range, def.read)).map((p) => ({
         label: axisLabel(p.at, range),
         value: p.value,
       })),
@@ -117,7 +174,9 @@ export default function VitalsDetail() {
      tick at each of them prints the same time more than once. */
   const xTicks = useMemo(() => distinctTicks(series.map((p) => p.label)), [series]);
 
-  const current = def.read(vitals[0]);
+  const current = isRecord
+    ? (recordSeries.length ? recordSeries[recordSeries.length - 1].value : null)
+    : def.read(vitals[0]);
   /* Movement across the window, not against the reading 3 seconds ago. */
   const windowStart = series.length > 1 ? series[0].value : null;
   const delta = current != null && windowStart != null ? Math.round((current - windowStart) * 10) / 10 : null;
@@ -128,8 +187,25 @@ export default function VitalsDetail() {
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error} onRetry={refresh} />;
 
-  const lastAt = vitals[0]?.recordedAt
-    ? new Date(vitals[0].recordedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  /* A record metric's latest reading is its newest record, not whatever the
+     band last reported — this said "4:11 PM" for a night's sleep logged at
+     6:45 AM, because it was reading the packet.
+     Pick the timestamp first, format it second: formatting `vitals[0]` inside
+     the branch meant the real fix only changed the *test* and the wrong value
+     still printed. */
+  const lastReadingAt = isRecord
+    ? recordSeries.length
+      ? recordSeries[recordSeries.length - 1].recordedAt
+      : undefined
+    : vitals[0]?.recordedAt;
+
+  const lastAt = lastReadingAt
+    ? new Date(lastReadingAt).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
     : "—";
 
   return (
@@ -319,7 +395,7 @@ export default function VitalsDetail() {
               {delta == null || delta === 0 ? "No change" : `${delta > 0 ? "+" : ""}${delta} ${def.unit}`}
             </p>
             <p className="text-[12.5px]" style={{ color: patientTheme.colors.textSecondary }}>
-              {PERIOD_LABEL[range]}
+              {periodLabel(registry?.cadence, range)}
             </p>
             <p className="text-[12px] mt-0.5" style={{ color: patientTheme.colors.textMuted }}>
               {inRange ? "(healthy variation)" : "(outside your usual range)"}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Heart, Loader2 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { success } from "../../components/shared/SweetAlert";
+import { BrandLogo } from "../../components/shared/BrandLogo";
 
 const CARD_SHADOW = "0 4px 20px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.10)";
 const BTN_SHADOW = "0 4px 6px -1px rgba(15,125,122,0.3)";
@@ -34,10 +35,7 @@ function PatientLoginPage() {
       <div className="w-full max-w-sm mx-4">
         <div className="flex items-center gap-3 justify-center mb-8">
           <button onClick={() => navigate("/")} className="absolute left-4 top-4 text-sm text-muted-foreground hover:text-foreground transition-all">← Back to home</button>
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F7D7A, #0A5E5C)" }}>
-            <Heart size={20} color="#fff" />
-          </div>
-          <span className="text-xl font-bold text-foreground">MicroHealth</span>
+          <BrandLogo variant="horizontal" height={30} />
         </div>
         <div className="bg-card rounded-2xl p-6" style={{ boxShadow: CARD_SHADOW }}>
           <h2 className="text-xl font-bold text-foreground mb-1">Welcome back</h2>
