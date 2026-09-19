@@ -13,7 +13,7 @@ import { patientTheme } from "../theme";
 import { StatusBadge } from "../components/StatusBadge";
 import { useWearable } from "../hooks/useWearable";
 import { BrandMark } from "../components/BrandMark";
-import { HealthScoreRing, ScoreBandChip, ScoreScale, scoreExplanation } from "../components/HealthScoreRing";
+import { ScoreBandChip, ScoreScale, scoreExplanation, scoreCoverage } from "../components/HealthScore";
 import { MetricTile } from "../components/MetricTile";
 import { GlyphIcon, HeartIcon, CalendarIcon, SparkIcon, SpeakerIcon, TrendIcon, ChevronRightIcon } from "../icons";
 import { resolveAll, toScoreReadings, type MetricValue } from "../../../metrics/readings";
@@ -130,6 +130,31 @@ function TodayRow({ items, onOpen }: { items: MetricValue[]; onOpen: (mv: Metric
   );
 }
 
+/**
+ * What a timeline row's colour is saying.
+ *
+ * The tile and the icon must agree, and the colour must mean something:
+ *
+ *   brand   an appointment is *structure* — it answers "what is this", so it
+ *           wears the brand teal like every other piece of chrome.
+ *   signal  a reading that sits in range. That IS a verdict, so it is leaf.
+ *   rose    a reading outside range.
+ *   amber   the agent, which is neither.
+ *
+ * This used to be a colour per row plus a tile per kind, chosen separately —
+ * which put a leaf-green calendar on a teal tile and a leaf-green heart on a
+ * rose one. Every icon on the timeline rendered green regardless of its
+ * container, which read as leftover from the old single-green palette.
+ */
+const TIMELINE_TONE = {
+  brand: { fg: patientTheme.colors.brandDeep, tile: patientTheme.gradients.tile },
+  signal: { fg: patientTheme.colors.signalDeep, tile: patientTheme.gradients.tileLeaf },
+  rose: { fg: patientTheme.colors.rose, tile: patientTheme.gradients.tileRose },
+  amber: { fg: patientTheme.colors.amber, tile: patientTheme.gradients.tileAmber },
+} as const;
+
+type TimelineTone = keyof typeof TIMELINE_TONE;
+
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -205,7 +230,7 @@ export default function Home() {
     const isToday = (ms: number) => ms >= startOfDay.getTime();
     const seen = new Set<string>();
 
-    const entries: { at: number; label: string; value: string; tone: string; kind: "reading" | "agent" | "appointment" }[] = [];
+    const entries: { at: number; label: string; value: string; tone: TimelineTone; kind: "reading" | "agent" | "appointment" }[] = [];
 
     for (const v of sourceVitals as any[]) {
       const ms = v.recordedAt ? new Date(v.recordedAt).getTime() : 0;
@@ -218,7 +243,7 @@ export default function Home() {
         label,
         value: v.heartRate != null ? `${v.heartRate} BPM` : "—",
         /* A reading's tone is a *status*, so it takes the signal colour. */
-        tone: v.heartRate > 100 || v.heartRate < 55 ? patientTheme.colors.error : patientTheme.colors.signal,
+        tone: v.heartRate > 100 || v.heartRate < 55 ? "rose" : "signal",
         kind: "reading",
       });
       if (entries.filter((e) => e.kind === "reading").length >= 3) break;
@@ -233,7 +258,7 @@ export default function Home() {
         at: day.getTime(),
         label: "Appointment",
         value: `${a.department || "General Practice"}${a.scheduledTime ? ` • ${a.scheduledTime.slice(0, 5)}` : ""}`,
-        tone: patientTheme.colors.signal,
+        tone: "brand",
         kind: "appointment",
       });
     }
@@ -241,7 +266,7 @@ export default function Home() {
     if (topInsight?.createdAt) {
       const ms = new Date(topInsight.createdAt).getTime();
       if (isToday(ms)) {
-        entries.push({ at: ms, label: "Health Agent", value: "Checked in on your trends", tone: "#F59E0B", kind: "agent" });
+        entries.push({ at: ms, label: "Health Agent", value: "Checked in on your trends", tone: "amber", kind: "agent" });
       }
     }
 
@@ -284,36 +309,50 @@ export default function Home() {
         </button>
       </div>
 
-      {/* The one number that answers "am I okay". The ring carries the value,
-          the chip carries the verdict, the scale carries the position — a
-          ring alone cannot say where a high score sits. */}
+      {/* The one number that answers "am I okay". The number carries the
+          magnitude, the scale carries the position — see HealthScore.tsx for
+          why this is not a ring. */}
       <button
         onClick={() => navigate("/patient/vitals")}
         className="mh-card w-full text-left block"
         style={{ padding: 16 }}
-        aria-label={`Health score ${score.score ?? "unavailable"}, ${score.band ?? "no data"}. ${scoreExplanation(score)}`}
+        aria-label={`Health score ${score.score ?? "unavailable"}, out of 100. ${scoreExplanation(score)}`}
       >
-        <div className="flex items-center gap-4">
-          <HealthScoreRing result={score} size={96} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-[13.5px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
-                Health Score
-              </p>
-              <ScoreBandChip band={score.band} />
-            </div>
-            <p className="text-[12.5px] mt-1.5 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
-              {scoreExplanation(score)}
-            </p>
-          </div>
-          <span className="flex-shrink-0 self-center" style={{ color: patientTheme.colors.textMuted }} aria-hidden>
-            <ChevronRightIcon size={17} />
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[13.5px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
+            Health Score
+          </p>
+          <ScoreBandChip band={score.band} />
+        </div>
+
+        <div className="flex items-baseline gap-1.5 mt-1.5">
+          <span
+            style={{
+              fontSize: 46,
+              fontWeight: 700,
+              lineHeight: 1.02,
+              letterSpacing: "-0.045em",
+              color: patientTheme.colors.textPrimary,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {score.score ?? "—"}
+          </span>
+          <span className="text-[12px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
+            / 100
           </span>
         </div>
+
         <ScoreScale score={score.score} />
-        <p className="text-[10.5px] mt-2" style={{ color: patientTheme.colors.textMuted }}>
-          Based on {score.scoredCount} of {score.scorableCount} measures
+
+        <p className="text-[12.5px] mt-3 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
+          {scoreExplanation(score)}
         </p>
+        {scoreCoverage(score) && (
+          <p className="text-[10.5px] mt-1.5" style={{ color: patientTheme.colors.textMuted }}>
+            {scoreCoverage(score)}
+          </p>
+        )}
       </button>
 
       {/* Heart rate — the headline live reading */}
@@ -464,13 +503,8 @@ export default function Home() {
                     width: 36,
                     height: 36,
                     borderRadius: 999,
-                    background:
-                      e.kind === "appointment"
-                        ? patientTheme.gradients.tile
-                        : e.kind === "agent"
-                          ? patientTheme.gradients.tileAmber
-                          : patientTheme.gradients.tileRose,
-                    color: e.tone,
+                    background: TIMELINE_TONE[e.tone].tile,
+                    color: TIMELINE_TONE[e.tone].fg,
                   }}
                 >
                   {e.kind === "appointment" ? <CalendarIcon size={19} /> : e.kind === "agent" ? <SparkIcon size={19} /> : <HeartIcon size={19} />}

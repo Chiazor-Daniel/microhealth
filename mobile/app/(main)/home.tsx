@@ -24,7 +24,7 @@ import { EmptyState } from "@/ui/EmptyState";
 import { useBandConnected } from "@/lib/band";
 import { FluidText } from "@/ui/FluidText";
 import { MetricTile } from "@/ui/MetricTile";
-import { HealthScoreRing, ScoreBandChip, ScoreScale, scoreExplanation } from "@/ui/HealthScoreRing";
+import { ScoreBandChip, ScoreScale, scoreExplanation, scoreCoverage } from "@/ui/HealthScore";
 import { card, iconGreen, iconTile, iconTileBorder, tabular } from "@/ui/styles";
 import { formatClock, formatShortDate, greeting, relativeTime } from "@/ui/dates";
 import {
@@ -132,7 +132,7 @@ export default function Home() {
       at: number;
       label: string;
       value: string;
-      tone: string;
+      tone: TimelineTone;
       kind: "reading" | "agent" | "appointment";
     }[] = [];
 
@@ -146,7 +146,7 @@ export default function Home() {
         at: ms,
         label,
         value: v.heartRate != null ? `${v.heartRate} BPM` : "—",
-        tone: v.heartRate > 100 || v.heartRate < 55 ? colors.error : colors.success,
+        tone: v.heartRate > 100 || v.heartRate < 55 ? "rose" : "signal",
         kind: "reading",
       });
       if (entries.filter((e) => e.kind === "reading").length >= 3) break;
@@ -164,7 +164,7 @@ export default function Home() {
         at: day.getTime(),
         label: "Appointment",
         value: `${a.department || "General Practice"}${a.scheduledTime ? ` • ${a.scheduledTime.slice(0, 5)}` : ""}`,
-        tone: colors.success,
+        tone: "brand",
         kind: "appointment",
       });
     }
@@ -176,7 +176,7 @@ export default function Home() {
           at: ms,
           label: "Health Agent",
           value: "Checked in on your trends",
-          tone: colors.warning,
+          tone: "amber",
           kind: "agent",
         });
       }
@@ -234,36 +234,33 @@ export default function Home() {
         </Reveal>
       ) : null}
 
-      {/* The one number that answers "am I okay". The ring carries the value,
-          the chip the verdict, the scale the position — a ring alone cannot
-          say where a high score sits. */}
-      {hasReadings ? (
-        <Reveal index={1}>
-          <TapScale
-            onPress={() => router.push("/vitals")}
-            accessibilityLabel={`Health score ${score.score ?? "unavailable"}, ${score.band ?? "no data"}`}
-            style={styles.block}
-          >
-            <View style={[card, { padding: spacing.md }]}>
-              <View style={styles.scoreRow}>
-                <HealthScoreRing result={score} size={96} />
-                <View style={styles.scoreText}>
-                  <View style={styles.scoreTitleRow}>
-                    <Text style={styles.scoreTitle}>Health Score</Text>
-                    <ScoreBandChip band={score.band} />
-                  </View>
-                  <Text style={styles.scoreBody}>{scoreExplanation(score)}</Text>
-                </View>
-                <ChevronRightIcon size={17} color={semantic.textMuted} />
-              </View>
-              <ScoreScale score={score.score} />
-              <Text style={styles.scoreFoot}>
-                Based on {score.scoredCount} of {score.scorableCount} measures
-              </Text>
+      {/* The one number that answers "am I okay". The number carries the
+          magnitude, the scale carries the position — see HealthScore.tsx for
+          why this is not a ring. */}
+      <Reveal index={1}>
+        <TapScale
+          onPress={() => router.push("/vitals")}
+          accessibilityLabel={`Health score ${score.score ?? "unavailable"}, out of 100`}
+          style={styles.block}
+        >
+          <View style={[card, { padding: spacing.md }]}>
+            <View style={styles.scoreHead}>
+              <Text style={styles.scoreTitle}>Health Score</Text>
+              <ScoreBandChip band={score.band} />
             </View>
-          </TapScale>
-        </Reveal>
-      ) : null}
+
+            <View style={styles.scoreValue}>
+              <Text style={styles.scoreNumber}>{score.score ?? "—"}</Text>
+              <Text style={styles.scoreOutOf}>/ 100</Text>
+            </View>
+
+            <ScoreScale score={score.score} />
+
+            <Text style={styles.scoreBody}>{scoreExplanation(score)}</Text>
+            {scoreCoverage(score) ? <Text style={styles.scoreFoot}>{scoreCoverage(score)}</Text> : null}
+          </View>
+        </TapScale>
+      </Reveal>
 
       {/* Heart rate — the headline live reading */}
       {heartRate ? (
@@ -496,16 +493,44 @@ function CategoryTile({
   );
 }
 
-function TimelineIcon({ kind, tone }: { kind: "reading" | "agent" | "appointment"; tone: string }) {
-  const gradient = kind === "appointment" ? "tile" : kind === "agent" ? "tileAmber" : "tileRose";
+/**
+ * What a timeline row's colour is saying.
+ *
+ * The tile and the glyph must agree, and the colour must mean something:
+ *
+ *   brand   an appointment is *structure* — it answers "what is this", so it
+ *           wears the brand teal like every other piece of chrome.
+ *   signal  a reading that sits in range. That IS a verdict, so it is leaf.
+ *   rose    a reading outside range.
+ *   amber   the agent, which is neither.
+ *
+ * This used to pick the tile from `kind` and the colour from a separate field,
+ * which put a leaf-green calendar on a teal tile and a leaf-green heart on a
+ * rose one — every icon on the timeline rendered green regardless of its
+ * container, reading as leftover from the old single-green palette.
+ */
+const TIMELINE_TONE = {
+  brand: { fg: semantic.brandDeep, tile: "tile", border: "brand" },
+  signal: { fg: semantic.signalDeep, tile: "tileLeaf", border: "leaf" },
+  rose: { fg: colors.rose, tile: "tileRose", border: "rose" },
+  amber: { fg: colors.amber, tile: "tileAmber", border: "amber" },
+} as const;
+
+type TimelineTone = keyof typeof TIMELINE_TONE;
+
+function TimelineIcon({ kind, tone }: { kind: "reading" | "agent" | "appointment"; tone: TimelineTone }) {
+  const t = TIMELINE_TONE[tone];
   return (
-    <LinearGradient {...linearGradient(gradient as keyof typeof gradients)} style={[iconTile, { width: 36, height: 36 }]}>
+    <LinearGradient
+      {...linearGradient(t.tile as keyof typeof gradients)}
+      style={[iconTile, { width: 36, height: 36, borderColor: iconTileBorder[t.border] }]}
+    >
       {kind === "appointment" ? (
-        <CalendarIcon size={19} color={tone} />
+        <CalendarIcon size={19} color={t.fg} />
       ) : kind === "agent" ? (
-        <SparkIcon size={19} color={tone} />
+        <SparkIcon size={19} color={t.fg} />
       ) : (
-        <HeartIcon size={19} color={tone} />
+        <HeartIcon size={19} color={t.fg} />
       )}
     </LinearGradient>
   );
@@ -635,12 +660,13 @@ const styles = StyleSheet.create({
   apptTitle: { ...text.body, ...font(600), color: semantic.textPrimary },
   apptMeta: { ...text.caption, color: semantic.textSecondary, marginTop: 2 },
   /* ---- Health score ---- */
-  scoreRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  scoreText: { flex: 1, minWidth: 0 },
-  scoreTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
+  scoreHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   scoreTitle: { fontSize: 13.5, ...font(600), color: semantic.textPrimary },
-  scoreBody: { fontSize: 12.5, ...font(400), color: semantic.textSecondary, lineHeight: 18, marginTop: 6 },
-  scoreFoot: { fontSize: 10.5, ...font(400), color: semantic.textMuted, marginTop: 8 },
+  scoreValue: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 6 },
+  scoreNumber: { fontSize: 46, ...font(700), lineHeight: 48, letterSpacing: -0.045 * 46, color: semantic.textPrimary },
+  scoreOutOf: { fontSize: 12, ...font(500), color: semantic.textMuted },
+  scoreBody: { fontSize: 12.5, ...font(400), color: semantic.textSecondary, lineHeight: 18, marginTop: spacing.sm },
+  scoreFoot: { fontSize: 10.5, ...font(400), color: semantic.textMuted, marginTop: 6 },
 
   /* ---- The live strip, two to a row ---- */
   liveGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.blockGap },
