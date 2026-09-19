@@ -26,7 +26,7 @@ import { useBandConnected } from "@/lib/band";
 import { FluidText } from "@/ui/FluidText";
 import { MetricTile } from "@/ui/MetricTile";
 import { ScoreRing, ScoreBandChip, ScoreDelta, scoreVerdict } from "@/ui/HealthScore";
-import { card, iconGreen, iconTile, iconTileBorder, tabular } from "@/ui/styles";
+import { card, iconGreen, iconTile, iconTileBorder, tabular, washCard } from "@/ui/styles";
 import { formatClock, formatShortDate, greeting, relativeTime } from "@/ui/dates";
 import {
   CalendarIcon,
@@ -353,7 +353,7 @@ export default function Home() {
 
       {/* Your Health Agent — what the agent noticed, and the two ways to reply */}
       <Reveal index={3}>
-      <LinearGradient {...linearGradient("mint")} style={[card, styles.agent]}>
+      <LinearGradient {...linearGradient("mint")} style={[washCard, styles.agent]}>
         <View style={styles.agentTop}>
           <View style={styles.agentTitleRow}>
             <LinearGradient {...linearGradient("iconGreen")} style={[iconGreen, { width: 38, height: 38 }]}>
@@ -367,6 +367,12 @@ export default function Home() {
             accessibilityLabel="Read this aloud"
             style={styles.speaker}
           >
+            <LinearGradient
+              colors={["#EAF3F7", "#DCEAF1"]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
             <SpeakerIcon size={16} color={semantic.accentDeep} />
           </Pressable>
         </View>
@@ -640,9 +646,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EAF8EF",
+    /* Web draws this as `linear-gradient(180deg, #EAF3F7, #DCEAF1)`. It was a
+       flat `#EAF8EF` — the old mint, left behind when the palette moved to
+       teal, and sitting on an otherwise-teal card it read as a stray green. */
     borderWidth: 1,
     borderColor: "rgba(196,224,233,0.8)",
+    overflow: "hidden",
   },
   agentBody: { ...text.secondary, color: semantic.textPrimary, lineHeight: 21, marginTop: spacing.sm },
   agentActions: { flexDirection: "row", gap: 10, marginTop: spacing.md },

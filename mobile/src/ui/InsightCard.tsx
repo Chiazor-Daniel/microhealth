@@ -4,7 +4,7 @@ import { colors, gradients, semantic, spacing } from "@tokens";
 import { linearGradient, font } from "@rn/theme";
 
 import { BrandMark } from "./BrandMark";
-import { buttonPrimary, buttonSecondary, card, iconGreen } from "./styles";
+import { buttonPrimary, buttonSecondary, card, iconGreen, washCard } from "./styles";
 
 export interface InsightCardProps {
   priority: "info" | "watch" | "attention" | "urgent";
@@ -40,7 +40,7 @@ export function InsightCard({ priority, title, message, time, actions, onClick }
 
   return (
     <Pressable onPress={onClick} disabled={!onClick}>
-      <LinearGradient {...linearGradient("mint")} style={[card, styles.card]}>
+      <LinearGradient {...linearGradient("mint")} style={[washCard, styles.card]}>
         <View style={styles.top}>
           <View style={styles.titleRow}>
             <LinearGradient colors={markColors} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={[iconGreen, styles.mark]}>

@@ -11,7 +11,7 @@ import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
 
 import { Screen } from "@/ui/Screen";
-import { card, iconGreen, iconTile, iconTileBorder } from "@/ui/styles";
+import { card, iconGreen, iconTile, iconTileBorder, washCard } from "@/ui/styles";
 import { AlertIcon, CheckCircleIcon } from "@/icons";
 
 const services = ["General Practice", "Antenatal Care", "Lab Tests", "Cardiology", "Dental"];
@@ -311,7 +311,7 @@ function OptionButton({ label, isSelected, onSelect }: { label: string; isSelect
   if (isSelected) {
     return (
       <Pressable onPress={onSelect}>
-        <LinearGradient {...linearGradient("mint")} style={[card, styles.option, { borderColor: "rgba(133,192,206,0.8)" }]}>
+        <LinearGradient {...linearGradient("mint")} style={[washCard, styles.option, { borderColor: "rgba(133,192,206,0.8)" }]}>
           {inner}
         </LinearGradient>
       </Pressable>
