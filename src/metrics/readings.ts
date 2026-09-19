@@ -206,6 +206,26 @@ export function withReadings(values: MetricValue[]): MetricValue[] {
 }
 
 /**
+ * The newest reading from before a cut-off — what "yesterday" looked like.
+ *
+ * Used to put a delta under the health score. It reads the *packet* as it
+ * stood, not today's, because a score compared against itself is always zero.
+ * Returns null rather than guessing when the history does not reach back far
+ * enough: a delta is a claim about change, and inventing one is worse than
+ * omitting it.
+ */
+export function packetBefore(vitals: any[], hoursAgo = 24): any | null {
+  const cutoff = Date.now() - hoursAgo * 3600_000;
+  return vitals.find((v) => v?.recordedAt && new Date(v.recordedAt).getTime() < cutoff) ?? null;
+}
+
+/** Records taken before the same cut-off, so the two scores cover one window each. */
+export function recordsBefore(records: MetricRecord[], hoursAgo = 24): MetricRecord[] {
+  const cutoff = Date.now() - hoursAgo * 3600_000;
+  return records.filter((r) => new Date(r.recordedAt).getTime() < cutoff);
+}
+
+/**
  * Resolved values → the input the health score wants.
  *
  * The scorer only needs a number per metric, so this drops the formatting and

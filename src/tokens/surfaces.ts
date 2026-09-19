@@ -177,19 +177,33 @@ const brandTab: GradientToken = {
 };
 
 /**
- * The health-score ring — the one place the leaf accent is allowed to be large.
+ * The health-score ring.
  *
- * Signal, not structure: it is the only gradient in the system built from the
- * accent ramp, which is what keeps it reading as "your health" rather than
- * "the product".
+ * The one place the accent and the brand are allowed to bleed into each other.
+ * It sweeps deep green → fresh green → teal → turquoise, which is the only
+ * gradient in the system that crosses both ramps — deliberate, because the
+ * ring is where "your health" (leaf) and "the product" (teal) meet.
+ *
+ * Four stops rather than two: a green-to-teal interpolation straight through
+ * passes via a muddy grey-green, and the midpoint is exactly where the arc
+ * spends most of its visible length.
  */
 const scoreRing: GradientToken = {
-  colors: ["#6EC763", "#4CAF50", "#53A627"],
-  locations: [0, 0.5, 1],
-  angleCSS: "150deg",
-  start: { x: 0.15, y: 0 },
-  end: { x: 0.85, y: 1 },
+  colors: ["#10784A", "#46B45B", "#2C9BAA", "#4FC8DC"],
+  locations: [0, 0.38, 0.72, 1],
+  angleCSS: "135deg",
+  start: { x: 0, y: 0 },
+  end: { x: 1, y: 1 },
 };
+
+/**
+ * The unfilled part of the score ring.
+ *
+ * Pale mint. A ring is only a meter if the part that is *not* filled is
+ * visible — a near-white track on a white card made every score above ~95
+ * look identical.
+ */
+const scoreTrack = "#DCEFE6";
 
 /** Raise-from-white for secondary buttons and inputs. */
 const surfaceRaise: GradientToken = {
@@ -219,6 +233,7 @@ export const gradients = {
   brandTab,
   wash,
   scoreRing,
+  scoreTrack,
   tile,
   tileRose,
   tileAmber,

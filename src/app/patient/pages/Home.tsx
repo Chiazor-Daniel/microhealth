@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
 import { useInsights } from "../hooks/useInsights";
 import { dashboardService } from "../../services/dashboard.service";
+import { vitalService } from "../../services/vital.service";
 import { Loading } from "../../components/shared/Loading";
 import { ErrorState } from "../../components/shared/ErrorState";
 import { Avatar } from "../components/Avatar";
@@ -13,10 +14,10 @@ import { patientTheme } from "../theme";
 import { StatusBadge } from "../components/StatusBadge";
 import { useWearable } from "../hooks/useWearable";
 import { BrandMark } from "../components/BrandMark";
-import { ScoreBandChip, ScoreScale, scoreExplanation, scoreCoverage } from "../components/HealthScore";
+import { ScoreRing, ScoreBandChip, ScoreDelta, scoreVerdict } from "../components/HealthScore";
 import { MetricTile } from "../components/MetricTile";
 import { GlyphIcon, HeartIcon, CalendarIcon, SparkIcon, SpeakerIcon, TrendIcon, ChevronRightIcon } from "../icons";
-import { resolveAll, toScoreReadings, type MetricValue } from "../../../metrics/readings";
+import { resolveAll, toScoreReadings, recordsBefore, type MetricValue } from "../../../metrics/readings";
 import { computeHealthScore } from "../../../metrics/healthScore";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 import { buildSeries } from "../lib/timeSeries";
@@ -196,6 +197,32 @@ export default function Home() {
 
   const score = useMemo(() => computeHealthScore(toScoreReadings(values)), [values]);
 
+  /* Yesterday's packet, fetched on its own.
+     The reading list is capped at 30 rows and the band ticks every few
+     seconds, so it is only ever minutes deep — a day-over-day comparison
+     cannot be made from it. One row is all a delta needs. */
+  const [priorPacket, setPriorPacket] = useState<any>(null);
+  useEffect(() => {
+    if (!patientId) return;
+    let cancelled = false;
+    vitalService
+      .getSnapshotBefore(patientId)
+      .then((row) => { if (!cancelled) setPriorPacket(row); })
+      /* A missing delta is not worth an error state — the card renders
+         perfectly well without it, and it simply does not appear. */
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [patientId]);
+
+  const scoreDelta = useMemo(() => {
+    if (!priorPacket || score.score == null) return null;
+    const priorScore = computeHealthScore(
+      toScoreReadings(resolveAll(priorPacket, recordsBefore(metricRecords)))
+    );
+    if (priorScore.score == null) return null;
+    return score.score - priorScore.score;
+  }, [priorPacket, metricRecords, score]);
+
   const heartRate = byKey.get("heartRate");
   const live = ["spo2", "bloodPressure", "respiratoryRate"]
     .map((k) => byKey.get(k))
@@ -309,14 +336,14 @@ export default function Home() {
         </button>
       </div>
 
-      {/* The one number that answers "am I okay". The number carries the
-          magnitude, the scale carries the position — see HealthScore.tsx for
-          why this is not a ring. */}
+      {/* The one number that answers "am I okay". The ring shows where you
+          are, the delta shows whether that is better or worse — see
+          HealthScore.tsx for why the ring only works with both. */}
       <button
         onClick={() => navigate("/patient/vitals")}
         className="mh-card w-full text-left block"
         style={{ padding: 16 }}
-        aria-label={`Health score ${score.score ?? "unavailable"}, out of 100. ${scoreExplanation(score)}`}
+        aria-label={`Health score ${score.score ?? "unavailable"} out of 100, ${score.band ?? "no data"}. ${scoreVerdict(score, scoreDelta).line}`}
       >
         <div className="flex items-center justify-between gap-2">
           <p className="text-[13.5px] font-semibold" style={{ color: patientTheme.colors.textPrimary }}>
@@ -325,34 +352,18 @@ export default function Home() {
           <ScoreBandChip band={score.band} />
         </div>
 
-        <div className="flex items-baseline gap-1.5 mt-1.5">
-          <span
-            style={{
-              fontSize: 46,
-              fontWeight: 700,
-              lineHeight: 1.02,
-              letterSpacing: "-0.045em",
-              color: patientTheme.colors.textPrimary,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {score.score ?? "—"}
-          </span>
-          <span className="text-[12px] font-medium" style={{ color: patientTheme.colors.textMuted }}>
-            / 100
-          </span>
+        <div className="flex items-center gap-4 mt-3">
+          <ScoreRing result={score} size={104} />
+          <div className="min-w-0 flex-1">
+            <ScoreDelta delta={scoreDelta} />
+            <p className="text-[13.5px] font-semibold mt-2 leading-snug" style={{ color: patientTheme.colors.textPrimary }}>
+              {scoreVerdict(score, scoreDelta).line}
+            </p>
+            <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
+              {scoreVerdict(score, scoreDelta).sub}
+            </p>
+          </div>
         </div>
-
-        <ScoreScale score={score.score} />
-
-        <p className="text-[12.5px] mt-3 leading-relaxed" style={{ color: patientTheme.colors.textSecondary }}>
-          {scoreExplanation(score)}
-        </p>
-        {scoreCoverage(score) && (
-          <p className="text-[10.5px] mt-1.5" style={{ color: patientTheme.colors.textMuted }}>
-            {scoreCoverage(score)}
-          </p>
-        )}
       </button>
 
       {/* Heart rate — the headline live reading */}

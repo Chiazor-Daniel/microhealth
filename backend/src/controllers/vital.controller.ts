@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../config/database";
 import { vitals, metricReadings } from "../db/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, lt } from "drizzle-orm";
 import { emitToAdmins } from "../websocket/server";
 
 export async function getByPatient(req: Request, res: Response, next: NextFunction) {
@@ -62,6 +62,39 @@ export async function getAbnormal(_req: Request, res: Response, next: NextFuncti
       (v.fatigue != null && v.fatigue > 75)
     );
     res.json(abnormal);
+  } catch (e) { next(e); }
+}
+
+/**
+ * The newest reading from before a cut-off — a single row.
+ *
+ * The patient's reading list is capped at 30 rows, and the band sends a packet
+ * every few seconds, so that list is only ever minutes deep. A client cannot
+ * compute a day-over-day change from it — asking for the whole day of packets
+ * would be ~10,000 rows to answer one question.
+ *
+ * So this answers exactly the question and nothing else: what did the band
+ * last report before this moment. One row, whatever the patient's history.
+ *
+ * Returns `null` rather than a fallback when the history does not reach back
+ * far enough. A delta is a claim that something changed, and a default would
+ * turn "we don't know" into "no change", which is a different and wrong answer.
+ */
+export async function getSnapshotBefore(req: Request, res: Response, next: NextFunction) {
+  try {
+    const patientId = String(req.params.patientId);
+    const raw = req.query.before ? String(req.query.before) : null;
+    const before = raw ? new Date(raw) : new Date(Date.now() - 24 * 3600_000);
+    if (Number.isNaN(before.getTime())) {
+      return res.status(400).json({ error: { message: "Invalid `before` date", code: "BAD_REQUEST" } });
+    }
+
+    const [row] = await db.query.vitals.findMany({
+      where: and(eq(vitals.patientId, patientId), lt(vitals.recordedAt, before)),
+      orderBy: [desc(vitals.recordedAt)],
+      limit: 1,
+    });
+    res.json(row ?? null);
   } catch (e) { next(e); }
 }
 

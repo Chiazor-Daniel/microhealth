@@ -43,6 +43,18 @@ export interface MetricRecord {
 export const vitalService = {
   getByPatient: (patientId: string) => api.get<Vital[]>(`/vitals/patient/${patientId}`),
   getTrends: (patientId: string) => api.get<Vital[]>(`/vitals/trends/${patientId}`),
+
+  /**
+   * The last reading from before a moment — one row, or null.
+   *
+   * The reading list is capped at 30 rows and the band ticks every few
+   * seconds, so it is only ever minutes deep. A day-over-day delta needs to
+   * ask for that one row rather than pull a day of packets to find it.
+   */
+  getSnapshotBefore: (patientId: string, before?: string) =>
+    api.get<Vital | null>(
+      `/vitals/snapshot-before/${patientId}${before ? `?before=${encodeURIComponent(before)}` : ""}`
+    ),
   record: (data: Partial<Vital>) => api.post<Vital>("/vitals", data),
   getAbnormal: () => api.get<Vital[]>("/vitals/abnormal"),
 

@@ -1,152 +1,264 @@
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { semantic, spacing } from "@tokens";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import { colors, gradients, semantic, spacing } from "@tokens";
 import { font } from "@rn/theme";
-import { SCORE_BAND_LABEL, SCORE_BANDS, type HealthScore, type ScoreBand } from "@metrics/healthScore";
+import { SCORE_BAND_LABEL, type HealthScore, type ScoreBand } from "@metrics/healthScore";
 
 /**
- * The health score — the native twin of the web component.
+ * The health score ring — the native twin of the web component.
  *
- * ## Why there is no ring
+ * ## What it is doing here, given it was removed once
  *
- * The first version was a ring. It looked good on paper and failed in use, for
- * a reason worth writing down: **the score lives in a narrow, high band.** A
- * patient who is basically fine scores 90–100 nearly every time, so the ring
- * was a closed green donut almost always — and at 100 it was a literal solid
- * circle, conveying nothing a plain number would not.
+ * An earlier version of this card had a ring and it was cut, for a good reason:
+ * the score sits in a narrow, *high* band, so a healthy patient sees a nearly
+ * closed circle almost every time, and at 100 it is a literal solid donut that
+ * says nothing a plain number would not.
  *
- * A ring is a good instrument for a value that sweeps its whole range. It is a
- * bad one for a value that sits at the top of it. And there were two meters for
- * one number — the ring *and* the scale — which is what made the card read
- * busy without being informative.
+ * Three things make it work now, and all three are load-bearing — remove any
+ * one and it goes back to being decoration:
  *
- * So the number carries the magnitude and the scale carries the position. The
- * scale is the part a ring could never do: 88 and 97 sit in visibly different
- * places on it.
+ * **The track is visible.** Pale mint, not near-white. A ring is only a meter
+ * if you can see the part that is *not* filled.
+ *
+ * **The delta carries the change.** The ring says where you are; `+2 from your
+ * usual` says whether that is better or worse, which a full circle cannot.
+ *
+ * **It fills.** A ring that animates from empty communicates a *process*, so
+ * the eye reads the arc travelling rather than a shape that is simply there.
+ *
+ * ## The gradient
+ *
+ * Deep green → fresh green → teal → turquoise, sweeping across the circle.
+ * Four stops, not two: a straight green-to-teal interpolation passes through a
+ * muddy grey-green, and the midpoint of the arc is where most of its visible
+ * length sits.
+ *
+ * As the arc fills it reveals more of the gradient, which is what makes the
+ * colour appear to travel along the stroke. There is no conic gradient in SVG,
+ * so this is the honest way to get that effect rather than rotating a layer
+ * and hoping it reads.
  */
 
-const BAND = {
-  good: { fg: semantic.signal, chip: "#DCEFDA" },
-  fair: { fg: "#B45309", chip: "#F7E9CE" },
-  attention: { fg: "#DC2626", chip: "#F7DADB" },
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+const RING = {
+  /** Stroke width as a fraction of the diameter. */
+  stroke: 0.1,
+  sweepMs: 1150,
+  countMs: 1000,
+  delayMs: 160,
 } as const;
 
-function bandOf(score: number): ScoreBand {
-  if (score >= SCORE_BANDS.good) return "good";
-  if (score >= SCORE_BANDS.fair) return "fair";
-  return "attention";
+/**
+ * A count-up that starts at zero and eases into the target.
+ *
+ * Runs on a plain interval rather than reanimated: the arc is what has to be
+ * smooth and that is on the UI thread, but a number is text — reanimated
+ * cannot drive `Text` children without another dependency, and crossing back
+ * to JS every frame for a label nobody is watching frame-by-frame would cost
+ * more than it buys. ~25 updates over the sweep is enough to read as counting.
+ */
+function useCountUp(target: number | null, durationMs: number, delayMs: number, skip: boolean) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (target == null) return;
+    if (skip) {
+      setValue(target);
+      return;
+    }
+    const started = { at: 0 };
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const begin = setTimeout(() => {
+      started.at = Date.now();
+      timer = setInterval(() => {
+        const p = Math.min(1, (Date.now() - started.at) / durationMs);
+        /* Cubic ease-out — the same shape as the arc, so the two land
+           together rather than one snapping while the other is still moving. */
+        setValue(Math.round(target * (1 - Math.pow(1 - p, 3))));
+        if (p >= 1 && timer) clearInterval(timer);
+      }, 40);
+    }, delayMs);
+    return () => {
+      clearTimeout(begin);
+      if (timer) clearInterval(timer);
+    };
+  }, [target, durationMs, delayMs, skip]);
+
+  return target == null ? null : value;
 }
 
-/** The marker's radius. The track is inset by it so the dot never overhangs. */
-const DOT = 14;
+export function ScoreRing({ result, size = 104 }: { result: HealthScore; size?: number }) {
+  const reduce = useReducedMotion();
+  const sw = size * RING.stroke;
+  const r = (size - sw) / 2;
+  const c = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const pct = result.score == null ? 0 : Math.max(0, Math.min(100, result.score)) / 100;
 
-/**
- * The band as a chip — the verdict in words.
- *
- * The scale shows *where* the score sits; this says what that means. Colour
- * alone would leave the patient to infer it, and the two colour-blind
- * conditions that matter most here are exactly the ones that make red and
- * green hard to tell apart.
- */
+  const shown = useCountUp(result.score, RING.countMs, RING.delayMs, !!reduce);
+
+  const progress = useSharedValue(reduce ? pct : 0);
+  useEffect(() => {
+    progress.value = reduce
+      ? pct
+      : withDelay(RING.delayMs, withTiming(pct, { duration: RING.sweepMs, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
+  }, [pct, reduce, progress]);
+
+  const arcProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - progress.value),
+  }));
+
+  const stops = gradients.scoreRing.colors;
+  const locs = gradients.scoreRing.locations ?? stops.map((_, i) => i / (stops.length - 1));
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Defs>
+          {/* userSpaceOnUse so the sweep spans the circle rather than each
+              path's own bounding box — the latter would restart the gradient
+              on the track and again on the arc. */}
+          <LinearGradient id="mhScoreRing" x1={0} y1={size} x2={size} y2={0} gradientUnits="userSpaceOnUse">
+            {stops.map((col, i) => (
+              <Stop key={col} offset={locs[i]} stopColor={col} />
+            ))}
+          </LinearGradient>
+        </Defs>
+
+        <Circle cx={c} cy={c} r={r} fill="none" stroke={colors.scoreTrack} strokeWidth={sw} />
+
+        {/* SVG starts an arc at 3 o'clock; the ring reads from 12. */}
+        <AnimatedCircle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          stroke="url(#mhScoreRing)"
+          strokeWidth={sw}
+          strokeLinecap="round"
+          rotation={-90}
+          origin={`${c}, ${c}`}
+          strokeDasharray={`${circumference} ${circumference}`}
+          animatedProps={arcProps}
+        />
+      </Svg>
+
+      <View style={styles.centre} pointerEvents="none">
+        <Text style={[styles.value, { fontSize: size * 0.32 }]}>{shown ?? "—"}</Text>
+        <Text style={[styles.denom, { fontSize: size * 0.095 }]}>/100</Text>
+      </View>
+    </View>
+  );
+}
+
+/** The band as a chip — the verdict in words, beside the shape. */
 export function ScoreBandChip({ band }: { band: ScoreBand | null }) {
-  const b = band ? BAND[band] : { fg: semantic.textSecondary, chip: "#E9EEF2" };
+  const tone =
+    band === "good"
+      ? { fg: semantic.signalDeep, bg: "#DCEFDA" }
+      : band === "fair"
+        ? { fg: "#B45309", bg: "#F7E9CE" }
+        : band === "attention"
+          ? { fg: "#BE123C", bg: "#F7DADB" }
+          : { fg: semantic.textSecondary, bg: "#E9EEF2" };
+
   return (
-    <View style={[styles.chip, { backgroundColor: b.chip }]}>
-      <Text style={[styles.chipLabel, { color: b.fg }]}>{band ? SCORE_BAND_LABEL[band] : "No data"}</Text>
+    <View style={[styles.chip, { backgroundColor: tone.bg }]}>
+      <Text style={[styles.chipLabel, { color: tone.fg }]}>{band ? SCORE_BAND_LABEL[band] : "No data"}</Text>
     </View>
   );
 }
 
 /**
- * Where the score sits on its own scale.
+ * How the score moved against the same window a day ago.
  *
- * The two tick marks are the band thresholds, drawn from the same constants
- * the scorer uses — so the scale and the verdict cannot disagree. They are
- * what give a high score a reference: without them a marker sitting at 95% of
- * the bar says nothing about whether that is good or merely acceptable.
+ * Renders nothing when there is no prior reading. A delta is a claim about
+ * change, and showing `0` because there was nothing to compare against would
+ * be a quiet lie.
+ *
+ * ## The noise floor
+ *
+ * A one-point move on a 0–100 score is not a change, it is rounding — a
+ * different reading a few seconds later lands there. Showing it as an amber
+ * "↓1" beside "you're doing well" trains the patient to read alarm into
+ * nothing, which is worse than showing no delta at all.
+ *
+ * So anything under two points reports as steady. That threshold is the reason
+ * the arrow means something when it does appear.
  */
-export function ScoreScale({ score }: { score: number | null }) {
-  const pct = score == null ? null : Math.max(0, Math.min(100, score));
-  const fg = pct == null ? semantic.textMuted : BAND[bandOf(pct)].fg;
+const NOISE_FLOOR = 2;
+
+export function ScoreDelta({ delta }: { delta: number | null }) {
+  if (delta == null) return null;
+
+  const steady = Math.abs(delta) < NOISE_FLOOR;
+  const up = delta > 0;
+  const colour = steady ? semantic.textMuted : up ? semantic.signalDeep : "#B45309";
 
   return (
-    <View style={styles.scale}>
-      <View style={styles.trackWrap}>
-        <View style={styles.track}>
-          <LinearGradient
-            colors={[BAND.attention.fg, BAND.fair.fg, BAND.good.fg, BAND.good.fg]}
-            locations={[0, SCORE_BANDS.fair / 100, SCORE_BANDS.good / 100, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[StyleSheet.absoluteFill, styles.trackFill]}
-          />
-          {/* Band thresholds. */}
-          {[SCORE_BANDS.fair, SCORE_BANDS.good].map((t) => (
-            <View key={t} style={[styles.tick, { left: `${t}%` }]} />
-          ))}
-        </View>
-        {pct != null && (
-          <View style={[styles.dot, { left: `${pct}%`, borderColor: fg }]} />
-        )}
-      </View>
-      <View style={styles.scaleLabels}>
-        <Text style={styles.scaleLabel}>Needs attention</Text>
-        <Text style={styles.scaleLabel}>Good</Text>
-      </View>
+    <View style={styles.deltaRow}>
+      <Text style={[styles.deltaValue, { color: colour }]}>
+        {steady ? "—" : `${up ? "↑" : "↓"} ${Math.abs(delta)}`}
+      </Text>
+      <Text style={styles.deltaCaption}>{steady ? "steady since yesterday" : "from your usual"}</Text>
     </View>
   );
 }
 
 /**
- * What is holding the score down, said plainly.
+ * What the score means, in words.
  *
- * A summary that will not say what it is summarising invites the patient to
- * guess. When the worst-metric cap bound, this is the sentence that explains
- * the number.
+ * The ring and the chip are both shorthand. This is the sentence a patient
+ * would actually say to themselves, and it is the one line that does not need
+ * decoding.
  */
-export function scoreExplanation(result: HealthScore): string {
-  if (result.score == null) return "Not enough readings yet to score your day.";
-  if (result.limited && result.limiting) {
-    return `${result.limiting.metric.label} is the one to watch right now.`;
+export function scoreVerdict(
+  result: HealthScore,
+  delta?: number | null
+): { line: string; sub: string } {
+  if (result.score == null) {
+    return { line: "Not enough readings yet.", sub: "Your score appears once we have a few." };
   }
-  const off = result.contributions.filter((c) => c.status !== "normal").length;
-  if (off === 0) return "Every measure is inside your usual range.";
-  if (off === 1) return "One measure is slightly outside your usual range.";
-  return `${off} measures are slightly outside your usual range.`;
-}
-
-/**
- * How much of the picture the score is actually based on.
- *
- * Only worth saying when it is *not* everything. "Based on 13 of 13 measures"
- * is a sentence that takes up a line to tell the patient nothing.
- */
-export function scoreCoverage(result: HealthScore): string | null {
-  if (result.score == null) return null;
-  if (result.scoredCount >= result.scorableCount) return null;
-  return `Based on ${result.scoredCount} of ${result.scorableCount} measures`;
+  /* A capped score means one metric is holding the headline down, and saying
+     "you're doing well" over the top of that would contradict the number. */
+  if (result.limited && result.limiting) {
+    return { line: `${result.limiting.metric.label} is the one to watch.`, sub: "Everything else is steady." };
+  }
+  /* The verdict has to agree with the arrow beside it. "Keep it up" printed
+     under an amber "↓2" is the card arguing with itself, and the patient
+     resolves that by trusting neither. */
+  const falling = delta != null && delta <= -NOISE_FLOOR;
+  switch (result.band) {
+    case "good":
+      return falling
+        ? { line: "You're doing well today.", sub: "Slightly down from yesterday." }
+        : { line: "You're doing well today.", sub: "Keep it up." };
+    case "fair":
+      return { line: "Mostly steady today.", sub: "A couple of things to keep an eye on." };
+    default:
+      return { line: "A few measures need attention.", sub: "Your agent has flagged them." };
+  }
 }
 
 const styles = StyleSheet.create({
+  centre: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  value: { ...font(700), color: semantic.textPrimary, letterSpacing: -0.05 * 33, includeFontPadding: false },
+  denom: { ...font(500), color: semantic.textMuted, marginTop: 1 },
+
   chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   chipLabel: { fontSize: 11, ...font(600), letterSpacing: -0.005 * 11 },
 
-  scale: { marginTop: spacing.sm },
-  /* Inset by the dot's radius so the marker stays inside the bar at 0 and at
-     100 rather than hanging off the end of it. */
-  trackWrap: { height: DOT, marginHorizontal: DOT / 2, justifyContent: "center" },
-  track: { height: 8, borderRadius: 999, overflow: "hidden" },
-  trackFill: { borderRadius: 999, opacity: 0.3 },
-  tick: { position: "absolute", top: 0, bottom: 0, width: 1.5, backgroundColor: "rgba(15,23,42,0.18)" },
-  dot: {
-    position: "absolute",
-    width: DOT,
-    height: DOT,
-    marginLeft: -DOT / 2,
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 3,
-  },
-  scaleLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
-  scaleLabel: { fontSize: 10, ...font(500), color: semantic.textMuted },
+  deltaRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  deltaValue: { fontSize: 13, ...font(700) },
+  deltaCaption: { fontSize: 11.5, ...font(400), color: semantic.textMuted },
 });

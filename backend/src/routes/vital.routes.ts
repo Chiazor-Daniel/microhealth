@@ -64,6 +64,8 @@ const readingSchema = z.object({
 
 vitalRoutes.get("/patient/:patientId", ctrl.getByPatient);
 vitalRoutes.get("/trends/:patientId", ctrl.getTrends);
+/* One row, for a day-over-day comparison the capped reading list cannot make. */
+vitalRoutes.get("/snapshot-before/:patientId", ctrl.getSnapshotBefore);
 vitalRoutes.post("/", authorize("admin","staff"), validate(schema), ctrl.record);
 vitalRoutes.get("/abnormal", authorize("admin","staff"), ctrl.getAbnormal);
 

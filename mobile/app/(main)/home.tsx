@@ -9,8 +9,9 @@ import { usePatientData } from "@app/hooks/usePatientData";
 import { useInsights } from "@app/patient/hooks/useInsights";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { dashboardService } from "@app/services/dashboard.service";
+import { vitalService } from "@app/services/vital.service";
 import { buildSeries } from "@app/patient/lib/timeSeries";
-import { resolveAll, toScoreReadings, type MetricValue } from "@metrics/readings";
+import { resolveAll, toScoreReadings, recordsBefore, type MetricValue } from "@metrics/readings";
 import { computeHealthScore } from "@metrics/healthScore";
 import type { Metric } from "@metrics/registry";
 
@@ -24,7 +25,7 @@ import { EmptyState } from "@/ui/EmptyState";
 import { useBandConnected } from "@/lib/band";
 import { FluidText } from "@/ui/FluidText";
 import { MetricTile } from "@/ui/MetricTile";
-import { ScoreBandChip, ScoreScale, scoreExplanation, scoreCoverage } from "@/ui/HealthScore";
+import { ScoreRing, ScoreBandChip, ScoreDelta, scoreVerdict } from "@/ui/HealthScore";
 import { card, iconGreen, iconTile, iconTileBorder, tabular } from "@/ui/styles";
 import { formatClock, formatShortDate, greeting, relativeTime } from "@/ui/dates";
 import {
@@ -99,6 +100,31 @@ export default function Home() {
   const byKey = useMemo(() => new Map(allValues.map((v) => [v.metric.key, v])), [allValues]);
 
   const score = useMemo(() => computeHealthScore(toScoreReadings(allValues)), [allValues]);
+
+  /* Yesterday's packet, fetched on its own. The reading list is capped at 30
+     rows and the band ticks every few seconds, so it is only ever minutes
+     deep — a day-over-day comparison cannot be made from it. */
+  const [priorPacket, setPriorPacket] = useState<any>(null);
+  useEffect(() => {
+    if (!patientId) return;
+    let cancelled = false;
+    vitalService
+      .getSnapshotBefore(patientId)
+      .then((row) => { if (!cancelled) setPriorPacket(row); })
+      /* A missing delta is not worth an error state — the card renders
+         perfectly well without it, and it simply does not appear. */
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [patientId]);
+
+  const scoreDelta = useMemo(() => {
+    if (!priorPacket || score.score == null) return null;
+    const priorScore = computeHealthScore(
+      toScoreReadings(resolveAll(priorPacket, recordsBefore(metricRecords)))
+    );
+    if (priorScore.score == null) return null;
+    return score.score - priorScore.score;
+  }, [priorPacket, metricRecords, score]);
 
   const heartRate = byKey.get("heartRate");
   /* Blood pressure, oxygen and respiration — what the band is reading right
@@ -234,13 +260,13 @@ export default function Home() {
         </Reveal>
       ) : null}
 
-      {/* The one number that answers "am I okay". The number carries the
-          magnitude, the scale carries the position — see HealthScore.tsx for
-          why this is not a ring. */}
+      {/* The one number that answers "am I okay". The ring shows where you
+          are, the delta shows whether that is better or worse — see
+          HealthScore.tsx for why the ring only works with both. */}
       <Reveal index={1}>
         <TapScale
           onPress={() => router.push("/vitals")}
-          accessibilityLabel={`Health score ${score.score ?? "unavailable"}, out of 100`}
+          accessibilityLabel={`Health score ${score.score ?? "unavailable"} out of 100`}
           style={styles.block}
         >
           <View style={[card, { padding: spacing.md }]}>
@@ -249,15 +275,14 @@ export default function Home() {
               <ScoreBandChip band={score.band} />
             </View>
 
-            <View style={styles.scoreValue}>
-              <Text style={styles.scoreNumber}>{score.score ?? "—"}</Text>
-              <Text style={styles.scoreOutOf}>/ 100</Text>
+            <View style={styles.scoreRow}>
+              <ScoreRing result={score} size={104} />
+              <View style={styles.scoreText}>
+                <ScoreDelta delta={scoreDelta} />
+                <Text style={styles.scoreLine}>{scoreVerdict(score, scoreDelta).line}</Text>
+                <Text style={styles.scoreSub}>{scoreVerdict(score, scoreDelta).sub}</Text>
+              </View>
             </View>
-
-            <ScoreScale score={score.score} />
-
-            <Text style={styles.scoreBody}>{scoreExplanation(score)}</Text>
-            {scoreCoverage(score) ? <Text style={styles.scoreFoot}>{scoreCoverage(score)}</Text> : null}
           </View>
         </TapScale>
       </Reveal>
@@ -661,6 +686,10 @@ const styles = StyleSheet.create({
   apptMeta: { ...text.caption, color: semantic.textSecondary, marginTop: 2 },
   /* ---- Health score ---- */
   scoreHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  scoreRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.sm },
+  scoreText: { flex: 1, minWidth: 0 },
+  scoreLine: { fontSize: 13.5, ...font(600), color: semantic.textPrimary, marginTop: spacing.xs, lineHeight: 19 },
+  scoreSub: { fontSize: 12.5, ...font(400), color: semantic.textSecondary, marginTop: 3, lineHeight: 18 },
   scoreTitle: { fontSize: 13.5, ...font(600), color: semantic.textPrimary },
   scoreValue: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 6 },
   scoreNumber: { fontSize: 46, ...font(700), lineHeight: 48, letterSpacing: -0.045 * 46, color: semantic.textPrimary },
