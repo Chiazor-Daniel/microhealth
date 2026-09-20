@@ -51,16 +51,16 @@ const NARROW = 360;
 
 const SPEC: Record<
   TileSize,
-  { pad: number; icon: number; disc: number; label: number; value: number; unit: number; spark: number; gap: number; chip: number; headGap: number }
+  { pad: number; icon: number; disc: number; label: number; valueSize: number; unit: number; spark: number; gap: number; chip: number; headGap: number }
 > = {
   /* Matched to web's Home hero, which is a bespoke element rather than a
      MetricTile: 40px disc, 40px value, a 72px chart, and a 10px header gap.
      These were 44/34/46/8 — close enough to look like a rendering difference
      rather than a design one, which is the worst kind of drift. */
-  hero: { pad: 16, icon: 20, disc: 40, label: 13, value: 40, unit: 13, spark: 72, gap: 8, chip: 11, headGap: 10 },
-  tile: { pad: 13, icon: 16, disc: 34, label: 11.5, value: 22, unit: 11, spark: 32, gap: 9, chip: 10, headGap: 8 },
+  hero: { pad: 16, icon: 20, disc: 40, label: 13, valueSize: 40, unit: 13, spark: 72, gap: 8, chip: 11, headGap: 10 },
+  tile: { pad: 13, icon: 16, disc: 34, label: 11.5, valueSize: 22, unit: 11, spark: 32, gap: 9, chip: 10, headGap: 8 },
   /** Today's rollups — three to a row, so only the essentials survive. */
-  mini: { pad: 12, icon: 17, disc: 0, label: 10.5, value: 19, unit: 10, spark: 0, gap: 8, chip: 0, headGap: 8 },
+  mini: { pad: 12, icon: 17, disc: 0, label: 10.5, valueSize: 19, unit: 10, spark: 0, gap: 8, chip: 0, headGap: 8 },
 };
 
 /**
@@ -218,7 +218,7 @@ export function MetricTile({
           right-aligned whether it lands beside the value or below it. */}
       <View style={[styles.valueRow, { marginTop: s.gap }]}>
         <View style={styles.valueGroup}>
-          <Text style={[styles.value, tabular, { fontSize: s.value }]} numberOfLines={1}>
+          <Text style={[styles.valueText, tabular, { fontSize: s.valueSize }]} numberOfLines={1}>
             {mv.display}
           </Text>
           {!!mv.unit && <Text style={[styles.unit, { fontSize: s.unit }]}>{mv.unit}</Text>}
@@ -281,7 +281,8 @@ export function MetricTile({
             )}
           </View>
         ))
-      )}    </Pressable>
+      )}
+    </Pressable>
   );
 }
 
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
      to a second line when the tile is too narrow for both. */
   valueGroup: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 5, rowGap: 0 },
   statusSlot: { marginLeft: "auto" },
-  value: { ...font(700), color: semantic.textPrimary, letterSpacing: -0.035 * 22 },
+  valueText: { ...font(700), color: semantic.textPrimary, letterSpacing: -0.035 * 22 },
   unit: { ...font(500), color: semantic.textSecondary },
   parts: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.sm, rowGap: 3, marginTop: 7 },
   part: { fontSize: 10.5, ...font(500), color: semantic.textMuted },

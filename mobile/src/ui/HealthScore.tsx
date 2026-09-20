@@ -163,7 +163,7 @@ export function ScoreRing({ result, size = 104 }: { result: HealthScore; size?: 
         </G>
       </Svg>
 
-      <Text style={[styles.value, { fontSize: size * 0.32 }]}>{shown ?? "—"}</Text>
+      <Text style={[styles.valueText, { fontSize: size * 0.32 }]}>{shown ?? "—"}</Text>
       <Text style={[styles.denom, { fontSize: size * 0.095 }]}>/100</Text>
     </View>
   );
@@ -260,7 +260,7 @@ export function scoreVerdict(
 
 const styles = StyleSheet.create({
   centre: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
-  value: { ...font(700), color: semantic.textPrimary, letterSpacing: -0.05 * 33, includeFontPadding: false },
+  valueText: { ...font(700), color: semantic.textPrimary, letterSpacing: -0.05 * 33, includeFontPadding: false },
   denom: { ...font(500), color: semantic.textMuted, marginTop: 1 },
 
   chip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
