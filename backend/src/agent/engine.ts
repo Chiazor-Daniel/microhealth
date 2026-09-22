@@ -6,11 +6,34 @@ import { buildPatientContext, formatPatientContext } from "./rag";
 import { retrieveKnowledge } from "./medicalRag";
 import { generateAgentResponse, systemPrompt } from "./ollama";
 import { summariseInsight, insightFormatPrompt } from "./response";
-import { detectTrend, checkVitalRanges } from "./rules";
+import { detectTrend, checkVitalRanges, careLabel } from "./rules";
 import { findAvailableAppointments, bookAppointment, prepareCareTeamMessage } from "./tools";
+import { matchPathway, parseTriageAnswer, TRIAGE_PATHWAYS } from "./triage";
+import { createEscalation } from "./escalation";
+import { remindDueDose, confirmDose, sweepMissedDoses } from "./adherence";
 
 // Re-exported for backwards compatibility (canonical definition lives in ./types)
 export type { GeneratedInsight } from "./types";
+
+/**
+ * Run every proactive processor and return what fired. Vitals arrival calls
+ * this (via the wearable controller); the evaluate endpoint exposes it for
+ * scheduled runs. Each branch dedupes against recent insights of its type,
+ * so a cycle never double-emits.
+ */
+export async function evaluateAll(patientUserId: string): Promise<GeneratedInsight[]> {
+  const out: GeneratedInsight[] = [];
+  const runners = [processVitalEvent, sweepMissedDoses, remindDueDose, processAppointmentReminder, processLabResult];
+  for (const run of runners) {
+    try {
+      const insight = await run(patientUserId);
+      if (insight) out.push(insight);
+    } catch (err) {
+      console.error(`[agent] ${run.name} failed:`, err);
+    }
+  }
+  return out;
+}
 
 export async function processVitalEvent(patientUserId: string): Promise<GeneratedInsight | null> {
   const ctx = await buildPatientContext(patientUserId);
@@ -24,13 +47,24 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
       /* Guarded like the other branches — without it, every reading that is
          out of range raises its own identical alert. */
       if (await recentSimilarInsight(ctx.patientId, "vital_trend")) return null;
+      /* Attention vitals page a nurse as well as the patient. */
+      try {
+        await createEscalation(patientUserId, {
+          reason: `${urgent.metric} outside usual range (${urgent.value})`,
+          urgency: "prompt",
+          vitalsSnapshot: latest as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        console.error("[agent] auto-escalation failed:", err);
+      }
+      const label = careLabel(urgent.status, "attention");
       return await generateInsight(ctx, {
         type: "vital_trend",
         priority: "attention",
-        title: "Vital outside usual range",
-        message: `Latest ${urgent.metric} is ${urgent.value}, which is outside the usual range.`,
+        title: `${label}: ${metricName(urgent.metric)}`,
+        message: `Latest ${metricName(urgent.metric)} is ${urgent.value}, which ${label === "Needs Attention" ? "needs attention" : "is outside the usual range"}. A nurse has been asked to review — if you feel unwell, seek care now.`,
         context: { metric: urgent.metric, value: urgent.value, status: urgent.status, latest },
-      });
+      }, { lockMessage: true });
     }
   }
 
@@ -41,9 +75,9 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
       type: "vital_trend",
       priority: "watch",
       title: "Resting heart rate trending up",
-      message: `Your resting heart rate has been rising over recent readings.`,
+      message: `Your resting heart rate has risen from around ${Math.round(hrTrend.prior)} to ${Math.round(hrTrend.recent)} bpm over recent readings — worth watching.`,
       context: { direction: hrTrend.direction, change: hrTrend.change, recent: hrTrend.recent, prior: hrTrend.prior },
-    });
+    }, { lockMessage: true });
   }
 
   if (hrTrend.direction === "falling" && hrTrend.change <= -5) {
@@ -52,12 +86,99 @@ export async function processVitalEvent(patientUserId: string): Promise<Generate
       type: "vital_recovery",
       priority: "info",
       title: "Heart rate returning toward baseline",
-      message: `Your heart rate appears to be settling back down.`,
+      message: `Your heart rate is settling back down toward your usual range.`,
       context: { direction: hrTrend.direction, change: hrTrend.change, recent: hrTrend.recent, prior: hrTrend.prior },
-    });
+    }, { lockMessage: true });
   }
 
   return null;
+}
+
+function metricName(metric: string): string {
+  switch (metric) {
+    case "heartRate": return "heart rate";
+    case "systolic": return "systolic blood pressure";
+    case "diastolic": return "diastolic blood pressure";
+    case "spo2": return "blood oxygen";
+    case "temperature": return "temperature";
+    default: return metric;
+  }
+}
+
+/** One triage question card; the option values carry answers so far. */
+function triageQuestion(pathwayId: string, answered: string[], q: { content: string; options: { label: string; value: string }[] }) {
+  const prefix = answered.length ? `${answered.join("+")}+` : "";
+  return {
+    type: "triage_question",
+    content: q.content,
+    options: q.options.map((o) => ({ label: o.label, value: `triage:${pathwayId}:${prefix}${o.value}` })),
+  };
+}
+
+/**
+ * Advance a pathway: more questions remain → ask the next; all answered →
+ * recommend. An `urgent` outcome pages a nurse immediately and says so.
+ */
+async function answerTriage(ctx: any, patientUserId: string, pathway: any, values: string[]): Promise<GeneratedInsight> {
+  const nextIndex = values.length;
+  if (nextIndex < pathway.questions.length) {
+    return {
+      id: crypto.randomUUID(),
+      patientId: ctx.patientId,
+      type: "triage_pathway",
+      priority: "watch",
+      title: "One more check",
+      message: "Noted. Next:",
+      context: {
+        pathwayId: pathway.id,
+        elements: [triageQuestion(pathway.id, values, pathway.questions[nextIndex])],
+      },
+      createdAt: new Date(),
+    };
+  }
+
+  const { outcome, advice } = pathway.recommend(values, ctx);
+
+  if (outcome === "urgent") {
+    try {
+      await createEscalation(patientUserId, { reason: `Triage (${pathway.id}): ${values.join(", ")}`, urgency: "immediate" });
+    } catch (err) {
+      console.error("[agent] triage escalation failed:", err);
+    }
+    return {
+      id: crypto.randomUUID(),
+      patientId: ctx.patientId,
+      type: "escalation_created",
+      priority: "urgent",
+      title: "Seek Care Now — nurse notified",
+      message: `${advice} I've alerted the care team with your details.`,
+      context: {
+        pathwayId: pathway.id,
+        elements: [
+          { type: "quick_actions", actions: [{ label: "Call emergency", action: "call_emergency" }, { label: "Message care team", action: "message_team" }] },
+        ],
+      },
+      createdAt: new Date(),
+    };
+  }
+
+  const review = outcome === "review";
+  return {
+    id: crypto.randomUUID(),
+    patientId: ctx.patientId,
+    type: "triage_pathway",
+    priority: review ? "watch" : "info",
+    title: review ? "Nurse review recommended" : "Monitoring is fine for now",
+    message: advice,
+    context: {
+      pathwayId: pathway.id,
+      outcome,
+      elements: review
+        ? [{ type: "quick_actions", actions: [{ label: "Book nurse review", action: "book_appointment" }, { label: "Message care team", action: "message_team" }] }]
+        : [],
+    },
+    createdAt: new Date(),
+  };
 }
 
 export async function processAppointmentReminder(patientUserId: string): Promise<GeneratedInsight | null> {
@@ -136,6 +257,48 @@ export async function respondToChat(
   const medicalKnowledge = retrieveKnowledge(userMessage, 2);
 
   const lower = userMessage.toLowerCase();
+
+  // Medication confirmation from the reminder button ("confirm_med:<logId>")
+  if (lower.startsWith("confirm_med:")) {
+    const logId = userMessage.slice("confirm_med:".length).trim();
+    const done = await confirmDose(patientUserId, logId);
+    if (done) return done;
+  }
+
+  // "Summarise my week" — weekly/monthly summary without a chat turn.
+  if (/summaris| summariz|week in review|month in review/.test(lower)) {
+    const { generateSummary } = await import("./summary");
+    const period = lower.includes("month") ? "month" : "week";
+    const summaryReply = await generateSummary(patientUserId, period);
+    if (summaryReply) return summaryReply;
+  }
+
+  // Triage pathway answers ("triage:<pathway>:<value+value>")
+  const triageAnswer = parseTriageAnswer(userMessage);
+  if (triageAnswer) {
+    const pathway = TRIAGE_PATHWAYS.find((p) => p.id === triageAnswer.pathwayId);
+    if (pathway) return await answerTriage(ctx, patientUserId, pathway, triageAnswer.values);
+  }
+
+  // A pathway owns this message: ask its first question; answers chain
+  // question-by-question (each option value carries the answers so far).
+  const pathway = matchPathway(userMessage, ctx);
+  if (pathway) {
+    const q = pathway.questions[0];
+    return {
+      id: crypto.randomUUID(),
+      patientId: ctx.patientId,
+      type: "triage_pathway",
+      priority: "watch",
+      title: "Let's check this properly",
+      message: "A couple of quick questions so I can point you at the safest next step.",
+      context: {
+        pathwayId: pathway.id,
+        elements: [triageQuestion(pathway.id, [], q)],
+      },
+      createdAt: new Date(),
+    };
+  }
 
   // Booking flow: agent shows available slots
   if (lower.includes("book") && lower.includes("appointment")) {
@@ -283,7 +446,11 @@ export async function respondToChat(
   };
 }
 
-async function generateInsight(ctx: any, event: { type: InsightType; priority: InsightPriority; title: string; message: string; context?: Record<string, unknown> }): Promise<GeneratedInsight> {
+async function generateInsight(
+  ctx: any,
+  event: { type: InsightType; priority: InsightPriority; title: string; message: string; context?: Record<string, unknown> },
+  opts?: { lockMessage?: boolean }
+): Promise<GeneratedInsight> {
   const patientContext = formatPatientContext(ctx);
   const medicalKnowledge = retrieveKnowledge(event.type, 2);
 
@@ -300,6 +467,12 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
     elements.unshift(...(event.context.elements as any[]));
   }
 
+  /* Rule-based findings keep their exact wording: the title names the metric
+     and the message describes it, so a summariser can never pair a heart-rate
+     title with a blood-pressure sentence. The model's reply is still kept as
+     the explanation behind the card. */
+  const message = opts?.lockMessage ? event.message : summariseInsight(response.text, event.message);
+
   return {
     id: crypto.randomUUID(),
     patientId: ctx.patientId,
@@ -308,7 +481,7 @@ async function generateInsight(ctx: any, event: { type: InsightType; priority: I
     title: event.title,
     /* The card leads with the finding. The model's full reply is kept as the
        explanation behind it, so nothing the agent said is lost. */
-    message: summariseInsight(response.text, event.message),
+    message,
     explanation: response.text,
     suggestedActions: response.suggestedActions,
     context: { ...event.context, elements },

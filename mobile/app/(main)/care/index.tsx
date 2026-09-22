@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -18,6 +18,9 @@ import { AppointmentCard } from "@/ui/AppointmentCard";
 import { MedicationCard } from "@/ui/MedicationCard";
 import { LabResultCard } from "@/ui/LabResultCard";
 import { ErrorState } from "@/ui/ErrorState";
+import { RowSkeleton } from "@/ui/Skeleton";
+import { OfflinePanel, StaleStrip } from "@/ui/OfflineNotice";
+import { useIsOffline } from "@/lib/connectivity";
 import { buttonPrimary, card, iconTile } from "@/ui/styles";
 import { ChatIcon, ChevronRightIcon, MoreIcon } from "@/icons";
 
@@ -80,26 +83,31 @@ export default function Care() {
   );
   const shown = upcoming.length > 0 ? upcoming : appointments.filter((a) => a.status !== "cancelled");
 
-  if (loading) {
+  const offline = useIsOffline();
+  const hasAny = appointments.length + prescriptions.length + labs.length + notifications.length > 0;
+
+  if (loading && !hasAny) {
     return (
       <Screen>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.green600} />
+        <View style={{ gap: spacing.sm }}>
+          <RowSkeleton rows={2} />
+          <RowSkeleton rows={2} />
         </View>
       </Screen>
     );
   }
 
-  if (error) {
+  if (error && !hasAny) {
     return (
       <Screen>
-        <ErrorState message={error} onRetry={refresh} />
+        {offline ? <OfflinePanel onRetry={refresh} /> : <ErrorState message={error} onRetry={refresh} />}
       </Screen>
     );
   }
 
   return (
     <Screen>
+      {error && hasAny ? <StaleStrip onRetry={refresh} /> : null}
       {/* Header — the title is the axis of the screen, so it centres */}
       <View style={styles.header}>
         <Text style={styles.title}>Care</Text>

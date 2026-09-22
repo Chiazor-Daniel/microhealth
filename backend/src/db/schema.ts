@@ -393,3 +393,71 @@ export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
     references: [patients.id],
   }),
 }));
+
+/**
+ * Nurse escalation queue (MVP function 4).
+ *
+ * The agent never manages high-risk situations alone: when triage or vitals
+ * cross a threshold, a row lands here with the vitals snapshot and an
+ * AI-written case summary. A clinician picks it up, acts, and resolves it —
+ * every step logged on the row.
+ */
+export const escalations = sqliteTable("escalations", {
+  id: id(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  reason: text("reason").notNull(),
+  urgency: text("urgency").notNull().default("routine"),
+  vitalsSnapshot: text("vitals_snapshot"),
+  caseSummary: text("case_summary"),
+  status: text("status").notNull().default("open"),
+  assignedStaffId: text("assigned_staff_id").references(() => staff.id),
+  actionTaken: text("action_taken"),
+  actionNote: text("action_note"),
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const escalationsRelations = relations(escalations, ({ one }) => ({
+  patient: one(patients, {
+    fields: [escalations.patientId],
+    references: [patients.id],
+  }),
+}));
+
+/**
+ * Medication adherence log (MVP function 5).
+ *
+ * One row per scheduled dose the agent reminds about: reminded at, confirmed
+ * (patient tapped "taken"), or missed (window passed with no confirmation).
+ * Repeated misses on a high-risk patient escalate.
+ */
+export const medicationLogs = sqliteTable("medication_logs", {
+  id: id(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  prescriptionId: text("prescription_id").references(() => prescriptions.id).notNull(),
+  dueAt: integer("due_at", { mode: "timestamp" }).notNull(),
+  remindedAt: integer("reminded_at", { mode: "timestamp" }),
+  confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+  status: text("status").notNull().default("due"),
+  createdAt: ts("created_at"),
+});
+
+/**
+ * Caregiver alert preferences (MVP function 6).
+ *
+ * Consent-based and per-category: the patient chooses which alert kinds each
+ * trusted contact may receive. No row (or no consent) means no alerts.
+ */
+export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {
+  id: id(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  familyMemberId: text("family_member_id").references(() => familyMembers.id).notNull(),
+  contactPhone: text("contact_phone"),
+  alertAbnormal: integer("alert_abnormal", { mode: "boolean" }).default(true),
+  alertMissedMedication: integer("alert_missed_medication", { mode: "boolean" }).default(true),
+  alertUrgent: integer("alert_urgent", { mode: "boolean" }).default(true),
+  consentedAt: integer("consented_at", { mode: "timestamp" }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});

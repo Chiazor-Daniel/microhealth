@@ -22,6 +22,10 @@ import { Sparkline, sparkDomain, SPARK_PAD } from "@/ui/Sparkline";
 import { BrandMark } from "@/ui/BrandMark";
 import { Avatar } from "@/ui/Avatar";
 import { EmptyState } from "@/ui/EmptyState";
+import { ErrorState } from "@/ui/ErrorState";
+import { HeroSkeleton, TilePairSkeleton, RowSkeleton } from "@/ui/Skeleton";
+import { OfflinePanel, StaleStrip } from "@/ui/OfflineNotice";
+import { useIsOffline } from "@/lib/connectivity";
 import { useBandConnected } from "@/lib/band";
 import { FluidText } from "@/ui/FluidText";
 import { MetricTile } from "@/ui/MetricTile";
@@ -54,7 +58,8 @@ const BANDS: Record<string, [number, number]> = {
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
-  const { vitals: existingVitals, appointments, metricRecords, loading: dataLoading } = usePatientData();
+  const { vitals: existingVitals, appointments, metricRecords, loading: dataLoading, error: dataError, refresh } = usePatientData();
+  const offline = useIsOffline();
   const patientId = user?.profile?.id;
   /* The feed stands in for a band, so it only runs when there is one — see
      useBandConnected. Without this a brand-new account is handed invented
@@ -214,8 +219,10 @@ export default function Home() {
   if (dataLoading && !sourceVitals.length) {
     return (
       <Screen>
-        <View style={styles.loading}>
-          <ActivityIndicator color={semantic.brand} />
+        <View style={{ gap: spacing.sm }}>
+          <HeroSkeleton />
+          <TilePairSkeleton />
+          <RowSkeleton rows={2} />
         </View>
       </Screen>
     );
@@ -224,6 +231,8 @@ export default function Home() {
 
   return (
     <Screen>
+      {/* Stale data stays on screen; the strip says why it isn't fresh. */}
+      {dataError && hasReadings ? <StaleStrip onRetry={refresh} /> : null}
       {/* Greeting — the state of things is the second line, in green */}
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>
@@ -247,8 +256,16 @@ export default function Home() {
       </View>
 
       {/* A brand-new account has nothing to chart, so the screen says what
-          would be here and how to fill it, rather than a row of em dashes. */}
-      {!hasReadings ? (
+          would be here and how to fill it, rather than a row of em dashes.
+          A failed load is not an empty account: offline gets the slate panel,
+          other failures the red state. */}
+      {dataError && !hasReadings ? (
+        offline ? (
+          <OfflinePanel onRetry={refresh} />
+        ) : (
+          <ErrorState message={dataError} onRetry={refresh} />
+        )
+      ) : !hasReadings ? (
         <Reveal index={1}>
           <EmptyState
             icon={<HeartIcon size={22} color={semantic.accentDeep} />}

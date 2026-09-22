@@ -1,8 +1,7 @@
 import { type VitalRow } from "./types";
 
 // Generic clinical ranges used only when a patient baseline is unavailable.
-export const DEFAULT_RANGES = {
-  heartRate: { min: 60, max: 100, unit: "bpm" },
+export const DEFAULT_RANGES = {  heartRate: { min: 60, max: 100, unit: "bpm" },
   systolic: { min: 90, max: 120, unit: "mmHg" },
   diastolic: { min: 60, max: 80, unit: "mmHg" },
   spo2: { min: 95, max: 100, unit: "%" },
@@ -122,4 +121,32 @@ function percentileRange(values: number[], fallbackMin: number, fallbackMax: num
   const low = sorted[Math.floor(values.length * 0.1)];
   const high = sorted[Math.floor(values.length * 0.9)];
   return { min: Math.round(low), max: Math.round(high) };
+}
+
+/**
+ * Care labels (Agentic AI MVP, function 1).
+ *
+ * The words a patient sees. Low-to-medium health literacy is the audience, so
+ * the internal range states map onto four plain labels: Normal, Watch
+ * Closely, Needs Attention, Seek Care Now. `urgent` priority always wins —
+ * whatever the numbers say, an urgent flag means Seek Care Now.
+ */
+export type CareLabel = "Normal" | "Watch Closely" | "Needs Attention" | "Seek Care Now";
+
+export function careLabel(
+  status: "normal" | "low" | "high" | "attention",
+  priority?: "info" | "watch" | "attention" | "urgent"
+): CareLabel {
+  if (priority === "urgent") return "Seek Care Now";
+  switch (status) {
+    case "normal":
+      return "Normal";
+    case "low":
+    case "high":
+      return priority === "attention" ? "Needs Attention" : "Watch Closely";
+    case "attention":
+      return "Needs Attention";
+    default:
+      return "Watch Closely";
+  }
 }

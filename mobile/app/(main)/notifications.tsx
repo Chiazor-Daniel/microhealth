@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { colors, semantic, spacing } from "@tokens";
@@ -10,6 +10,9 @@ import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
 import { SegmentedTabs } from "@/ui/SegmentedTabs";
 import { ErrorState } from "@/ui/ErrorState";
+import { HeroSkeleton, RowSkeleton } from "@/ui/Skeleton";
+import { OfflinePanel } from "@/ui/OfflineNotice";
+import { useIsOffline } from "@/lib/connectivity";
 import { card, iconTile } from "@/ui/styles";
 import {
   BellIcon,
@@ -127,11 +130,13 @@ export default function Notifications() {
   const today = collapse(visible.filter((i) => isToday(i.createdAt)));
   const earlier = collapse(visible.filter((i) => !isToday(i.createdAt)));
 
+  const offline = useIsOffline();
+
   if (loading) {
     return (
       <Screen>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.green600} />
+        <View style={{ gap: spacing.sm }}>
+          <RowSkeleton rows={4} />
         </View>
       </Screen>
     );
@@ -140,10 +145,12 @@ export default function Notifications() {
   if (error) {
     return (
       <Screen>
-        <ErrorState message={error} />
+        {offline ? <OfflinePanel /> : <ErrorState message={error} />}
       </Screen>
     );
   }
+
+
 
   const rows = (list: ReturnType<typeof collapse>) => (
     <View style={styles.rows}>

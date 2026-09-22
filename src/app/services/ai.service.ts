@@ -36,4 +36,24 @@ export const aiService = {
   dismiss: (id: string) => api.post<Insight>(`/ai/insights/${id}/dismiss`, {}).then(parseInsight),
   chat: (message: string, history?: string) =>
     api.post<any>("/ai/chat", { message, history }).then(parseInsight),
+  evaluate: () => api.post<any[]>("/ai/evaluate", {}).then((arr) => arr.map(parseInsight)),
+  confirmMedication: (logId: string) =>
+    api.post<any>(`/ai/medications/${logId}/confirm`, {}).then(parseInsight),
+  summary: (period: "week" | "month" = "week") =>
+    api.get<any>(`/ai/summary?period=${period}`).then(parseInsight),
+  caregiverPrefs: () => api.get<any[]>("/ai/caregivers/prefs"),
+  saveCaregiverPrefs: (prefs: {
+    familyMemberId: string;
+    contactPhone?: string;
+    alertAbnormal?: boolean;
+    alertMissedMedication?: boolean;
+    alertUrgent?: boolean;
+  }) => api.post<any>("/ai/caregivers/prefs", prefs),
+};
+
+export const escalationService = {
+  queue: (status?: string) => api.get<any[]>(`/escalations/queue${status ? `?status=${status}` : ""}`),
+  actions: () => api.get<string[]>("/escalations/actions"),
+  act: (id: string, action: string, note?: string) =>
+    api.post<any>(`/escalations/queue/${id}/act`, { action, note }),
 };

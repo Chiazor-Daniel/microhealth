@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, semantic, spacing } from "@tokens";
 import { linearGradient, text, font } from "@rn/theme";
 import { familyService, type FamilyMember } from "@app/services/family.service";
+import { aiService } from "@app/services/ai.service";
 import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
 
@@ -26,11 +27,27 @@ export default function FamilyMembers() {
   const [newRelation, setNewRelation] = useState("");
   const [newAge, setNewAge] = useState("");
   const [saving, setSaving] = useState(false);
+  /* Caregiver alert consent per member: which alert kinds they may receive. */
+  const [prefs, setPrefs] = useState<Record<string, { alertAbnormal: boolean; alertMissedMedication: boolean; alertUrgent: boolean }>>({});
 
   useEffect(() => {
     setMembers(family || []);
     if (userPatientId) setPatientId(userPatientId);
   }, [family, userPatientId]);
+
+  useEffect(() => {
+    aiService.caregiverPrefs().then((rows) => {
+      const map: Record<string, { alertAbnormal: boolean; alertMissedMedication: boolean; alertUrgent: boolean }> = {};
+      for (const r of rows) {
+        map[r.familyMemberId] = {
+          alertAbnormal: !!r.alertAbnormal,
+          alertMissedMedication: !!r.alertMissedMedication,
+          alertUrgent: !!r.alertUrgent,
+        };
+      }
+      setPrefs(map);
+    }).catch(() => {});
+  }, []);
 
   const handleAdd = async () => {
     if (!newName.trim() || !newRelation.trim() || !patientId) return;
@@ -154,12 +171,57 @@ export default function FamilyMembers() {
                     </Pressable>
                   ))}
                 </View>
+
+                <CaregiverToggles
+                  memberId={m.id}
+                  value={prefs[m.id]}
+                  onChange={(next) => {
+                    setPrefs((p) => ({ ...p, [m.id]: next }));
+                    aiService.saveCaregiverPrefs({ familyMemberId: m.id, ...next }).catch(() => {
+                      Alert.alert("Couldn't save", "Alert preferences didn't save. Try again.");
+                    });
+                  }}
+                />
               </View>
             );
           })}
         </View>
       )}
     </Screen>
+  );
+}
+
+/** Consent toggles: which alert kinds this contact may receive. */
+function CaregiverToggles({
+  memberId,
+  value,
+  onChange,
+}: {
+  memberId: string;
+  value?: { alertAbnormal: boolean; alertMissedMedication: boolean; alertUrgent: boolean };
+  onChange: (next: { alertAbnormal: boolean; alertMissedMedication: boolean; alertUrgent: boolean }) => void;
+}) {
+  void memberId;
+  const v = value ?? { alertAbnormal: false, alertMissedMedication: false, alertUrgent: false };
+  const rows = [
+    { key: "alertAbnormal", label: "Abnormal readings" },
+    { key: "alertMissedMedication", label: "Missed medication" },
+    { key: "alertUrgent", label: "Urgent care" },
+  ] as const;
+  return (
+    <View style={styles.alertBox}>
+      <Text style={styles.alertTitle}>Caregiver alerts</Text>
+      {rows.map((r) => (
+        <View key={r.key} style={styles.alertRow}>
+          <Text style={styles.alertLabel}>{r.label}</Text>
+          <Switch
+            value={v[r.key]}
+            onValueChange={(nv) => onChange({ ...v, [r.key]: nv })}
+            trackColor={{ true: colors.green600 }}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -228,4 +290,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(133,192,206,0.65)",
   },
   actionLabel: { fontSize: 12, ...font(600), lineHeight: 18, color: semantic.accentDeep },
+
+  alertBox: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: "rgba(133,192,206,0.35)" },
+  alertTitle: { fontSize: 12, ...font(600), lineHeight: 18, color: semantic.textSecondary, marginBottom: 2 },
+  alertRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
+  alertLabel: { fontSize: 13, lineHeight: 20, color: semantic.textPrimary },
 });

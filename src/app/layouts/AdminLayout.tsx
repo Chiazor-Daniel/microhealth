@@ -4,6 +4,7 @@ import { AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, Users, Calendar, MessageSquare,
   Settings, Bell, ChevronDown, Search, Menu, X,
+  Siren,
   LogOut, Heart, Stethoscope, Home, FlaskConical,
   Package, DollarSign, BarChart3, GitBranch, UserCheck, Pill, Activity,
 } from "lucide-react";
@@ -16,6 +17,7 @@ const ADMIN_NAV = [
   { path: "patients", icon: Users, label: "Patients" },
   { path: "appointments", icon: Calendar, label: "Appointments" },
   { path: "consultations", icon: Stethoscope, label: "Consultations" },
+  { path: "escalations", icon: Siren, label: "Escalations" },
   { path: "vitals", icon: Activity, label: "Vitals Dashboard" },
   { path: "labs", icon: FlaskConical, label: "Lab Tests" },
   { path: "prescriptions", icon: Pill, label: "Prescriptions" },

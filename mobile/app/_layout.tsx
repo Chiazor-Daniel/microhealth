@@ -7,6 +7,7 @@ import { semantic } from "@tokens";
 import { AuthProvider } from "@app/hooks/useAuth";
 import { PatientDataProvider } from "@app/hooks/usePatientData";
 import { hydratePlatform } from "@/lib/platform";
+import { ConnectivityProvider } from "@/lib/connectivity";
 import { Splash } from "@/ui/Splash";
 
 /**
@@ -42,7 +43,9 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <AuthProvider>
         <PatientDataProvider>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: semantic.pageBackground } }} />
+          <ConnectivityProvider>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: semantic.pageBackground } }} />
+          </ConnectivityProvider>
         </PatientDataProvider>
       </AuthProvider>
     </SafeAreaProvider>

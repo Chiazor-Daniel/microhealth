@@ -14,9 +14,14 @@ export type InsightType =
   | "vital_trend"
   | "vital_recovery"
   | "medication_due"
+  | "medication_missed"
   | "appointment_reminder"
   | "lab_result"
   | "wearable_offline"
+  | "triage_pathway"
+  | "escalation_created"
+  | "caregiver_alert"
+  | "weekly_summary"
   | "system";
 
 export interface HealthEvent {

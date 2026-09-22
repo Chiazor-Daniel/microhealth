@@ -18,6 +18,8 @@ import { font, linearGradient, text } from "@rn/theme";
 
 import { Atmosphere } from "./Atmosphere";
 import { BrandLogo } from "./BrandLogo";
+import { WifiOffIcon } from "@/icons";
+import { useIsOffline } from "@/lib/connectivity";
 
 /**
  * The chrome shared by sign-in and sign-up.
@@ -57,7 +59,7 @@ export function AuthShell({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <BrandLogo variant="horizontal" height={30} style={styles.mark} />
+          <BrandLogo variant="horizontal" height={44} style={styles.brand} />
 
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
@@ -154,8 +156,20 @@ export function AuthButton({
  *
  * Distinct from a field error, which points at one input. This one belongs to
  * the whole attempt, so it sits above the button rather than under a field.
+ *
+ * A dead connection is not a red event: when the phone is offline the box
+ * goes slate and says so, with the retry left to the button below it.
  */
 export function AuthError({ message }: { message: string }) {
+  const offline = useIsOffline();
+  if (offline) {
+    return (
+      <View style={styles.offline} accessibilityRole="alert">
+        <WifiOffIcon size={15} color={semantic.textSecondary} />
+        <Text style={styles.offlineText}>You're offline. Check your connection and try again.</Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.alert} accessibilityRole="alert">
       <Text style={styles.alertText}>{message}</Text>
@@ -194,7 +208,7 @@ export function AuthSwitch({ prompt, action, onPress }: { prompt: string; action
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: spacing.pageX },
-  mark: { width: 56, height: 56, borderRadius: radii.pill, alignItems: "center", justifyContent: "center", alignSelf: "center" },
+  brand: { alignSelf: "center", marginBottom: spacing.xs },
   title: { fontSize: 24, ...font(700), lineHeight: 32, letterSpacing: -0.02 * 24, color: semantic.textPrimary, textAlign: "center", marginTop: spacing.md },
   subtitle: { fontSize: 14, lineHeight: 21, color: semantic.textSecondary, textAlign: "center", marginTop: 6 },
 
@@ -231,6 +245,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorSoft,
   },
   alertText: { fontSize: 13, lineHeight: 19, color: "#991B1B" },
+
+  offline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.control,
+    borderWidth: 1,
+    borderColor: "rgba(203,213,225,0.7)",
+    backgroundColor: "#F4F7F9",
+  },
+  offlineText: { flex: 1, fontSize: 13, lineHeight: 19, color: semantic.textSecondary },
 
   demo: {
     marginTop: spacing.md,

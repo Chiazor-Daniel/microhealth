@@ -478,6 +478,23 @@ export const glyphs = {
       c(12, 14.2, 1.25, { fill: "current", stroke: "none" }),
     ],
   },
+
+  /* No connection — wifi arcs with a slash. The offline panel's mark. */
+  wifiOff: {
+    reg: "outline",
+    prims: [
+      p("M5 12.55a11 11 0 0 1 14.08 0"),
+      p("M8.53 16.11a6 6 0 0 1 6.95 0"),
+      p("M12 20h.01"),
+      p("M1 1l22 22"),
+    ],
+  },
+
+  /* Retry — circular arrow. Lives on retry buttons, not in the icon set. */
+  refresh: {
+    reg: "outline",
+    prims: [p("M23 4v6h-6"), p("M20.49 15a9 9 0 1 1-2.12-9.36L23 10")],
+  },
 } satisfies Record<string, Glyph>;
 
 export type GlyphName = keyof typeof glyphs;

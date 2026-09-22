@@ -39,3 +39,53 @@ export async function chat(req: Request, res: Response, next: NextFunction) {
     res.json(reply);
   } catch (e) { next(e); }
 }
+
+export async function evaluate(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { evaluateAll } = await import("../agent/engine");
+    const { persistAndEmit } = await import("../agent/insights");
+    const insights = await evaluateAll(req.user!.userId);
+    for (const i of insights) {
+      try { await persistAndEmit(i, req.user!.userId); } catch (e) { console.error("[ai] persist failed:", e); }
+    }
+    res.json(insights);
+  } catch (e) { next(e); }
+}
+
+export async function confirmMedication(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { confirmDose } = await import("../agent/adherence");
+    const { persistAndEmit } = await import("../agent/insights");
+    const reply = await confirmDose(req.user!.userId, String(req.params.logId));
+    if (!reply) throw new AppError("Dose log not found", 404);
+    try { await persistAndEmit(reply, req.user!.userId); } catch (e) { console.error("[ai] persist failed:", e); }
+    res.json(reply);
+  } catch (e) { next(e); }
+}
+
+export async function summary(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { generateSummary } = await import("../agent/summary");
+    const period = (String(req.query.period ?? "week") === "month" ? "month" : "week") as "week" | "month";
+    const { persistAndEmit } = await import("../agent/insights");
+    const reply = await generateSummary(req.user!.userId, period);
+    if (!reply) throw new AppError("Patient not found", 404);
+    try { await persistAndEmit(reply, req.user!.userId); } catch (e) { console.error("[ai] persist failed:", e); }
+    res.json(reply);
+  } catch (e) { next(e); }
+}
+
+export async function caregiverPrefs(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { getPrefs, setPrefs } = await import("../agent/caregivers");
+    const patient = await db.query.patients.findFirst({ where: eq(patients.userId, req.user!.userId) });
+    if (!patient) throw new AppError("Patient not found", 404);
+    if (req.method === "GET") {
+      res.json(await getPrefs(patient.id));
+      return;
+    }
+    const { familyMemberId, contactPhone, alertAbnormal, alertMissedMedication, alertUrgent } = req.body;
+    if (!familyMemberId) throw new AppError("familyMemberId is required", 400);
+    res.json(await setPrefs(patient.id, { familyMemberId, contactPhone, alertAbnormal, alertMissedMedication, alertUrgent }));
+  } catch (e) { next(e); }
+}

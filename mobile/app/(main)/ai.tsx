@@ -5,14 +5,13 @@ import {
   Linking,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radii, semantic, spacing } from "@tokens";
@@ -20,18 +19,15 @@ import { linearGradient, text, font } from "@rn/theme";
 import { useInsights } from "@app/patient/hooks/useInsights";
 import { aiService, type Insight } from "@app/services/ai.service";
 
-import { AgentOrb } from "@/ui/AgentOrb";
+import { AgentOrb, type OrbMood } from "@/ui/AgentOrb";
 import { InsightCard } from "@/ui/InsightCard";
 import { GenUI, type GenUIElement } from "@/ui/GenUI";
 import { Atmosphere } from "@/ui/Atmosphere";
 import { SoftIn, TapScale } from "@/ui/motion";
 import { card } from "@/ui/styles";
 import {
-  CalendarIcon,
-  CapsuleIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
-  HeartIcon,
   SendIcon,
 } from "@/icons";
 
@@ -52,19 +48,6 @@ interface Message {
 }
 
 /**
- * Openers, in the patient's words rather than the system's.
- *
- * Four of them read as a menu to be studied; two read as an invitation. These
- * are the questions someone actually arrives with — and the agent can reach
- * everything else from a plain sentence, so the chips only need to start the
- * conversation, not enumerate it.
- */
-const suggestions = [
-  { key: "how", icon: HeartIcon, label: "How am I doing?", send: "How am I doing?" },
-  { key: "book", icon: CalendarIcon, label: "Book a visit", send: "I'd like to book a visit" },
-  { key: "meds", icon: CapsuleIcon, label: "My medications", send: "What am I taking at the moment?" },
-] as const;
-
 /* Hermes does not reliably expose `crypto.randomUUID`, and a message id only
    has to be unique within one mounted screen — so a counter is enough. */
 let nextId = 0;
@@ -76,13 +59,49 @@ export default function AI() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [typing, setTyping] = useState(false);
-  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
   const keyboardOpen = useKeyboardOpen();
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages, typing]);
+
+  /* The orb's face follows the conversation: thinking while the reply
+     brews, speaking the moment it lands, then settling into the mood the
+     reply carries (priority + type decide the feeling). */
+  const [speaking, setSpeaking] = useState(false);
+  useEffect(() => {
+    if (speaking) {
+      const t = setTimeout(() => setSpeaking(false), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [speaking]);
+  const lastAgent = [...messages].reverse().find((m) => m.role === "agent");
+  /* Floating dock: once the header orb scrolls off, a mini orb fades into
+     the top-right corner (tap = back to top); at the top it fades away. */
+  const dockProgress = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      dockProgress.value = withTiming(e.contentOffset.y > 220 ? 1 : 0, { duration: 220 });
+    },
+  });
+  const dockStyle = useAnimatedStyle(() => ({
+    opacity: dockProgress.value,
+    transform: [{ scale: 0.6 + dockProgress.value * 0.4 }, { translateY: (1 - dockProgress.value) * -12 }],
+  }));  const mood: OrbMood = typing
+    ? "thinking"
+    : speaking
+      ? "speaking"
+      : lastAgent?.insight?.priority === "urgent" || lastAgent?.insight?.type === "escalation_created"
+        ? "scared"
+        : lastAgent?.insight?.priority === "attention"
+          ? "scared"
+          : lastAgent?.insight?.priority === "watch"
+            ? "unsure"
+            : lastAgent
+              ? "happy"
+              : "idle";
 
   const send = useCallback(
     async (value: string, display?: string) => {
@@ -100,6 +119,7 @@ export default function AI() {
       try {
         const reply = await aiService.chat(value, history);
         setMessages((m) => [...m, { id: newId(), role: "agent", text: reply.message, insight: reply }]);
+        setSpeaking(true);
         refresh();
       } catch {
         setMessages((m) => [
@@ -123,11 +143,20 @@ export default function AI() {
   };
 
   const handleGenUIAction = useCallback(
-    (action: string, payload?: any) => {
+    async (action: string, payload?: any) => {
       if (action === "select_appointment" && payload?.metadata) {
         send(`slot:${JSON.stringify(payload.metadata)}`, `Book: ${payload.label}`);
       } else if (action === "triage_answer") {
         send(`Severity: ${payload?.value}`, payload?.label ?? `Severity: ${payload?.value}`);
+      } else if (action === "confirm_medication" && payload?.logId) {
+        try {
+          const reply = await aiService.confirmMedication(payload.logId);
+          setMessages((m) => [...m, { id: newId(), role: "agent", text: reply.message, insight: reply }]);
+          setSpeaking(true);
+          refresh();
+        } catch {
+          send(`confirm_med:${payload.logId}`, "I took it");
+        }
       } else if (action === "message_team") {
         router.push("/care/messages");
       } else if (action === "book_appointment") {
@@ -165,9 +194,11 @@ export default function AI() {
       keyboardVerticalOffset={0}
     >
     <Atmosphere>
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 12) + spacing.pageY,
           paddingBottom: spacing.lg,
@@ -176,7 +207,7 @@ export default function AI() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-      {/* Header — the agent introduces itself rather than being labelled */}
+      {/* Header — scrolls with the conversation */}
       <View style={styles.header}>
         <Pressable onPress={() => router.push("/home")} accessibilityLabel="Back to home" style={styles.back}>
           <ChevronLeftIcon size={22} color={semantic.textPrimary} />
@@ -184,24 +215,9 @@ export default function AI() {
         <Text style={styles.title}>Health Agent</Text>
         <Text style={styles.subtitle}>Always here for you</Text>
         <View style={{ marginTop: spacing.xs }}>
-          <AgentOrb size={92} active={typing} />
+          <AgentOrb size={92} mood={mood} />
         </View>
       </View>
-
-      {/* Suggestion chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginTop: spacing.md }}
-        contentContainerStyle={styles.chipRow}
-      >
-        {suggestions.map(({ key, icon: Icon, label, send }) => (
-          <Pressable key={key} onPress={() => send(send)} style={styles.suggestion}>
-            <Icon size={15} color={colors.green600} />
-            <Text style={styles.suggestionLabel}>{label}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
 
       {/* Pinned unread insight — the agent's own news, until the conversation starts */}
       {topUnread && messages.length === 0 ? (
@@ -219,18 +235,12 @@ export default function AI() {
       {/* Conversation */}
       <View style={styles.conversation}>
         {messages.length === 0 && !topUnread ? (
-          <Text style={styles.empty}>Start a conversation, or tap a suggestion above.</Text>
+          <Text style={styles.empty}>Start a conversation below.</Text>
         ) : null}
 
         {messages.map((msg) => (
           <SoftIn key={msg.id}>
             <View style={[styles.msgRow, msg.role === "user" ? styles.msgRowUser : null]}>
-            {msg.role === "agent" ? (
-              <View style={{ flexShrink: 0, marginTop: -4 }}>
-                <AgentOrb size={30} />
-              </View>
-            ) : null}
-
             {msg.role === "user" ? (
               <LinearGradient
                 colors={["#0A7085", "#005F73"]}
@@ -272,13 +282,38 @@ export default function AI() {
 
         {typing ? (
           <View style={styles.typingRow}>
-            <AgentOrb size={30} active />
+            <AgentOrb size={30} mood="thinking" />
             <ThinkingPulse />
           </View>
         ) : null}
       </View>
 
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Floating dock — the orb, shrunk to the corner once the header has
+          scrolled off. Tap returns to the top. */}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: Math.max(insets.top, 12),
+            right: spacing.pageX,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            overflow: "hidden",
+          },
+          dockStyle,
+        ]}
+        pointerEvents="box-none"
+      >
+        <Pressable
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          accessibilityLabel="Back to top"
+        >
+          <AgentOrb size={52} mood={mood} />
+        </Pressable>
+      </Animated.View>
 
       {/* Composer. The fade above it is the page's own bottom colour rising to
           opaque, so a long reply scrolls *under* the band rather than being cut
@@ -379,21 +414,6 @@ const styles = StyleSheet.create({
   back: { position: "absolute", left: -8, top: 0, width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 17, ...font(600), lineHeight: 26, letterSpacing: -0.02 * 17, color: semantic.textPrimary },
   subtitle: { fontSize: 13, ...font(500), lineHeight: 20, color: semantic.accentDeep, marginTop: 2 },
-
-  chipRow: { gap: spacing.xs, paddingHorizontal: 4 },
-  suggestion: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: "rgba(133,192,206,0.65)",
-    flexShrink: 0,
-  },
-  suggestionLabel: { fontSize: 13, ...font(500), lineHeight: 20, color: semantic.textPrimary },
 
   conversation: { gap: spacing.sm, paddingBottom: spacing.xs, marginTop: spacing.md },
   empty: { fontSize: 13, lineHeight: 20, color: semantic.textMuted, textAlign: "center", paddingVertical: spacing.lg },

@@ -29,6 +29,7 @@ import PatientsList from "./pages/admin/PatientsList";
 import AdminPatientProfile from "./pages/admin/AdminPatientProfile";
 import AppointmentsPage from "./pages/admin/AppointmentsPage";
 import ConsultationsPage from "./pages/admin/ConsultationsPage";
+import EscalationsPage from "./pages/admin/EscalationsPage";
 import VitalsDashboard from "./pages/admin/VitalsDashboard";
 import LabTestsPage from "./pages/admin/LabTestsPage";
 import PrescriptionsPage from "./pages/admin/PrescriptionsPage";
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="patients/:id" element={<AdminPatientProfile />} />
         <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="consultations" element={<ConsultationsPage />} />
+        <Route path="escalations" element={<EscalationsPage />} />
         <Route path="vitals" element={<VitalsDashboard />} />
         <Route path="labs" element={<LabTestsPage />} />
         <Route path="prescriptions" element={<PrescriptionsPage />} />

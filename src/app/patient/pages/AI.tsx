@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { patientTheme } from "../theme";
 import { InsightCard } from "../components/InsightCard";
 import { AgentOrb } from "../components/AgentOrb";
-import { CheckCircleIcon, HeartIcon, CalendarIcon, CapsuleIcon, FlaskIcon, SendIcon, ChevronLeftIcon } from "../icons";
+import { SendIcon, ChevronLeftIcon } from "../icons";
 import { GenUI, type GenUIElement } from "../components/GenUI";
 import { useInsights } from "../hooks/useInsights";
 import { aiService, type Insight } from "../../services/ai.service";
@@ -24,13 +24,6 @@ interface Message {
   display?: string;
   insight?: Insight;
 }
-
-const suggestions = [
-  { icon: <HeartIcon size={15} />, label: "Analyze my vitals" },
-  { icon: <CalendarIcon size={15} />, label: "Book appointment" },
-  { icon: <CapsuleIcon size={15} />, label: "My medications" },
-  { icon: <FlaskIcon size={15} />, label: "My latest labs" },
-];
 
 export default function AI() {
   const navigate = useNavigate();
@@ -79,11 +72,19 @@ export default function AI() {
     send(input.trim());
   };
 
-  const handleGenUIAction = (action: string, payload?: any) => {
+  const handleGenUIAction = async (action: string, payload?: any) => {
     if (action === "select_appointment" && payload?.metadata) {
       send(`slot:${JSON.stringify(payload.metadata)}`, `Book: ${payload.label}`);
     } else if (action === "triage_answer") {
       send(`Severity: ${payload?.value}`, payload?.label ?? `Severity: ${payload?.value}`);
+    } else if (action === "confirm_medication" && payload?.logId) {
+      try {
+        const reply = await aiService.confirmMedication(payload.logId);
+        setMessages((m) => [...m, { id: crypto.randomUUID(), role: "agent", text: reply.message, insight: reply }]);
+        refresh();
+      } catch {
+        send(`confirm_med:${payload.logId}`, "I took it");
+      }
     } else if (action === "message_team") {
       navigate("/patient/care/messages");
     } else if (action === "book_appointment") {
@@ -118,25 +119,6 @@ export default function AI() {
         <div className="mt-2 -mb-1">
           <AgentOrb size={92} active={typing} />
         </div>
-      </div>
-
-      {/* Suggestion chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {suggestions.map((s) => (
-          <button
-            key={s.label}
-            onClick={() => {
-              if (s.label === "Book appointment") send("Book me an appointment");
-              else if (s.label === "Analyze my vitals") send("Analyze my latest vitals and tell me what you see");
-              else setInput(s.label);
-            }}
-            className="mh-btn-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap flex-shrink-0"
-            style={{ color: patientTheme.colors.textPrimary }}
-          >
-            <span style={{ color: patientTheme.colors.primaryGreen }}>{s.icon}</span>
-            {s.label}
-          </button>
-        ))}
       </div>
 
       {/* Pinned unread insight */}

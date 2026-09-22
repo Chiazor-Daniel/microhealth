@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { colors, semantic, spacing } from "@tokens";
 import { font } from "@rn/theme";
@@ -13,6 +13,9 @@ import { resolveAll, type MetricValue } from "@metrics/readings";
 import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
 import { ErrorState } from "@/ui/ErrorState";
+import { HeroSkeleton, TilePairSkeleton } from "@/ui/Skeleton";
+import { OfflinePanel, StaleStrip } from "@/ui/OfflineNotice";
+import { useIsOffline } from "@/lib/connectivity";
 import { SegmentedTabs } from "@/ui/SegmentedTabs";
 import { EmptyState } from "@/ui/EmptyState";
 import { MetricTile } from "@/ui/MetricTile";
@@ -195,26 +198,36 @@ export default function Vitals() {
      across every category so it can be one row at the foot of the screen. */
   const allMissing = useMemo(() => allValues.filter((v) => v.value == null).map((v) => v.metric), [allValues]);
 
+  const offline = useIsOffline();
+
   if (loading && !vitals.length) {
     return (
       <Screen>
-        <View style={styles.loading}>
-          <ActivityIndicator color={semantic.brand} />
+        <View style={{ gap: spacing.sm }}>
+          <TilePairSkeleton />
+          <TilePairSkeleton />
+          <HeroSkeleton />
         </View>
       </Screen>
     );
   }
 
-  if (error) {
+  /* Data on screen beats any error box: the strip explains the staleness.
+     Only a total failure with nothing to show gets a panel — slate for
+     offline, red for anything else. */
+  const stale = error && vitals.length > 0;
+
+  if (error && !vitals.length) {
     return (
       <Screen>
-        <ErrorState message={error} onRetry={refresh} />
+        {offline ? <OfflinePanel onRetry={refresh} /> : <ErrorState message={error} onRetry={refresh} />}
       </Screen>
     );
   }
 
   return (
     <Screen>
+      {stale ? <StaleStrip onRetry={refresh} /> : null}
       {/* Header — the title is the axis of the screen, so it centres */}
       <View style={styles.header}>
         <Text style={styles.title}>Vitals</Text>

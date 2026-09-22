@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Loader2, X, UserPlus } from "lucide-react";
 import { familyService, type FamilyMember } from "../../services/family.service";
+import { aiService } from "../../services/ai.service";
 import { useAuth } from "../../hooks/useAuth";
 import { usePatientData } from "../../hooks/usePatientData";
 import { Loading } from "../../components/shared/Loading";
@@ -25,11 +26,34 @@ function FamilyMembers() {
   const [newRelation, setNewRelation] = useState("");
   const [newAge, setNewAge] = useState("");
   const [saving, setSaving] = useState(false);
+  type AlertPref = { alertAbnormal: boolean; alertMissedMedication: boolean; alertUrgent: boolean };
+  const [prefs, setPrefs] = useState<Record<string, AlertPref>>({});
 
   useEffect(() => {
     setMembers(family || []);
     if (userPatientId) setPatientId(userPatientId);
   }, [family, userPatientId]);
+
+  useEffect(() => {
+    aiService.caregiverPrefs().then((rows) => {
+      const map: Record<string, AlertPref> = {};
+      for (const r of rows) {
+        map[r.familyMemberId] = {
+          alertAbnormal: !!r.alertAbnormal,
+          alertMissedMedication: !!r.alertMissedMedication,
+          alertUrgent: !!r.alertUrgent,
+        };
+      }
+      setPrefs(map);
+    }).catch(() => {});
+  }, []);
+
+  const togglePref = (memberId: string, key: keyof AlertPref) => {
+    const current = prefs[memberId] ?? { alertAbnormal: false, alertMissedMedication: false, alertUrgent: false };
+    const next = { ...current, [key]: !current[key] };
+    setPrefs((p) => ({ ...p, [memberId]: next }));
+    aiService.saveCaregiverPrefs({ familyMemberId: memberId, ...next }).catch(() => showError("Couldn't save alert preferences."));
+  };
 
   const handleAdd = async () => {
     if (!newName.trim() || !newRelation.trim() || !patientId) return;
@@ -158,6 +182,38 @@ function FamilyMembers() {
                     {label}
                   </button>
                 ))}
+              </div>
+
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--mh-hairline-soft)" }}>
+                <p className="text-[12px] font-semibold" style={{ color: patientTheme.colors.textSecondary }}>
+                  Caregiver alerts
+                </p>
+                {(
+                  [
+                    { key: "alertAbnormal", label: "Abnormal readings" },
+                    { key: "alertMissedMedication", label: "Missed medication" },
+                    { key: "alertUrgent", label: "Urgent care" },
+                  ] as const
+                ).map((row) => {
+                  const on = prefs[m.id]?.[row.key] ?? false;
+                  return (
+                    <button
+                      key={row.key}
+                      onClick={() => togglePref(m.id, row.key)}
+                      className="w-full flex items-center justify-between py-1.5"
+                    >
+                      <span className="text-[13px]" style={{ color: patientTheme.colors.textPrimary }}>
+                        {row.label}
+                      </span>
+                      <span
+                        className="inline-flex w-9 h-5 rounded-full p-0.5 transition-colors"
+                        style={{ background: on ? patientTheme.colors.primaryGreen : "#CBD5E1", justifyContent: on ? "flex-end" : "flex-start" }}
+                      >
+                        <span className="w-4 h-4 rounded-full bg-white" />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           ))}

@@ -1,10 +1,13 @@
 import { Redirect, Stack, usePathname } from "expo-router";
-import { View } from "react-native";
+import { Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@app/hooks/useAuth";
 import { useLiveVitals } from "@app/patient/hooks/useLiveVitals";
 import { useLiveInsights } from "@app/patient/hooks/useLiveInsights";
 import { usePatientData } from "@app/hooks/usePatientData";
 import { semantic } from "@tokens";
+import { useIsOffline } from "@/lib/connectivity";
+import { WifiOffIcon } from "@/icons";
 import { BottomNavigation } from "@/ui/BottomNavigation";
 import { NavClearanceProvider } from "@/ui/navClearance";
 
@@ -70,7 +73,9 @@ function AuthedContent({ authenticated, loading }: { authenticated: boolean; loa
   }
 
   return (
-    <Stack
+    <View style={{ flex: 1 }}>
+      <OfflineRibbon />
+      <Stack
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: semantic.pageBackground },
@@ -88,5 +93,29 @@ function AuthedContent({ authenticated, loading }: { authenticated: boolean; loa
         animation: "none",
       }}
     />
+    </View>
+  );
+}
+
+/** Thin slate ribbon under the status area while the phone is offline. */
+function OfflineRibbon() {
+  const insets = useSafeAreaInsets();
+  const offline = useIsOffline();
+  if (!offline) return null;
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingTop: Math.max(insets.top, 8),
+        paddingBottom: 8,
+        backgroundColor: "#334155",
+      }}
+    >
+      <WifiOffIcon size={13} color="#E2E8F0" />
+      <Text style={{ fontSize: 12, fontWeight: "600", color: "#F1F5F8" }}>You're offline — showing saved data</Text>
+    </View>
   );
 }

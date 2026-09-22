@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactElement } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { colors, semantic, spacing, type GradientName } from "@tokens";
@@ -7,6 +7,7 @@ import { linearGradient, font } from "@rn/theme";
 import { useInsights } from "@app/patient/hooks/useInsights";
 
 import { Screen } from "@/ui/Screen";
+import { HeroSkeleton, RowSkeleton } from "@/ui/Skeleton";
 import { Reveal, TapScale } from "@/ui/motion";
 import { SegmentedTabs } from "@/ui/SegmentedTabs";
 import { buttonPrimary, card, iconTile, iconTileBorder } from "@/ui/styles";
@@ -125,8 +126,9 @@ export default function Insights() {
   if (loading) {
     return (
       <Screen>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.green600} />
+        <View style={{ gap: spacing.sm }}>
+          <HeroSkeleton />
+          <RowSkeleton rows={3} />
         </View>
       </Screen>
     );
