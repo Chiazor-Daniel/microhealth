@@ -9,6 +9,7 @@ import { summariseInsight, insightFormatPrompt } from "./response";
 import { detectTrend, checkVitalRanges, careLabel } from "./rules";
 import { findAvailableAppointments, bookAppointment, prepareCareTeamMessage } from "./tools";
 import { matchPathway, parseTriageAnswer, TRIAGE_PATHWAYS } from "./triage";
+import { resolveChatSubject } from "./familyContext";
 import { createEscalation } from "./escalation";
 import { remindDueDose, confirmDose, sweepMissedDoses } from "./adherence";
 
@@ -248,12 +249,20 @@ export async function processMedicationDue(patientUserId: string): Promise<Gener
 export async function respondToChat(
   patientUserId: string,
   userMessage: string,
-  conversationHistory?: string
+  conversationHistory?: string,
+  subjectPatientId?: string
 ): Promise<GeneratedInsight | null> {
   const ctx = await buildPatientContext(patientUserId);
   if (!ctx) return null;
 
-  const patientContext = formatPatientContext(ctx);
+  /* Family subject resolution: explicit subject > name/role mention in the
+     message > the viewer. Runs before every branch so triage, booking and
+     chat alike read the SUBJECT's numbers, never the viewer's by accident. */
+  const fam = await resolveChatSubject(ctx, patientUserId, userMessage, subjectPatientId);
+  const subjectCtx = fam.subjectCtx ?? ctx;
+  const familyLine = fam.familyLine;
+
+  const patientContext = formatPatientContext(subjectCtx);
   const medicalKnowledge = retrieveKnowledge(userMessage, 2);
 
   const lower = userMessage.toLowerCase();
@@ -273,21 +282,26 @@ export async function respondToChat(
     if (summaryReply) return summaryReply;
   }
 
+  /* From here the turn belongs to the subject: every branch below reads
+     the subject's numbers. confirm_med/summary above stay viewer-own. */
+  const actx = subjectCtx ?? ctx;
+  const actId = fam.subjectPatientId;
+
   // Triage pathway answers ("triage:<pathway>:<value+value>")
   const triageAnswer = parseTriageAnswer(userMessage);
   if (triageAnswer) {
     const pathway = TRIAGE_PATHWAYS.find((p) => p.id === triageAnswer.pathwayId);
-    if (pathway) return await answerTriage(ctx, patientUserId, pathway, triageAnswer.values);
+    if (pathway) return await answerTriage(actx, actId, pathway, triageAnswer.values);
   }
 
   // A pathway owns this message: ask its first question; answers chain
   // question-by-question (each option value carries the answers so far).
-  const pathway = matchPathway(userMessage, ctx);
+  const pathway = matchPathway(userMessage, actx);
   if (pathway) {
     const q = pathway.questions[0];
     return {
       id: crypto.randomUUID(),
-      patientId: ctx.patientId,
+      patientId: actId,
       type: "triage_pathway",
       priority: "watch",
       title: "Let's check this properly",
@@ -302,7 +316,7 @@ export async function respondToChat(
 
   // Booking flow: agent shows available slots
   if (lower.includes("book") && lower.includes("appointment")) {
-    const slots = await findAvailableAppointments(ctx.patientId);
+    const slots = await findAvailableAppointments(actId);
     return await generateInsight(ctx, {
       type: "system",
       priority: "info",
@@ -334,15 +348,15 @@ export async function respondToChat(
       }
     }
     if (!selected) {
-      const slots = await findAvailableAppointments(ctx.patientId);
+      const slots = await findAvailableAppointments(actId);
       const idx = lower.includes("second") ? 1 : lower.includes("third") ? 2 : 0;
       const s = slots[idx];
       if (s) selected = { doctorId: s.doctorId, date: s.date, time: s.time };
     }
     if (selected) {
-      const appt = await bookAppointment(ctx.patientId, selected);
+      const appt = await bookAppointment(actId, selected);
       const doctorName = await getDoctorName(selected.doctorId);
-      return await generateInsight(ctx, {
+      return await generateInsight(actx, {
         type: "appointment_reminder",
         priority: "info",
         title: "Appointment confirmed",
@@ -368,7 +382,7 @@ export async function respondToChat(
 
   // "I can't see a doctor yet" triage flow
   if ((lower.includes("can't") || lower.includes("cannot") || lower.includes("unable")) && lower.includes("doctor")) {
-    return await generateInsight(ctx, {
+    return await generateInsight(actx, {
       type: "system",
       priority: "watch",
       title: "Let's figure out next steps",
@@ -395,7 +409,7 @@ export async function respondToChat(
     const hasUrgent = urgentSymptoms.some((sym) => lower.includes(sym));
 
     if (severity === "severe" || hasUrgent) {
-      return await generateInsight(ctx, {
+      return await generateInsight(actx, {
         type: "system",
         priority: "urgent",
         title: "Please seek care now",
@@ -408,7 +422,7 @@ export async function respondToChat(
       });
     }
 
-    return await generateInsight(ctx, {
+    return await generateInsight(actx, {
       type: "system",
       priority: "watch",
       title: "Self-care while you arrange follow-up",
@@ -423,7 +437,7 @@ export async function respondToChat(
 
   // Default LLM response
   const response = await generateAgentResponse({
-    system: systemPrompt,
+    system: `${systemPrompt}${familyLine}`,
     patientContext,
     medicalKnowledge,
     event: { type: "chat", priority: "info", title: "Chat", message: userMessage },
@@ -434,7 +448,7 @@ export async function respondToChat(
 
   return {
     id: crypto.randomUUID(),
-    patientId: ctx.patientId,
+    patientId: actId,
     type: "system",
     priority: response.priority || "info",
     title: "Health Agent",

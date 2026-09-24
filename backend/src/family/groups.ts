@@ -1,6 +1,7 @@
 import { db } from "../config/database";
-import { familyGroups, familyMemberships, patients, users, type FamilyRole } from "../db/schema";
+import { familyGroups, familyMemberships, familyInvites, patients, users, type FamilyRole } from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { AppError } from "../middleware/errorHandler";
 import { authorizeViewer } from "./authorization";
 
@@ -69,6 +70,14 @@ export async function listMembers(viewerUserId: string, groupId: string) {
   }));
 }
 
+/** Only the group creator (family head) may invite or remove. */
+async function requireHead(groupId: string, patientId: string) {
+  const group = await db.query.familyGroups.findFirst({ where: eq(familyGroups.id, groupId) });
+  if (!group) throw new AppError("Group not found", 404);
+  if (group.createdBy !== patientId) throw new AppError("Only the family head can do this", 403, "FORBIDDEN");
+  return group;
+}
+
 /**
  * Invite by email or phone. If a matching account already exists it joins as
  * active immediately; otherwise an `invited` row holds the contact until the
@@ -77,8 +86,7 @@ export async function listMembers(viewerUserId: string, groupId: string) {
 export async function invite(userId: string, groupId: string, contact: string, role: FamilyRole) {
   assertRole(role);
   const inviter = await patientOfUser(userId);
-  const inviterGroups = await myGroups(inviter.id);
-  if (!inviterGroups.some((m) => m.groupId === groupId)) throw new AppError("Not your family", 403);
+  await requireHead(groupId, inviter.id);
 
   const clean = contact.trim().toLowerCase();
   if (!clean) throw new AppError("Contact is required", 400);
@@ -127,13 +135,63 @@ export async function claimInvites(patientId: string): Promise<number> {
   return claimed;
 }
 
-/** Remove a membership. Only an active member of the same group may remove. */
+/** Remove a membership. Only the family head may remove. */
 export async function removeMembership(userId: string, membershipId: string) {
   const remover = await patientOfUser(userId);
   const row = await db.query.familyMemberships.findFirst({ where: eq(familyMemberships.id, membershipId) });
   if (!row) throw new AppError("Membership not found", 404);
-  const removerGroups = await myGroups(remover.id);
-  if (!removerGroups.some((m) => m.groupId === row.groupId)) throw new AppError("Not your family", 403);
+  await requireHead(row.groupId, remover.id);
   await db.delete(familyMemberships).where(eq(familyMemberships.id, membershipId));
   return { removed: membershipId };
+}
+
+/**
+ * Shareable invite link payload. The head generates one per role; anyone
+ * opening it sees the family name and the offered role — never health data.
+ */
+export async function createInviteLink(userId: string, groupId: string, role: FamilyRole) {
+  assertRole(role);
+  const inviter = await patientOfUser(userId);
+  await requireHead(groupId, inviter.id);
+  const token = randomUUID().replace(/-/g, "").slice(0, 16);
+  const [row] = await db.insert(familyInvites).values({
+    token,
+    groupId,
+    role,
+    createdBy: inviter.id,
+  }).returning();
+  return row;
+}
+
+export async function resolveInvite(token: string) {
+  const row = await db.query.familyInvites.findFirst({ where: eq(familyInvites.token, token) });
+  if (!row) throw new AppError("Invite not found", 404);
+  const group = await db.query.familyGroups.findFirst({ where: eq(familyGroups.id, row.groupId) });
+  const head = row.createdBy
+    ? await db.query.patients.findFirst({ where: eq(patients.id, row.createdBy), with: { user: true } })
+    : null;
+  const headName = (head as any)?.user
+    ? `${(head as any).user.firstName ?? ""} ${(head as any).user.lastName ?? ""}`.trim() || "Your family"
+    : "Your family";
+  return { token: row.token, role: row.role, used: !!row.usedBy, familyName: `${headName}'s family` };
+}
+
+/** Join via link token after registering/logging in. */
+export async function joinByToken(userId: string, token: string) {
+  const row = await db.query.familyInvites.findFirst({ where: eq(familyInvites.token, token) });
+  if (!row) throw new AppError("Invite not found", 404);
+  const patient = await patientOfUser(userId);
+  const existing = await db.query.familyMemberships.findFirst({
+    where: and(eq(familyMemberships.groupId, row.groupId), eq(familyMemberships.patientId, patient.id)),
+  });
+  if (existing) return existing;
+  const [membership] = await db.insert(familyMemberships).values({
+    groupId: row.groupId,
+    patientId: patient.id,
+    role: row.role as FamilyRole,
+    status: "active",
+  }).returning();
+  await db.update(familyInvites).set({ usedBy: patient.id }).where(eq(familyInvites.id, row.id));
+  await claimInvites(patient.id).catch(() => {});
+  return membership;
 }

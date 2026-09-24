@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Redirect, useRouter } from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { colors, semantic, spacing } from "@tokens";
 import { font } from "@rn/theme";
 import { useAuth } from "@app/hooks/useAuth";
+import { familyGroupService } from "@app/services/family.service";
 
 import { Atmosphere } from "@/ui/Atmosphere";
 import { AuthShell, AuthField, AuthButton, AuthSwitch, AuthError } from "@/ui/auth";
@@ -22,6 +23,7 @@ const MIN_PASSWORD = 8;
 export default function Register() {
   const { isAuthenticated, register, loading } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ inviteToken?: string }>();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -57,6 +59,18 @@ export default function Register() {
     setError(null);
     try {
       await register({ email: email.trim(), password, firstName: firstName.trim(), lastName: lastName.trim() || undefined });
+      /* Invite links join right after the account exists — the newcomer
+         lands inside the family, not beside it. */
+      const inviteToken = params?.inviteToken;
+      if (inviteToken) {
+        try {
+          await familyGroupService.joinLink(String(inviteToken));
+          router.replace("/family");
+          return;
+        } catch {
+          /* A bad token must never strand a fresh account. */
+        }
+      }
       /* Straight into onboarding — a new account is empty, and the app has to
          introduce itself before a blank Home screen makes sense. */
       router.replace("/onboarding");

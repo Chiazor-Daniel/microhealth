@@ -83,7 +83,24 @@ export async function notifyCaregivers(patientId: string, kind: CaregiverAlertKi
       title: "Caregiver alert sent",
       message,
       type: "caregiver_alert",
+      subjectPatientId: patientId,
     });
   }
+
+  /* Plus everyone subscribed to this person's alerts ("whose alerts do I get"). */
+  const { subscribersOf } = await import("../family/subscriptions");
+  const subs = await subscribersOf(patientId, kind);
+  for (const subPatientId of subs) {
+    const sub = await db.query.patients.findFirst({ where: eq(patients.id, subPatientId) });
+    if (!sub?.userId || sub.userId === patient.userId) continue;
+    await db.insert(notifications).values({
+      userId: sub.userId,
+      title: "Family alert",
+      message,
+      type: "caregiver_alert",
+      subjectPatientId: patientId,
+    });
+  }
+
   return eligible.map((p) => p.familyMemberId);
 }

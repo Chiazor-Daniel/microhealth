@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth";
 import * as ctrl from "../controllers/vital.controller";
 import { validate } from "../middleware/validate";
+import { authorizePatientParam } from "../middleware/authorizePatient";
 import { z } from "zod";
 
 export const vitalRoutes = Router();
@@ -62,15 +63,15 @@ const readingSchema = z.object({
   recordedAt: z.coerce.date().optional(),
 });
 
-vitalRoutes.get("/patient/:patientId", ctrl.getByPatient);
-vitalRoutes.get("/trends/:patientId", ctrl.getTrends);
+vitalRoutes.get("/patient/:patientId", authorizePatientParam, ctrl.getByPatient);
+vitalRoutes.get("/trends/:patientId", authorizePatientParam, ctrl.getTrends);
 /* One row, for a day-over-day comparison the capped reading list cannot make. */
-vitalRoutes.get("/snapshot-before/:patientId", ctrl.getSnapshotBefore);
+vitalRoutes.get("/snapshot-before/:patientId", authorizePatientParam, ctrl.getSnapshotBefore);
 vitalRoutes.post("/", authorize("admin","staff"), validate(schema), ctrl.record);
 vitalRoutes.get("/abnormal", authorize("admin","staff"), ctrl.getAbnormal);
 
 /* Metric readings. The band posts its packet to `/`, and anything recorded on
    its own schedule — sleep, ECG, composition, glucose, labs — comes here. */
-vitalRoutes.get("/metric-readings/:patientId", ctrl.getMetricReadings);
-vitalRoutes.get("/metric-readings/:patientId/latest", ctrl.getLatestMetricReadings);
+vitalRoutes.get("/metric-readings/:patientId", authorizePatientParam, ctrl.getMetricReadings);
+vitalRoutes.get("/metric-readings/:patientId/latest", authorizePatientParam, ctrl.getLatestMetricReadings);
 vitalRoutes.post("/metric-readings", validate(readingSchema), ctrl.recordMetricReading);

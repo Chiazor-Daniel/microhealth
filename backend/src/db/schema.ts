@@ -529,3 +529,30 @@ export const familyViews = sqliteTable("family_views", {
   subjectPatientId: text("subject_patient_id").references(() => patients.id).notNull(),
   createdAt: ts("created_at"),
 });
+
+/** Invite links: token resolves to a group + role without exposing health data. */
+export const familyInvites = sqliteTable("family_invites", {
+  id: id(),
+  token: text("token").notNull().unique(),
+  groupId: text("group_id").references(() => familyGroups.id).notNull(),
+  role: text("role").notNull(),
+  createdBy: text("created_by").references(() => patients.id).notNull(),
+  usedBy: text("used_by").references(() => patients.id),
+  createdAt: ts("created_at"),
+});
+
+/**
+ * Alert subscriptions — the reverse of caregiver prefs. "Whose alerts do I
+ * want?" A subscriber gets notified about the target's abnormal / missed /
+ * urgent events, subject to the same family authorization as everything else.
+ */
+export const alertSubscriptions = sqliteTable("alert_subscriptions", {
+  id: id(),
+  subscriberPatientId: text("subscriber_patient_id").references(() => patients.id).notNull(),
+  targetPatientId: text("target_patient_id").references(() => patients.id).notNull(),
+  alertAbnormal: integer("alert_abnormal", { mode: "boolean" }).default(true),
+  alertMissedMedication: integer("alert_missed_medication", { mode: "boolean" }).default(true),
+  alertUrgent: integer("alert_urgent", { mode: "boolean" }).default(true),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});

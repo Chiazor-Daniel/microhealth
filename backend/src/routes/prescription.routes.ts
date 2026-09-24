@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authorizePatientParam } from "../middleware/authorizePatient";
 import { authenticate, authorize } from "../middleware/auth";
 import * as ctrl from "../controllers/prescription.controller";
 import { validate } from "../middleware/validate";
@@ -18,7 +19,7 @@ const schema = z.object({
 });
 
 prescriptionRoutes.get("/", authorize("admin","staff"), ctrl.list);
-prescriptionRoutes.get("/patient/:patientId", ctrl.getByPatient);
+prescriptionRoutes.get("/patient/:patientId", authorizePatientParam, ctrl.getByPatient);
 prescriptionRoutes.post("/", authorize("admin","staff"), validate(schema), ctrl.create);
 prescriptionRoutes.patch("/:id/dispense", authorize("admin","staff"), ctrl.dispense);
 prescriptionRoutes.post("/:id/refill", ctrl.requestRefill);

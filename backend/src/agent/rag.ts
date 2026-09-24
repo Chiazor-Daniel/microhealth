@@ -18,10 +18,19 @@ export async function buildPatientContext(userId: string): Promise<PatientContex
     where: eq(patients.userId, userId),
   });
   if (!patient) return null;
+  return buildPatientContextById(patient.id, userId);
+}
 
-  const patientId = patient.id;
+/** Same context for any patient id (family subject reads). Caller authorizes. */
+export async function buildPatientContextById(patientId: string, userId?: string): Promise<PatientContext | null> {
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+  });
+  if (!patient) return null;
+  const ownerId = userId ?? patient.userId;
+  if (!ownerId) return null;
   const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
+    where: eq(users.id, ownerId),
     columns: { id: true, firstName: true, lastName: true, email: true, phone: true },
   });
 
@@ -50,7 +59,7 @@ export async function buildPatientContext(userId: string): Promise<PatientContex
       limit: 10,
     }),
     db.query.messages.findMany({
-      where: eq(messages.recipientId, userId),
+      where: eq(messages.recipientId, ownerId),
       orderBy: [desc(messages.sentAt)],
       limit: 10,
     }),
@@ -60,7 +69,7 @@ export async function buildPatientContext(userId: string): Promise<PatientContex
 
   return {
     patientId,
-    userId,
+    userId: ownerId,
     profile: patientWithUser,
     recentVitals,
     baseline,

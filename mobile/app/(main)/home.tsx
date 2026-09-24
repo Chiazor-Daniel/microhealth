@@ -10,6 +10,7 @@ import { useInsights } from "@app/patient/hooks/useInsights";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { dashboardService } from "@app/services/dashboard.service";
 import { vitalService } from "@app/services/vital.service";
+import { familyGroupService } from "@app/services/family.service";
 import { buildSeries } from "@app/patient/lib/timeSeries";
 import { resolveAll, toScoreReadings, recordsBefore, type MetricValue } from "@metrics/readings";
 import { computeHealthScore } from "@metrics/healthScore";
@@ -33,6 +34,7 @@ import { ScoreRing, ScoreBandChip, ScoreDelta, scoreVerdict } from "@/ui/HealthS
 import { card, iconGreen, iconTile, iconTileBorder, tabular, washCard } from "@/ui/styles";
 import { formatClock, formatShortDate, greeting, relativeTime } from "@/ui/dates";
 import {
+  BellIcon,
   CalendarIcon,
   ChevronRightIcon,
   DropletIcon,
@@ -58,7 +60,27 @@ const BANDS: Record<string, [number, number]> = {
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
-  const { vitals: existingVitals, appointments, metricRecords, family, loading: dataLoading, error: dataError, refresh } = usePatientData();
+  const { vitals: existingVitals, appointments, metricRecords, family, notifications: tableNotifs, loading: dataLoading, error: dataError, refresh } = usePatientData();
+  /* Household comes from the server group — every member sees it, not just
+     the head. Legacy dependent rows don't count. */
+  const [household, setHousehold] = useState<{ patientId: string | null; firstName: string; lastName: string; role: string }[]>([]);
+  useEffect(() => {
+    familyGroupService.mine()
+      .then(async (groups) => {
+        if (!groups.length) {
+          setHousehold([]);
+          return;
+        }
+        const members = await familyGroupService.members(groups[0].group.id);
+        setHousehold(members.map((m) => ({
+          patientId: m.patientId,
+          firstName: m.firstName ?? m.role,
+          lastName: m.lastName ?? "",
+          role: m.role,
+        })));
+      })
+      .catch(() => {});
+  }, []);
   const offline = useIsOffline();
   const patientId = user?.profile?.id;
   /* The feed stands in for a band, so it only runs when there is one — see
@@ -67,6 +89,8 @@ export default function Home() {
   const bandConnected = useBandConnected(patientId, existingVitals.length > 0);
   const { latest: wearableLatest, connected: wearableConnected } = useWearable(patientId, bandConnected);
   const { insights } = useInsights();
+  const unreadCount =
+    insights.filter((i) => !i.isRead).length + tableNotifs.filter((n) => !n.isRead && !n.dismissedAt).length;
   const { width } = useWindowDimensions();
 
   const [dashboard, setDashboard] = useState<any>(null);
@@ -234,7 +258,7 @@ export default function Home() {
       {/* Stale data stays on screen; the strip says why it isn't fresh. */}
       {dataError && hasReadings ? <StaleStrip onRetry={refresh} /> : null}
       {/* Family accounts wear it: household strip under the greeting. */}
-      {family.length > 0 ? <HouseholdStrip members={family} /> : null}
+      {household.length > 0 ? <HouseholdStrip members={household} /> : null}
       {/* Greeting — the state of things is the second line, in green */}
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>
@@ -252,6 +276,14 @@ export default function Home() {
             <Text style={[text.caption, { marginTop: 6 }]}>Your readings will show up here</Text>
           )}
         </View>
+        <Pressable onPress={() => router.push("/notifications")} accessibilityLabel="Notifications" style={styles.bell}>
+          <BellIcon size={22} color={semantic.textPrimary} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+            </View>
+          ) : null}
+        </Pressable>
         <Pressable onPress={() => router.push("/profile")} accessibilityLabel="Your profile">
           <Avatar seed={user?.profile?.id ?? user?.email} name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`} size={46} />
         </Pressable>
@@ -481,28 +513,28 @@ export default function Home() {
 }
 
 /**
- * Household strip — the family tell. Only renders when the account has
- * family members, so individual accounts never see it: no members, no strip,
- * no doubt about which plan you're on.
+ * Household strip — the family tell. Renders for group members only, so
+ * individual accounts never see it: no group, no strip, no doubt about
+ * which plan you're on.
  */
-function HouseholdStrip({ members }: { members: { id: string; name: string; relation: string }[] }) {
+function HouseholdStrip({ members }: { members: { patientId: string | null; firstName: string; lastName: string; role: string }[] }) {
   const router = useRouter();
   const shown = members.slice(0, 4);
-  const lastName = members[0]?.name.split(" ").slice(-1)[0] ?? "Family";
+  const lastName = (members.find((m) => m.lastName)?.lastName ?? members[0]?.firstName ?? "Family").split(" ").slice(-1)[0];
   return (
     <Pressable onPress={() => router.push("/family")} accessibilityRole="button" accessibilityLabel="Open family">
       <View style={styles.household}>
         <View style={styles.faces}>
           {shown.map((m, i) => (
-            <View key={m.id} style={i === 0 ? null : styles.faceOverlap}>
-              <Avatar seed={m.id} name={m.name} size={30} />
+            <View key={m.patientId ?? m.firstName} style={i === 0 ? null : styles.faceOverlap}>
+              <Avatar seed={m.patientId ?? m.firstName} name={`${m.firstName} ${m.lastName}`} size={30} />
             </View>
           ))}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.householdName}>{lastName} household</Text>
           <Text style={styles.householdSub}>
-            {members.length + 1} sharing vitals · {members.map((m) => m.relation).slice(0, 3).join(" · ")}
+            {members.length} sharing vitals · {members.map((m) => m.role).slice(0, 3).join(" · ")}
           </Text>
         </View>
         <View style={styles.planPill}>
@@ -651,6 +683,20 @@ const styles = StyleSheet.create({
   block: { marginTop: spacing.blockGap },
 
   greetingRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  bell: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  badge: {
+    position: "absolute",
+    top: 4,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeLabel: { fontSize: 10.5, ...font(700), lineHeight: 14, color: "#FFFFFF" },
   greeting: { ...text.pageTitle, fontSize: 22, letterSpacing: -0.02 * 22 },
   statusLine: { ...text.h3, ...font(600), color: semantic.accentDeep, marginTop: 4 },
   updatedRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },

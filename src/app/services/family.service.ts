@@ -46,6 +46,14 @@ export const familyGroupService = {
   members: (groupId: string) => api.get<GroupMember[]>(`/families/${groupId}/members`),
   invite: (groupId: string, contact: string, role: GroupRole) =>
     api.post<GroupInvite>(`/families/${groupId}/invite`, { contact, role }),
+  inviteLink: (groupId: string, role: GroupRole) =>
+    api.post<{ token: string; role: string }>(`/families/${groupId}/links`, { role }),
+  resolveLink: (token: string) => api.get<{ token: string; role: string; used: boolean; familyName: string }>(`/families/join/${token}`),
+  joinLink: (token: string) => api.post(`/families/join`, { token }),
   accept: () => api.post<{ claimed: number }>("/families/accept", {}),
   removeMember: (membershipId: string) => api.delete(`/families/members/${membershipId}`),
+  subscriptions: () => api.get<any[]>("/families/subscriptions"),
+  follow: (targetPatientId: string, kinds?: { alertAbnormal?: boolean; alertMissedMedication?: boolean; alertUrgent?: boolean }) =>
+    api.post<any>("/families/subscriptions", { targetPatientId, ...kinds }),
+  unfollow: (targetPatientId: string) => api.delete(`/families/subscriptions/${targetPatientId}`),
 };

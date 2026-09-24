@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authorizePatientParam } from "../middleware/authorizePatient";
 import { authenticate, authorize } from "../middleware/auth";
 import * as ctrl from "../controllers/lab.controller";
 import { validate } from "../middleware/validate";
@@ -14,7 +15,7 @@ const schema = z.object({
 });
 
 labRoutes.get("/", authorize("admin","staff"), ctrl.list);
-labRoutes.get("/patient/:patientId", ctrl.getByPatient);
+labRoutes.get("/patient/:patientId", authorizePatientParam, ctrl.getByPatient);
 labRoutes.post("/", authorize("admin","staff"), validate(schema), ctrl.order);
 labRoutes.patch("/:id/status", authorize("admin","staff"), ctrl.updateStatus);
 labRoutes.patch("/:id/result", authorize("admin","staff"), ctrl.addResult);

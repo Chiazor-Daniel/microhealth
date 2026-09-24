@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { colors, semantic, spacing } from "@tokens";
 import { linearGradient, font } from "@rn/theme";
 import { useInsights } from "@app/patient/hooks/useInsights";
+import { usePatientData } from "@app/hooks/usePatientData";
+import { messageService } from "@app/services/message.service";
+import { familyGroupService } from "@app/services/family.service";
 
 import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
@@ -97,7 +100,39 @@ function timeLabel(iso?: string) {
 export default function Notifications() {
   const router = useRouter();
   const { insights, loading, error, markRead } = useInsights();
+  const { notifications: tableRows, refresh: refreshData } = usePatientData();
   const [filter, setFilter] = useState<Filter>("all");
+  /* subject names for family alert rows (patientId → display name). */
+  const [subjectNames, setSubjectNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    familyGroupService.mine()
+      .then(async (groups) => {
+        const map: Record<string, string> = {};
+        for (const g of groups) {
+          const ms = await familyGroupService.members(g.group.id).catch(() => []);
+          for (const m of ms) {
+            if (m.patientId) map[m.patientId] = `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim() || m.role;
+          }
+        }
+        setSubjectNames(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const markTableRead = async (id: string) => {
+    try {
+      await messageService.markNotificationRead(id);
+      await refreshData();
+    } catch {
+      /* Row stays; the dot is honest. */
+    }
+  };
+
+  const familyAlerts = useMemo(
+    () => tableRows.filter((n: any) => n.type === "caregiver_alert"),
+    [tableRows]
+  );
 
   /**
    * The agent can raise the same finding more than once — a trend that
@@ -225,6 +260,41 @@ export default function Notifications() {
         <Text style={styles.sectionTitle}>Today</Text>
         {rows(today)}
       </View>
+
+      {familyAlerts.length > 0 ? (
+        <View style={styles.block}>
+          <Text style={styles.sectionTitle}>Family alerts</Text>
+          <View style={styles.rows}>
+            {familyAlerts.map((n: any) => {
+              const subject = n.subjectPatientId ? subjectNames[n.subjectPatientId] : null;
+              const unread = !n.isRead;
+              return (
+                <TapScale
+                  key={n.id}
+                  onPress={() => unread && markTableRead(n.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${n.title}. ${n.message}`}
+                  style={[card, styles.row]}
+                >
+                  <LinearGradient {...linearGradient("tileRose")} style={[iconTile, styles.rowIcon]}>
+                    <BellIcon size={19} color={colors.rose} />
+                  </LinearGradient>
+                  <View style={styles.rowText}>
+                    <View style={styles.titleRow}>
+                      <Text style={styles.title}>
+                        {subject ? `${subject} — ${n.title}` : n.title}
+                      </Text>
+                      {unread ? <View style={styles.unread} accessibilityLabel="Unread" accessible /> : null}
+                    </View>
+                    <Text style={styles.message} numberOfLines={2}>{n.message}</Text>
+                  </View>
+                  <Text style={styles.time}>{timeLabel(n.createdAt)}</Text>
+                </TapScale>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
 
       {earlier.length > 0 ? (
         <View style={styles.block}>

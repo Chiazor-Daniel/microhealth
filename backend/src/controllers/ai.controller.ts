@@ -33,9 +33,14 @@ export async function dismiss(req: Request, res: Response, next: NextFunction) {
 
 export async function chat(req: Request, res: Response, next: NextFunction) {
   try {
-    const { message, history } = req.body;
+    const { message, history, subjectPatientId } = req.body;
     if (!message) throw new AppError("message is required", 400);
-    const reply = await respondToChat(req.user!.userId, String(message), history ? String(history) : undefined);
+    const reply = await respondToChat(
+      req.user!.userId,
+      String(message),
+      history ? String(history) : undefined,
+      subjectPatientId ? String(subjectPatientId) : undefined
+    );
     res.json(reply);
   } catch (e) { next(e); }
 }
