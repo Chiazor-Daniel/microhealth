@@ -9,7 +9,7 @@ import { Screen } from "@/ui/Screen";
 import { Avatar } from "@/ui/Avatar";
 import { StatusBadge } from "@/ui/StatusBadge";
 import { card, cardFeature, iconTile, iconTileBorder } from "@/ui/styles";
-import { CalendarIcon, ChevronLeftIcon } from "@/icons";
+import { CalendarIcon, ChevronLeftIcon, VideoIcon } from "@/icons";
 
 /**
  * One appointment, on its own screen.
@@ -97,6 +97,16 @@ export default function AppointmentDetails() {
         {appt.notes ? <Detail label="Location" value={appt.notes} /> : null}
         <Detail label="Status" value={appt.status} last />
       </View>
+
+      {/* Appointment time: join the visit room. */}
+      {!["cancelled", "completed"].includes(appt.status) ? (
+        <Pressable onPress={() => router.push(`/care/visit/${appt.id}`)} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
+          <LinearGradient {...linearGradient("buttonPrimary")} style={styles.join}>
+            <VideoIcon size={17} color={colors.onGreen} />
+            <Text style={styles.joinLabel}>Join visit</Text>
+          </LinearGradient>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -155,4 +165,7 @@ const styles = StyleSheet.create({
   missing: { marginTop: spacing.blockGap, padding: spacing.lg, alignItems: "center" },
   missingTitle: { fontSize: 14, ...font(600), lineHeight: 21, color: semantic.textPrimary },
   missingBody: { fontSize: 13, lineHeight: 19.5, color: semantic.textMuted, marginTop: 4, textAlign: "center" },
+
+  join: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: radii.pill },
+  joinLabel: { fontSize: 15, ...font(600), lineHeight: 21, color: colors.onGreen },
 });

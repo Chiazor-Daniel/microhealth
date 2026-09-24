@@ -23,3 +23,9 @@ appointmentRoutes.post("/", authorize("admin","staff","patient"), validate(schem
 appointmentRoutes.patch("/:id/status", authorize("admin","staff"), ctrl.updateStatus);
 appointmentRoutes.put("/:id", authorize("admin","staff"), validate(schema), ctrl.update);
 appointmentRoutes.delete("/:id", authorize("admin"), ctrl.remove);
+
+/* Visit sessions — the consultation room. Patients join their own visits. */
+import * as visitCtrl from "../controllers/visit.controller";
+appointmentRoutes.post("/:id/visit/join", visitCtrl.join);
+appointmentRoutes.get("/:id/visit", visitCtrl.current);
+appointmentRoutes.post("/:id/visit/end", visitCtrl.end);

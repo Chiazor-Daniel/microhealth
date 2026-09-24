@@ -79,6 +79,8 @@ export function AppointmentsPanel() {
               /* The one place Care navigates: you are looking at a specific
                  appointment, which is what a separate screen is for. */
               onAction={() => router.push(`/care/appointment/${a.id}`)}
+              secondaryActionLabel={tab === "upcoming" && !["cancelled", "completed"].includes(a.status) ? "Join visit" : undefined}
+              onSecondaryAction={() => router.push(`/care/visit/${a.id}`)}
             />
           ))}
         </View>

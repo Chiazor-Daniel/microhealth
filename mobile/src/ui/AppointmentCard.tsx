@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { colors, elevation, radii, semantic, spacing } from "@tokens";
 import { linearGradient, shadow, font } from "@rn/theme";
 
-import { CalendarIcon, ChevronRightIcon } from "@/icons";
+import { CalendarIcon, ChevronRightIcon, VideoIcon } from "@/icons";
 import { Avatar } from "./Avatar";
 import { buttonPrimary, card, pillTone, statusText } from "./styles";
 
@@ -18,6 +18,9 @@ interface AppointmentCardProps {
   /** Renders the full-width action the design system gives appointment cards. */
   actionLabel?: string;
   onAction?: () => void;
+  /** Second row action (e.g. joining a visit) — quieter than the primary. */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 }
 
 /**
@@ -35,6 +38,8 @@ export function AppointmentCard({
   onClick,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
 }: AppointmentCardProps) {
   const cancelled = status === "cancelled";
   const settled = status === "completed";
@@ -75,6 +80,13 @@ export function AppointmentCard({
         </Pressable>
       ) : null}
 
+      {secondaryActionLabel ? (
+        <Pressable onPress={onSecondaryAction} accessibilityRole="button" style={[styles.secondary, !actionLabel ? { marginTop: 14 } : null]}>
+          <VideoIcon size={15} color={semantic.accentDeep} />
+          <Text style={styles.secondaryLabel}>{secondaryActionLabel}</Text>
+        </Pressable>
+      ) : null}
+
       {!actionLabel && onClick ? (
         <Pressable onPress={onClick} accessibilityRole="button" style={styles.viewDetails}>
           <Text style={styles.viewDetailsLabel}>View details</Text>
@@ -109,6 +121,20 @@ const styles = StyleSheet.create({
 
   action: { alignItems: "center", paddingVertical: 10 },
   actionLabel: { fontSize: 13, ...font(600), lineHeight: 19.5, color: colors.onGreen },
+
+  secondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: "rgba(133,192,206,0.65)",
+    backgroundColor: colors.surface,
+  },
+  secondaryLabel: { fontSize: 13, ...font(600), lineHeight: 19.5, color: semantic.accentDeep },
 
   viewDetails: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 10 },
   viewDetailsLabel: { fontSize: 12.5, ...font(600), lineHeight: 18.75, color: semantic.accentDeep },

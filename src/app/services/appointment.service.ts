@@ -25,3 +25,10 @@ export const appointmentService = {
   update: (id: string, data: Partial<Appointment>) => api.put<Appointment>(`/appointments/${id}`, data),
   remove: (id: string) => api.delete(`/appointments/${id}`),
 };
+
+export const visitService = {
+  join: (appointmentId: string) => api.post<any>(`/appointments/${appointmentId}/visit/join`, {}),
+  current: (appointmentId: string) => api.get<any | null>(`/appointments/${appointmentId}/visit`),
+  end: (appointmentId: string, summary?: string) =>
+    api.post<any>(`/appointments/${appointmentId}/visit/end`, { summary }),
+};

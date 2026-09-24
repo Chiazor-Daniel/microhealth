@@ -138,7 +138,9 @@ export default function Care() {
                 time={appt.scheduledTime?.slice(0, 5) ?? ""}
                 status={appt.status}
                 actionLabel="View Details"
-                onAction={() => setTab("appointments")}
+                onAction={() => router.push(`/care/appointment/${appt.id}`)}
+                secondaryActionLabel={!["cancelled", "completed"].includes(appt.status) ? "Join visit" : undefined}
+                onSecondaryAction={() => router.push(`/care/visit/${appt.id}`)}
               />
             ))
           ) : (
