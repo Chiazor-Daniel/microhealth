@@ -143,6 +143,7 @@ export const CheckAllIcon = bind("checkAll");
 export const AlertIcon = bind("alert");
 export const WifiOffIcon = bind("wifiOff");
 export const RefreshIcon = bind("refresh");
+export const VideoIcon = bind("video");
 export const BatteryIcon = bind("battery");
 export const CheckCircleIcon = bind("checkCircle");
 export const InsightMarkIcon = bind("insightMark");

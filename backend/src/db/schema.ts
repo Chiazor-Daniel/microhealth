@@ -343,6 +343,7 @@ export const notifications = sqliteTable("notifications", {
   title: text("title").notNull(),
   message: text("message").notNull(),
   type: text("type"),
+  subjectPatientId: text("subject_patient_id").references(() => patients.id),
   isRead: integer("is_read", { mode: "boolean" }).default(false),
   createdAt: ts("created_at"),
 });
@@ -449,8 +450,7 @@ export const medicationLogs = sqliteTable("medication_logs", {
  * Consent-based and per-category: the patient chooses which alert kinds each
  * trusted contact may receive. No row (or no consent) means no alerts.
  */
-export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {
-  id: id(),
+export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {  id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   familyMemberId: text("family_member_id").references(() => familyMembers.id).notNull(),
   contactPhone: text("contact_phone"),
@@ -460,4 +460,72 @@ export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {
   consentedAt: integer("consented_at", { mode: "timestamp" }),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
+});
+
+/**
+ * Visit sessions (telemedicine room).
+ *
+ * Joining a visit opens a session on the appointment: who joined when, and
+ * the summary written at the end. The video track itself joins later (needs
+ * a native build); everything around it — shared vitals, chat, summary —
+ * runs on this row today.
+ */
+export const visitSessions = sqliteTable("visit_sessions", {
+  id: id(),
+  appointmentId: text("appointment_id").references(() => appointments.id).notNull(),
+  patientId: text("patient_id").references(() => patients.id).notNull(),
+  status: text("status").notNull().default("waiting"),
+  joinedAt: integer("joined_at", { mode: "timestamp" }),
+  endedAt: integer("ended_at", { mode: "timestamp" }),
+  summary: text("summary"),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+/**
+ * Family plan foundation (Stage 1).
+ *
+ * A group is the shared care space. Membership links REAL patient accounts —
+ * a row is only `active` once the invited person's own account is attached;
+ * until then it sits as `invited` holding the contact it was sent to. Typed
+ * names never become accounts (see the onboarding contract).
+ */
+export const familyGroups = sqliteTable("family_groups", {
+  id: id(),
+  plan: text("plan").notNull().default("family"),
+  createdBy: text("created_by").references(() => patients.id).notNull(),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export type FamilyRole = "Mum" | "Dad" | "Spouse" | "Child" | "Grandparent" | "Other";
+
+export const familyMemberships = sqliteTable("family_memberships", {
+  id: id(),
+  groupId: text("group_id").references(() => familyGroups.id).notNull(),
+  patientId: text("patient_id").references(() => patients.id),
+  role: text("role").notNull(),
+  status: text("status").notNull().default("invited"),
+  invitedContact: text("invited_contact"),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const familyMembershipsRelations = relations(familyMemberships, ({ one }) => ({
+  group: one(familyGroups, {
+    fields: [familyMemberships.groupId],
+    references: [familyGroups.id],
+  }),
+  patient: one(patients, {
+    fields: [familyMemberships.patientId],
+    references: [patients.id],
+  }),
+}));
+
+/** Audit: who viewed whose health data, and when. */
+export const familyViews = sqliteTable("family_views", {
+  id: id(),
+  viewerPatientId: text("viewer_patient_id").references(() => patients.id).notNull(),
+  subjectPatientId: text("subject_patient_id").references(() => patients.id).notNull(),
+  createdAt: ts("created_at"),
 });

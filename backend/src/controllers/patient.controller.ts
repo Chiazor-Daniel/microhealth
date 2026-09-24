@@ -65,8 +65,14 @@ export async function addFamilyMember(req: Request, res: Response, next: NextFun
 
 export async function removeFamilyMember(req: Request, res: Response, next: NextFunction) {
   try {
-    const id = String(req.params.id);
-    await db.delete(familyMembers).where(eq(familyMembers.id, id));
+    const userId = req.user!.userId;
+    const patient = await db.query.patients.findFirst({ where: eq(patients.userId, userId) });
+    if (!patient) throw new AppError("Patient not found", 404);
+    const memberId = String(req.params.memberId ?? req.params.id);
+    const row = await db.query.familyMembers.findFirst({ where: eq(familyMembers.id, memberId) });
+    /* Ownership: only the patient whose record holds the member may remove it. */
+    if (!row || row.patientId !== patient.id) throw new AppError("Family member not found", 404);
+    await db.delete(familyMembers).where(eq(familyMembers.id, memberId));
     res.json({ message: "Family member removed" });
   } catch (e) { next(e); }
 }
@@ -79,6 +85,13 @@ export async function getById(req: Request, res: Response, next: NextFunction) {
       with: { doctor: true, user: true },
     });
     if (!p) throw new AppError("Patient not found", 404);
+    /* Staff and admins read records clinically; patients pass family authz. */
+    if (req.user!.role === "patient") {
+      const viewer = await db.query.patients.findFirst({ where: eq(patients.userId, req.user!.userId) });
+      if (!viewer) throw new AppError("Patient not found", 404);
+      const { requireViewer } = await import("../family/authorization");
+      await requireViewer(viewer.id, p.id);
+    }
     res.json(p);
   } catch (e) { next(e); }
 }

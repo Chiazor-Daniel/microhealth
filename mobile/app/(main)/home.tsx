@@ -58,7 +58,7 @@ const BANDS: Record<string, [number, number]> = {
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
-  const { vitals: existingVitals, appointments, metricRecords, loading: dataLoading, error: dataError, refresh } = usePatientData();
+  const { vitals: existingVitals, appointments, metricRecords, family, loading: dataLoading, error: dataError, refresh } = usePatientData();
   const offline = useIsOffline();
   const patientId = user?.profile?.id;
   /* The feed stands in for a band, so it only runs when there is one — see
@@ -233,6 +233,8 @@ export default function Home() {
     <Screen>
       {/* Stale data stays on screen; the strip says why it isn't fresh. */}
       {dataError && hasReadings ? <StaleStrip onRetry={refresh} /> : null}
+      {/* Family accounts wear it: household strip under the greeting. */}
+      {family.length > 0 ? <HouseholdStrip members={family} /> : null}
       {/* Greeting — the state of things is the second line, in green */}
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>
@@ -475,6 +477,39 @@ export default function Home() {
         </Reveal>
       ) : null}
     </Screen>
+  );
+}
+
+/**
+ * Household strip — the family tell. Only renders when the account has
+ * family members, so individual accounts never see it: no members, no strip,
+ * no doubt about which plan you're on.
+ */
+function HouseholdStrip({ members }: { members: { id: string; name: string; relation: string }[] }) {
+  const router = useRouter();
+  const shown = members.slice(0, 4);
+  const lastName = members[0]?.name.split(" ").slice(-1)[0] ?? "Family";
+  return (
+    <Pressable onPress={() => router.push("/family")} accessibilityRole="button" accessibilityLabel="Open family">
+      <View style={styles.household}>
+        <View style={styles.faces}>
+          {shown.map((m, i) => (
+            <View key={m.id} style={i === 0 ? null : styles.faceOverlap}>
+              <Avatar seed={m.id} name={m.name} size={30} />
+            </View>
+          ))}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.householdName}>{lastName} household</Text>
+          <Text style={styles.householdSub}>
+            {members.length + 1} sharing vitals · {members.map((m) => m.relation).slice(0, 3).join(" · ")}
+          </Text>
+        </View>
+        <View style={styles.planPill}>
+          <Text style={styles.planPillLabel}>FAMILY</Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -733,5 +768,28 @@ const styles = StyleSheet.create({
   /* ---- Today's rollups, three to a row ---- */
   todayRow: { flexDirection: "row", gap: spacing.xs, alignItems: "stretch" },
 
-
+  /* ---- Household strip: only family accounts see this ---- */
+  household: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.card,
+    backgroundColor: "#EFF6FA",
+    borderWidth: 1,
+    borderColor: "rgba(133,192,206,0.5)",
+    marginBottom: spacing.sm,
+  },
+  faces: { flexDirection: "row" },
+  faceOverlap: { marginLeft: -10, borderWidth: 1.5, borderColor: "#EFF6FA", borderRadius: 999 },
+  householdName: { fontSize: 13.5, ...font(600), lineHeight: 20, color: semantic.textPrimary },
+  householdSub: { fontSize: 12, lineHeight: 16, color: semantic.textSecondary },
+  planPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.green600,
+  },
+  planPillLabel: { fontSize: 11, ...font(700), lineHeight: 15, color: colors.onGreen, letterSpacing: 0.04 * 11 },
 });

@@ -178,19 +178,41 @@ export function AuthError({ message }: { message: string }) {
 }
 
 /**
- * Notes the credentials a reviewer can use.
+ * Demo quick-fills — one tap per test account.
  *
- * This is a demo build with a seeded patient, and hunting for the password of
- * an app you were just handed is a poor way to start. Deliberately plain, so
- * it reads as a note about this build rather than as part of the product.
+ * Demo builds get handed around, and typing five credentials to compare
+ * Individual vs Family is how a reviewer gives up on the second account.
+ * Each chip fills its login; the list is data, so adding the next demo
+ * account is one line in the screen, not a new component.
  */
-export function DemoHint({ onUse }: { onUse: () => void }) {
+export const DEMO_ACCOUNTS = [
+  { label: "Ada", detail: "Individual + household", email: "ada.patient@example.com", password: "patient123" },
+  { label: "Kola", detail: "Individual only", email: "individual.demo@example.com", password: "demo1234" },
+  { label: "Femi (Dad)", detail: "Family household", email: "dad.demo@example.com", password: "demo1234" },
+  { label: "Ngozi (Mum)", detail: "Family member", email: "mum.demo@example.com", password: "demo1234" },
+  { label: "Tunde (Child)", detail: "Family member", email: "child.demo@example.com", password: "demo1234" },
+] as const;
+
+export function DemoHint({ onUse }: { onUse: (email: string, password: string) => void }) {
   return (
-    <Pressable onPress={onUse} style={styles.demo} accessibilityRole="button" accessibilityLabel="Fill in the demo account">
-      <Text style={styles.demoTitle}>Demo account</Text>
-      <Text style={styles.demoBody}>ada.patient@example.com · patient123</Text>
-      <Text style={styles.demoAction}>Tap to fill</Text>
-    </Pressable>
+    <View style={styles.demoBox}>
+      <Text style={styles.demoTitle}>Demo accounts — tap to fill</Text>
+      {DEMO_ACCOUNTS.map((a) => (
+        <Pressable
+          key={a.email}
+          onPress={() => onUse(a.email, a.password)}
+          style={styles.demoRow}
+          accessibilityRole="button"
+          accessibilityLabel={`Fill in ${a.label}'s account`}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.demoName}>{a.label}</Text>
+            <Text style={styles.demoBody}>{a.detail}</Text>
+          </View>
+          <Text style={styles.demoAction}>Fill</Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
@@ -260,7 +282,7 @@ const styles = StyleSheet.create({
   },
   offlineText: { flex: 1, fontSize: 13, lineHeight: 19, color: semantic.textSecondary },
 
-  demo: {
+  demoBox: {
     marginTop: spacing.md,
     padding: spacing.sm,
     borderRadius: radii.card,
@@ -268,10 +290,13 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: "rgba(133,192,206,0.65)",
     backgroundColor: colors.green50,
+    gap: 2,
   },
-  demoTitle: { fontSize: 12, ...font(600), lineHeight: 17, color: semantic.accentDeep },
-  demoBody: { fontSize: 12.5, lineHeight: 18, color: semantic.textSecondary, marginTop: 2 },
-  demoAction: { fontSize: 11.5, ...font(600), lineHeight: 17, color: semantic.accentDeep, marginTop: 4 },
+  demoTitle: { fontSize: 12, ...font(600), lineHeight: 17, color: semantic.accentDeep, marginBottom: 4 },
+  demoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 },
+  demoName: { fontSize: 13.5, ...font(600), lineHeight: 19, color: semantic.textPrimary },
+  demoBody: { fontSize: 12, lineHeight: 16, color: semantic.textSecondary },
+  demoAction: { fontSize: 12.5, ...font(700), lineHeight: 17, color: semantic.accentDeep },
 
   switchRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   switchPrompt: { ...text.secondary, color: semantic.textSecondary },

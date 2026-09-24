@@ -22,6 +22,7 @@ import { dashboardRoutes } from "./routes/dashboard.routes";
 import { reportRoutes } from "./routes/report.routes";
 import { wearableRoutes } from "./routes/wearable.routes";
 import { aiRoutes } from "./routes/ai.routes";
+import { familyRoutes } from "./routes/family.routes";
 import { escalationRoutes } from "./routes/escalation.routes";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -76,6 +77,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/wearables", wearableRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/families", familyRoutes);
 app.use("/api/escalations", escalationRoutes);
 app.use("/api/reports", reportRoutes);
 

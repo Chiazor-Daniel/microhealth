@@ -495,6 +495,12 @@ export const glyphs = {
     reg: "outline",
     prims: [p("M23 4v6h-6"), p("M20.49 15a9 9 0 1 1-2.12-9.36L23 10")],
   },
+
+  /* Video visit — camera body with the lens triangle. */
+  video: {
+    reg: "outline",
+    prims: [r(1, 5, 15, 14, { rx: 2 }), p("M16 10.5l7-3.5v10l-7-3.5")],
+  },
 } satisfies Record<string, Glyph>;
 
 export type GlyphName = keyof typeof glyphs;

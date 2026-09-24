@@ -21,6 +21,16 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new AppError("Invalid credentials", 401);
     const tokens = generateTokens({ userId: user.id, role: user.role });
+    /* Invited family rows waiting on this contact activate here. Additive:
+       auth never fails because of it. */
+    if (user.role === "patient") {
+      const { patients } = await import("../db/schema");
+      const patient = await db.query.patients.findFirst({ where: eq(patients.userId, user.id) });
+      if (patient) {
+        const { claimInvites } = await import("../family/groups");
+        await claimInvites(patient.id).catch(() => {});
+      }
+    }
     res.cookie("token", tokens.access, { httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400000 });
     res.json({ token: tokens.access, refreshToken: tokens.refresh, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
   } catch (e) { next(e); }
@@ -66,11 +76,15 @@ export async function register(req: Request, res: Response, next: NextFunction) 
        insights hang off — so it is created with the account rather than left
        for later. The code is derived from the id, which is already unique, so
        there is no counter to race on. */
-    await db.insert(patients).values({
+    const [patient] = await db.insert(patients).values({
       userId: user.id,
       patientCode: `MH-${user.id.slice(0, 6).toUpperCase()}`,
       status: "active",
-    });
+    }).returning();
+
+    /* A fresh account may complete a pending family invite. */
+    const { claimInvites } = await import("../family/groups");
+    await claimInvites(patient.id).catch(() => {});
 
     const tokens = generateTokens({ userId: user.id, role: user.role });
     res.cookie("token", tokens.access, { httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400000 });

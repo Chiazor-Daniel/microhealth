@@ -7,8 +7,6 @@ import { useAuth } from "@app/hooks/useAuth";
 import { Atmosphere } from "@/ui/Atmosphere";
 import { AuthShell, AuthField, AuthButton, AuthSwitch, DemoHint, AuthError } from "@/ui/auth";
 
-const DEMO = { email: "ada.patient@example.com", password: "patient123" };
-
 /**
  * Patient sign-in.
  *
@@ -93,9 +91,9 @@ export default function Login() {
       <AuthButton label="Sign in" onPress={submit} busy={busy} />
 
       <DemoHint
-        onUse={() => {
-          setEmail(DEMO.email);
-          setPassword(DEMO.password);
+        onUse={(demoEmail, demoPassword) => {
+          setEmail(demoEmail);
+          setPassword(demoPassword);
           setError(null);
           setFieldError({});
         }}

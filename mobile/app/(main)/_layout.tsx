@@ -21,6 +21,7 @@ import { NavClearanceProvider } from "@/ui/navClearance";
  * PatientShell so the two platforms present the same screen the same way.
  */
 const FULL_FRAME = ["/ai"];
+const FULL_FRAME_PREFIXES = ["/care/visit"]; // the visit room owns the whole frame
 
 /**
  * The signed-in shell.
@@ -45,7 +46,7 @@ const FULL_FRAME = ["/ai"];
 export default function MainLayout() {
   const { isAuthenticated, loading } = useAuth();
   const pathname = usePathname();
-  const fullFrame = FULL_FRAME.includes(pathname);
+  const fullFrame = FULL_FRAME.includes(pathname) || FULL_FRAME_PREFIXES.some((p) => pathname.startsWith(p));
 
   return (
     <NavClearanceProvider>
