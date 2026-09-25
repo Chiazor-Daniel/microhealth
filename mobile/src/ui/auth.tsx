@@ -194,24 +194,32 @@ export const DEMO_ACCOUNTS = [
 ] as const;
 
 export function DemoHint({ onUse }: { onUse: (email: string, password: string) => void }) {
+  const [open, setOpen] = useState(false);
   return (
     <View style={styles.demoBox}>
-      <Text style={styles.demoTitle}>Demo accounts — tap to fill</Text>
-      {DEMO_ACCOUNTS.map((a) => (
-        <Pressable
-          key={a.email}
-          onPress={() => onUse(a.email, a.password)}
-          style={styles.demoRow}
-          accessibilityRole="button"
-          accessibilityLabel={`Fill in ${a.label}'s account`}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={styles.demoName}>{a.label}</Text>
-            <Text style={styles.demoBody}>{a.detail}</Text>
-          </View>
-          <Text style={styles.demoAction}>Fill</Text>
-        </Pressable>
-      ))}
+      <Pressable onPress={() => setOpen((v) => !v)} accessibilityRole="button" style={styles.demoHead}>
+        <Text style={styles.demoTitle}>Demo accounts — tap to fill</Text>
+        <Text style={styles.demoCaret}>{open ? "▾" : "▸"}</Text>
+      </Pressable>
+      {open ? (
+        <View style={{ gap: 2 }}>
+          {DEMO_ACCOUNTS.map((a) => (
+            <Pressable
+              key={a.email}
+              onPress={() => onUse(a.email, a.password)}
+              style={styles.demoRow}
+              accessibilityRole="button"
+              accessibilityLabel={`Fill in ${a.label}'s account`}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.demoName}>{a.label}</Text>
+                <Text style={styles.demoBody}>{a.detail}</Text>
+              </View>
+              <Text style={styles.demoAction}>Fill</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -292,7 +300,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green50,
     gap: 2,
   },
-  demoTitle: { fontSize: 12, ...font(600), lineHeight: 17, color: semantic.accentDeep, marginBottom: 4 },
+  demoTitle: { fontSize: 12, ...font(600), lineHeight: 17, color: semantic.accentDeep, marginBottom: 0, flex: 1 },
+  demoHead: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
+  demoCaret: { fontSize: 13, ...font(700), lineHeight: 17, color: semantic.accentDeep },
   demoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 },
   demoName: { fontSize: 13.5, ...font(600), lineHeight: 19, color: semantic.textPrimary },
   demoBody: { fontSize: 12, lineHeight: 16, color: semantic.textSecondary },
