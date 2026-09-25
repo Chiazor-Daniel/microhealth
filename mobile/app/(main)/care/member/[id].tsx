@@ -94,7 +94,7 @@ export default function MemberVitals() {
   const latest = vitals[0];
   const allValues = resolveAll(latest, records);
   const score = computeHealthScore(toScoreReadings(allValues));
-  const firstName = display.split(" ")[0];
+  const firstName = (display ?? "Family member").split(" ")[0];
   const verdict = scoreVerdict(score, null, firstName);
   const hrMetric = allValues.find((v) => v.metric.key === "heartRate");
   const series = hrMetric?.metric.read
