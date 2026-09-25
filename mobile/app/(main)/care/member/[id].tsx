@@ -11,7 +11,7 @@ import { computeHealthScore } from "@metrics/healthScore";
 
 import { Screen } from "@/ui/Screen";
 import { Avatar } from "@/ui/Avatar";
-import { ScoreRing, ScoreBandChip } from "@/ui/HealthScore";
+import { ScoreRing, ScoreBandChip, scoreVerdict } from "@/ui/HealthScore";
 import { Sparkline } from "@/ui/Sparkline";
 import { card } from "@/ui/styles";
 import { ChevronLeftIcon } from "@/icons";
@@ -94,6 +94,8 @@ export default function MemberVitals() {
   const latest = vitals[0];
   const allValues = resolveAll(latest, records);
   const score = computeHealthScore(toScoreReadings(allValues));
+  const firstName = display.split(" ")[0];
+  const verdict = scoreVerdict(score, null, firstName);
   const hrMetric = allValues.find((v) => v.metric.key === "heartRate");
   const series = hrMetric?.metric.read
     ? buildSeries(vitals, "day", (v) => hrMetric.metric.read!(v)).map((p) => p.value as number)
@@ -125,7 +127,8 @@ export default function MemberVitals() {
           <ScoreRing result={score} size={96} />
           <View style={{ flex: 1 }}>
             <ScoreBandChip band={score.band} />
-            <Text style={styles.scoreNote}>Scored the same way as {display.split(" ")[0]}'s own Home screen.</Text>
+            <Text style={styles.scoreLine}>{verdict.line}</Text>
+            <Text style={styles.scoreNote}>{verdict.sub}</Text>
           </View>
         </View>
       </View>
@@ -160,6 +163,7 @@ const styles = StyleSheet.create({
   scoreCard: { marginTop: spacing.md, padding: spacing.md },
   scoreRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   scoreNote: { fontSize: 12.5, lineHeight: 18, color: semantic.textSecondary, marginTop: 6 },
+  scoreLine: { fontSize: 14.5, ...font(600), lineHeight: 21, color: semantic.textPrimary, marginTop: 6 },
   hero: { marginTop: spacing.sm, padding: spacing.md },
   heroLabel: { fontSize: 13, ...font(500), color: semantic.textSecondary },
   heroValue: { fontSize: 34, ...font(700), color: semantic.textPrimary, marginVertical: 4 },

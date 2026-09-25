@@ -232,10 +232,15 @@ export function ScoreDelta({ delta }: { delta: number | null }) {
  */
 export function scoreVerdict(
   result: HealthScore,
-  delta?: number | null
+  delta?: number | null,
+  name?: string
 ): { line: string; sub: string } {
+  /* Third-person mode for family screens: "Ngozi is doing well today."
+     Home keeps calling without a name and reads exactly as before. */
+  const you = (s: string) =>
+    name ? s.replace(/^You're\b/, `${name} is`).replace(/^Your\b/, `${name}'s`) : s;
   if (result.score == null) {
-    return { line: "Not enough readings yet.", sub: "Your score appears once we have a few." };
+    return { line: you("Not enough readings yet."), sub: name ? `${name}'s score appears once we have a few.` : "Your score appears once we have a few." };
   }
   /* A capped score means one metric is holding the headline down, and saying
      "you're doing well" over the top of that would contradict the number. */
@@ -249,11 +254,11 @@ export function scoreVerdict(
   switch (result.band) {
     case "good":
       return falling
-        ? { line: "You're doing well today.", sub: "Slightly down from yesterday." }
-        : { line: "You're doing well today.", sub: "Keep it up." };
+        ? { line: you("You're doing well today."), sub: "Slightly down from yesterday." }
+        : { line: you("You're doing well today."), sub: "Keep it up." };
     case "fair":
-      return { line: "Mostly steady today.", sub: "A couple of things to keep an eye on." };
+      return { line: you("Mostly steady today."), sub: "A couple of things to keep an eye on." };
     default:
-      return { line: "A few measures need attention.", sub: "Your agent has flagged them." };
+      return { line: you("A few measures need attention."), sub: name ? `${name}'s agent has flagged them.` : "Your agent has flagged them." };
   }
 }

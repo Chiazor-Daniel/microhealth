@@ -6,6 +6,8 @@ import { useRouter } from "expo-router";
 import { colors, radii, semantic, spacing } from "@tokens";
 import { linearGradient, font } from "@rn/theme";
 import { familyService, familyGroupService, type FamilyMember, type GroupMember, type GroupRole } from "@app/services/family.service";
+import { vitalService } from "@app/services/vital.service";
+import { computeHealthScore, readingsFromPacket } from "@metrics/healthScore";
 import { aiService } from "@app/services/ai.service";
 import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
@@ -15,7 +17,7 @@ import { StatusBadge } from "@/ui/StatusBadge";
 import { Avatar } from "@/ui/Avatar";
 import { variantForRelation } from "@app/patient/lib/avatars";
 import { card, iconTile, iconTileBorder } from "@/ui/styles";
-import { PersonIcon, CheckIcon } from "@/icons";
+import { PersonIcon, CheckIcon, ChevronRightIcon } from "@/icons";
 import { RowSkeleton } from "@/ui/Skeleton";
 import { useIsOffline } from "@/lib/connectivity";
 
@@ -206,13 +208,13 @@ export default function FamilyMembers() {
                   </View>
                 </View>
 
-                <View style={styles.actions}>
-                  {m.patientId && !isMe ? (
-                    <Pressable style={styles.action} onPress={() => router.push(`/care/member/${m.patientId}`)}>
-                      <Text style={styles.actionLabel} numberOfLines={1}>View Vitals</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
+                {m.patientId && !isMe ? (
+                  <MemberScoreRow
+                    patientId={m.patientId}
+                    name={m.firstName ?? m.role}
+                    onOpen={() => router.push(`/care/member/${m.patientId}`)}
+                  />
+                ) : null}
 
                 {m.patientId && !isMe ? (
                   <View style={styles.alertRow}>
@@ -309,6 +311,27 @@ export default function FamilyMembers() {
   );
 }
 
+/** Member health-score summary with a drill-in arrow. Taps through to View Vitals. */
+function MemberScoreRow({ patientId, name, onOpen }: { patientId: string; name: string; onOpen: () => void }) {
+  const [score, setScore] = useState<number | null>(null);
+  useEffect(() => {
+    vitalService.getByPatient(patientId).then((rows) => {
+      if (!rows.length) return;
+      const s = computeHealthScore(readingsFromPacket(rows[0]));
+      setScore(s.score);
+    }).catch(() => {});
+  }, [patientId]);
+  return (
+    <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${name}'s vitals`} style={styles.scoreRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.scoreLabel}>Health score</Text>
+        <Text style={styles.scoreValue}>{score == null ? "—" : score}<Text style={styles.scoreDenom}>/100</Text></Text>
+      </View>
+      <ChevronRightIcon size={18} color={semantic.textSecondary} />
+    </Pressable>
+  );
+}
+
 /** Consent toggles: which alert kinds this contact may receive. */
 function CaregiverToggles({
   memberId,
@@ -368,6 +391,22 @@ const styles = StyleSheet.create({
   memberMeta: { fontSize: 13, lineHeight: 20, color: semantic.textSecondary },
 
   actions: { flexDirection: "row", gap: spacing.xs, marginTop: 14 },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    gap: spacing.sm,
+    marginTop: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.control,
+    backgroundColor: "#F6FAF8",
+    borderWidth: 1,
+    borderColor: "rgba(226,236,231,0.9)",
+  },
+  scoreLabel: { fontSize: 12, ...font(500), lineHeight: 16, color: semantic.textSecondary },
+  scoreValue: { fontSize: 22, ...font(700), lineHeight: 26, color: semantic.textPrimary, marginTop: 2 },
+  scoreDenom: { fontSize: 12, ...font(500), color: semantic.textMuted },
   action: { flex: 1, paddingVertical: spacing.xs, paddingHorizontal: spacing.xs, borderRadius: radii.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.green600 },
   actionLabel: { fontSize: 12, ...font(600), lineHeight: 18, color: colors.onGreen },
 
