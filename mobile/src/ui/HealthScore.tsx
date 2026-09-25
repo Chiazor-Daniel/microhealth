@@ -11,7 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors, gradients, semantic, spacing } from "@tokens";
 import { font } from "@rn/theme";
-import { SCORE_BAND_LABEL, type HealthScore, type ScoreBand } from "@metrics/healthScore";
+import { SCORE_BAND_LABEL, limitingAdvice, type HealthScore, type ScoreBand } from "@metrics/healthScore";
 
 /**
  * The health score ring — the native twin of the web component.
@@ -240,7 +240,7 @@ export function scoreVerdict(
   /* A capped score means one metric is holding the headline down, and saying
      "you're doing well" over the top of that would contradict the number. */
   if (result.limited && result.limiting) {
-    return { line: `${result.limiting.metric.label} is the one to watch.`, sub: "Everything else is steady." };
+    return limitingAdvice(result.limiting.metric.key, result.limiting.metric.label);
   }
   /* The verdict has to agree with the arrow beside it. "Keep it up" printed
      under an amber "↓2" is the card arguing with itself, and the patient

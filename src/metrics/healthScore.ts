@@ -284,3 +284,37 @@ export function worstOffender(result: HealthScore): { metric: Metric; status: Me
 }
 
 export { metrics };
+
+/**
+ * Plain-language verdict for the metric holding the score down.
+ *
+ * Medical labels ("Blood Glucose") don't tell anyone what to DO. This maps
+ * each metric key onto words a patient can act on: what's happening, in
+ * plain terms, plus one concrete next step. One map, shared by web and
+ * native — the two platforms must never explain the same number differently.
+ */
+export function limitingAdvice(metricKey: string, fallbackLabel: string): { line: string; sub: string } {
+  switch (metricKey) {
+    case "bloodGlucose":
+      return { line: "Sugar is running a bit high.", sub: "Skip sugary drinks and heavy starches today, then recheck tomorrow." };
+    case "bloodPressure":
+      return { line: "Pressure is up.", sub: "Sit quietly for 5 minutes and recheck. Go easy on salt today." };
+    case "heartRate":
+      return { line: "Pulse is running high.", sub: "Sit down, drink some water, and recheck after resting a while." };
+    case "spo2":
+      return { line: "Oxygen is a touch low.", sub: "Sit upright and rest, then recheck. If breathing feels hard, seek care." };
+    case "bodyTemperature":
+      return { line: "Temperature is up.", sub: "Rest, drink fluids, and recheck in a few hours." };
+    case "respiratoryRate":
+      return { line: "Breathing is faster than usual.", sub: "Rest and recheck in 15 minutes." };
+    case "stress":
+      return { line: "Stress is high.", sub: "Take a short break, breathe slowly, and check again later." };
+    case "sleep":
+      return { line: "Sleep has been short.", sub: "Aim for an earlier night tonight — it steadies everything else." };
+    case "steps":
+    case "activity":
+      return { line: "You've moved less than usual.", sub: "A short walk today helps." };
+    default:
+      return { line: `${fallbackLabel} is the one to watch.`, sub: "Ask your agent what to do about it." };
+  }
+}

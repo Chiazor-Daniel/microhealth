@@ -125,7 +125,7 @@ export default function MemberVitals() {
           <ScoreRing result={score} size={96} />
           <View style={{ flex: 1 }}>
             <ScoreBandChip band={score.band} />
-            <Text style={styles.scoreNote}>Same scoring as your own Home screen.</Text>
+            <Text style={styles.scoreNote}>Scored the same way as {display.split(" ")[0]}'s own Home screen.</Text>
           </View>
         </View>
       </View>
