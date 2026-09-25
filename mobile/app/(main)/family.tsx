@@ -7,7 +7,8 @@ import { colors, radii, semantic, spacing } from "@tokens";
 import { linearGradient, font } from "@rn/theme";
 import { familyService, familyGroupService, type FamilyMember, type GroupMember, type GroupRole } from "@app/services/family.service";
 import { vitalService } from "@app/services/vital.service";
-import { computeHealthScore, readingsFromPacket } from "@metrics/healthScore";
+import { toScoreReadings, resolveAll } from "@metrics/readings";
+import { computeHealthScore } from "@metrics/healthScore";
 import { aiService } from "@app/services/ai.service";
 import { useAuth } from "@app/hooks/useAuth";
 import { usePatientData } from "@app/hooks/usePatientData";
@@ -315,11 +316,15 @@ export default function FamilyMembers() {
 function MemberScoreRow({ patientId, name, onOpen }: { patientId: string; name: string; onOpen: () => void }) {
   const [score, setScore] = useState<number | null>(null);
   useEffect(() => {
-    vitalService.getByPatient(patientId).then((rows) => {
-      if (!rows.length) return;
-      const s = computeHealthScore(readingsFromPacket(rows[0]));
-      setScore(s.score);
-    }).catch(() => {});
+    /* Identical pipeline to Home and the member screen: same packet, same
+       records, same score. Two different maths here is how cards lie. */
+    Promise.all([vitalService.getByPatient(patientId), vitalService.getMetricReadings(patientId)])
+      .then(([rows, records]) => {
+        if (!rows.length) return;
+        const s = computeHealthScore(toScoreReadings(resolveAll(rows[0], records)));
+        setScore(s.score);
+      })
+      .catch(() => {});
   }, [patientId]);
   return (
     <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${name}'s vitals`} style={styles.scoreRow}>

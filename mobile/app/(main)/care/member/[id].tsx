@@ -94,16 +94,15 @@ export default function MemberVitals() {
   const latest = vitals[0];
   const allValues = resolveAll(latest, records);
   const score = computeHealthScore(toScoreReadings(allValues));
-  const firstName = (display ?? "Family member").split(" ")[0];
+  const display = name || "Family member";
+  const firstName = display.split(" ")[0];
   const verdict = scoreVerdict(score, null, firstName);
   const hrMetric = allValues.find((v) => v.metric.key === "heartRate");
   const series = hrMetric?.metric.read
     ? buildSeries(vitals, "day", (v) => hrMetric.metric.read!(v)).map((p) => p.value as number)
     : [];
-  const display = name || "Family member";
 
-  const tiles = [
-    { label: "Blood Pressure", value: latest?.bloodPressureSystolic != null ? `${latest.bloodPressureSystolic}/${latest.bloodPressureDiastolic ?? "—"}` : "—", unit: "mmHg" },
+  const tiles = [    { label: "Blood Pressure", value: latest?.bloodPressureSystolic != null ? `${latest.bloodPressureSystolic}/${latest.bloodPressureDiastolic ?? "—"}` : "—", unit: "mmHg" },
     { label: "Blood Oxygen", value: latest?.spo2 != null ? `${latest.spo2}` : "—", unit: "%" },
     { label: "Temperature", value: latest?.temperature != null ? `${latest.temperature}` : "—", unit: "°C" },
     { label: "Respiration", value: latest?.respiratoryRate != null ? `${latest.respiratoryRate}` : "—", unit: "br/min" },
