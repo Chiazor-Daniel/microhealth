@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { type patients, type vitals, type appointments, type prescriptions, type labTests, type messages } from "../db/schema";
+import { type patients, type vitals, type appointments, type prescriptions, type labTests, type messages, type metricReadings } from "../db/schema";
 
 export type PatientRow = InferSelectModel<typeof patients>;
 export type VitalRow = InferSelectModel<typeof vitals>;
@@ -7,6 +7,7 @@ export type AppointmentRow = InferSelectModel<typeof appointments>;
 export type PrescriptionRow = InferSelectModel<typeof prescriptions>;
 export type LabRow = InferSelectModel<typeof labTests>;
 export type MessageRow = InferSelectModel<typeof messages>;
+export type MetricReadingRow = InferSelectModel<typeof metricReadings>;
 
 export type InsightPriority = "info" | "watch" | "attention" | "urgent";
 
@@ -54,6 +55,10 @@ export interface PatientContext {
   prescriptions: PrescriptionRow[];
   labs: LabRow[];
   messages: MessageRow[];
+  /** Latest episodic reading per metric key (sleep, glucose, steps…). */
+  episodic: MetricReadingRow[];
+  /** Hand-written trend flags for episodic keys (glucose rising, …). */
+  episodicTrend?: string;
 }
 
 export interface VitalBaseline {

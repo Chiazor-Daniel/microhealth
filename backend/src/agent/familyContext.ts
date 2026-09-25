@@ -88,18 +88,23 @@ export function resolveMention(message: string, members: VisibleMember[], viewer
     if (first.length >= 3 && lower.includes(first)) return m;
   }
   // 2. Role nouns ("my wife", "mum", "dad", "my son")
-  const roleWords: { re: RegExp; role: Role }[] = [
-    { re: /\bmum\b|\bmother\b|\bmom\b/, role: "Mum" },
-    { re: /\bdad\b|\bfather\b|\bpop\b/, role: "Dad" },
-    { re: /\bwife\b|\bmy spouse\b/, role: "Spouse" },
-    { re: /\bhusband\b/, role: "Spouse" },
-    { re: /\bmy son\b|\bmy daughter\b|\bmy kid\b|\bmy child\b/, role: "Child" },
-    { re: /\bgrandma\b|\bgrandpa\b|\bgrandmother\b|\bgrandfather\b/, role: "Grandparent" },
+  // Spouse is symmetric: Mum's husband is Dad, Dad's wife is Mum.
+  const viewerRole = members.find((m) => m.patientId === viewerPatientId)?.role ?? null;
+  const roleWords: { re: RegExp; roles: Role[] }[] = [
+    { re: /\bmum\b|\bmother\b|\bmom\b/, roles: ["Mum"] },
+    { re: /\bdad\b|\bfather\b|\bpop\b/, roles: ["Dad"] },
+    { re: /\bwife\b/, roles: viewerRole === "Dad" ? ["Mum"] : ["Spouse", "Mum"] },
+    { re: /\bhusband\b/, roles: viewerRole === "Mum" ? ["Dad"] : ["Spouse", "Dad"] },
+    { re: /\bmy spouse\b|\bpartner\b/, roles: ["Spouse", "Mum", "Dad"] },
+    { re: /\bmy son\b|\bmy daughter\b|\bmy kid\b|\bmy child\b/, roles: ["Child"] },
+    { re: /\bgrandma\b|\bgrandpa\b|\bgrandmother\b|\bgrandfather\b/, roles: ["Grandparent"] },
   ];
-  for (const { re, role } of roleWords) {
+  for (const { re, roles } of roleWords) {
     if (re.test(lower)) {
-      const hit = members.find((m) => m.role === role && m.patientId !== viewerPatientId);
-      if (hit) return hit;
+      for (const role of roles) {
+        const hit = members.find((m) => m.role === role && m.patientId !== viewerPatientId);
+        if (hit) return hit;
+      }
     }
   }
   return null;
@@ -111,20 +116,45 @@ export function isAggregateQuestion(message: string): boolean {
 
 /** One-line vitals snapshot per member for "how is everyone" questions. */
 export async function familySnapshot(viewerPatientId: string): Promise<string> {
+  const { detectTrend } = await import("./rules");
   const members = await visibleMembers(viewerPatientId);
   const lines: string[] = [];
   for (const m of members) {
-    const latest = await db.query.vitals.findFirst({
+    const recent = await db.query.vitals.findMany({
       where: eq(vitals.patientId, m.patientId),
       orderBy: [desc(vitals.recordedAt)],
+      limit: 30,
     });
+    const { metricReadings } = await import("../db/schema");
+    const gluc = await db.query.metricReadings.findMany({
+      where: and(eq(metricReadings.patientId, m.patientId), eq(metricReadings.metricKey, "bloodGlucose")),
+      orderBy: [desc(metricReadings.recordedAt)],
+      limit: 5,
+    });
+    const glucTrend =
+      gluc.length >= 2
+        ? (() => {
+            const first = Number(gluc[0].value);
+            const last = Number(gluc[gluc.length - 1].value);
+            if (!isFinite(first) || !isFinite(last) || last === 0) return "";
+            const pct = ((first - last) / Math.abs(last)) * 100;
+            return Math.abs(pct) >= 5 ? `, glucose ${pct > 0 ? "rising" : "falling"} (${last}→${first})` : "";
+          })()
+        : "";
+    const latest = recent[0];
     const name = `${m.firstName}${m.lastName ? ` ${m.lastName}` : ""}${m.patientId === viewerPatientId ? " (you)" : ""}`;
     if (!latest) {
       lines.push(`- ${name}${m.role ? ` [${m.role}]` : ""}: no readings yet`);
       continue;
     }
+    const sys = detectTrend(recent, "systolic");
+    const hr = detectTrend(recent, "heartRate");
+    const trendBits: string[] = [];
+    if (sys.direction !== "stable") trendBits.push(`BP ${sys.direction} (${Math.round(sys.prior)}→${Math.round(sys.recent)})`);
+    if (hr.direction !== "stable") trendBits.push(`HR ${hr.direction}`);
     lines.push(
-      `- ${name}${m.role ? ` [${m.role}]` : ""}: HR ${latest.heartRate ?? "—"} bpm, BP ${latest.bloodPressureSystolic ?? "—"}/${latest.bloodPressureDiastolic ?? "—"}, SpO2 ${latest.spo2 ?? "—"}%, temp ${latest.temperature ?? "—"}°C`
+      `- ${name}${m.role ? ` [${m.role}]` : ""}: HR ${latest.heartRate ?? "—"} bpm, BP ${latest.bloodPressureSystolic ?? "—"}/${latest.bloodPressureDiastolic ?? "—"}, SpO2 ${latest.spo2 ?? "—"}%, temp ${latest.temperature ?? "—"}°C` +
+      (trendBits.length ? `; TRENDS: ${trendBits.join(", ")}` : "; steady") + glucTrend
     );
   }
   return lines.join("\n");
@@ -189,8 +219,17 @@ export async function resolveChatSubject(
     const { authorizeViewer } = await import("../family/authorization");
 
     const members = await visibleMembers(viewerCtx.patientId);
+    /* Aggregate questions ("compare us", "how is everyone") need the whole
+       household in context — a mentioned name must not narrow it to one. */
+    if (members.length > 1 && isAggregateQuestion(userMessage)) {
+      const snapshot = await familySnapshot(viewerCtx.patientId);
+      return {
+        subjectPatientId: viewerCtx.patientId,
+        subjectCtx: null,
+        familyLine: `\nFamily context: the asker wants a whole-family view. Every member below is visible to them. Answer ONLY from these readings:\n${snapshot}\nRefer to each person by first name and relationship where known.`,
+      };
+    }
     const mentioned = resolveMention(userMessage, members, viewerCtx.patientId);
-    const aggregate = members.length > 1 && isAggregateQuestion(userMessage);
 
     let subjectId = viewerCtx.patientId;
     if (explicitSubjectId && explicitSubjectId !== viewerCtx.patientId) subjectId = explicitSubjectId;
@@ -211,14 +250,6 @@ export async function resolveChatSubject(
       };
     }
 
-    if (aggregate) {
-      const snapshot = await familySnapshot(viewerCtx.patientId);
-      return {
-        subjectPatientId: viewerCtx.patientId,
-        subjectCtx: null,
-        familyLine: `\nFamily context: the asker wants a whole-family view. Every member below is visible to them. Answer ONLY from these readings:\n${snapshot}\nRefer to each person by first name and relationship where known.`,
-      };
-    }
     return none;
   } catch {
     return none;

@@ -150,11 +150,14 @@ export const TRIAGE_PATHWAYS: TriagePathway[] = [
 ];
 
 /** Which pathway, if any, owns this message + vitals snapshot. */
-export function matchPathway(message: string, ctx?: PatientContext): TriagePathway | null {
+export function matchPathway(message: string, ctx?: PatientContext, opts?: { aboutSomeoneElse?: boolean }): TriagePathway | null {
   for (const p of TRIAGE_PATHWAYS) {
     if (p.triggers.some((t) => t.test(message))) return p;
   }
   // Vitals-driven fallback: concerning numbers with no clear topic.
+  // Skipped when asking ABOUT someone — "how is Dad?" is a question for
+  // the agent, not a symptom report, and must reach chat, not triage.
+  if (opts?.aboutSomeoneElse) return null;
   if (ctx?.recentVitals[0]) {
     const v = ctx.recentVitals[0];
     if (v.bloodPressureSystolic != null && v.bloodPressureSystolic >= 140) return TRIAGE_PATHWAYS[0];

@@ -296,7 +296,7 @@ export async function respondToChat(
 
   // A pathway owns this message: ask its first question; answers chain
   // question-by-question (each option value carries the answers so far).
-  const pathway = matchPathway(userMessage, actx);
+  const pathway = matchPathway(userMessage, actx, { aboutSomeoneElse: fam.subjectPatientId !== ctx.patientId });
   if (pathway) {
     const q = pathway.questions[0];
     return {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { wearableService, type WearableReading } from "../../services/wearable.service";
+import { vitalService } from "../../services/vital.service";
 
 export interface WearableState {
   connected: boolean;
@@ -43,6 +44,11 @@ interface BandState {
   temperature: number;
   gsr: number;
   fatigue: number;
+  /** Persona baselines: the walk reverts to THEIR numbers, not fixed ones. */
+  baseHr: number;
+  baseSys: number;
+  baseDia: number;
+  baseSpo2: number;
 }
 
 const clamp = (n: number, lo: number, hi: number) => (n < lo ? lo : n > hi ? hi : n);
@@ -57,11 +63,12 @@ const HR_RESTING = 72;
  * `baseHr` lets a caller seed a different resting rate (an older patient, an
  * unwell one) without every measure having to be re-derived.
  */
-function step(state: BandState, baseHr: number): BandState {
+function step(state: BandState): BandState {
   /* Mean-reverting walk: the pull toward rest grows with the distance from
-     it, so excursions are possible but do not run away. */
+     it, so excursions are possible but do not run away. Rest is personal —
+     the state carries each patient's own baselines. */
   const heartRate = clamp(
-    state.heartRate + (baseHr - state.heartRate) * 0.12 + jitter(2.6),
+    state.heartRate + (state.baseHr - state.heartRate) * 0.12 + jitter(2.6),
     48,
     132
   );
@@ -98,10 +105,10 @@ function packetFrom(state: BandState, patientId: string): WearableReading {
 
   /* SpO2 sits high and steady; the occasional dip is what gives the apnea and
      hypoxia detection something to find. */
-  const spo2 = Math.round(clamp(98 + jitter(1.1) - (Math.random() < 0.03 ? 3 : 0), 92, 100));
+  const spo2 = Math.round(clamp(state.baseSpo2 + jitter(1.1) - (Math.random() < 0.03 ? 3 : 0), 92, 100));
 
-  const systolic = Math.round(clamp(118 + (hr - 72) * 0.35 + jitter(4), 96, 158));
-  const diastolic = Math.round(clamp(76 + (hr - 72) * 0.2 + jitter(3), 58, 102));
+  const systolic = Math.round(clamp(state.baseSys + (hr - state.baseHr) * 0.35 + jitter(4), 96, 158));
+  const diastolic = Math.round(clamp(state.baseDia + (hr - state.baseHr) * 0.2 + jitter(3), 58, 102));
 
   return {
     patientId,
@@ -120,12 +127,16 @@ function packetFrom(state: BandState, patientId: string): WearableReading {
 }
 
 /** A fresh simulator state, seeded around a resting heart rate. */
-function initialBandState(baseHr: number): BandState {
+function initialBandState(baseHr: number, seed?: { sys?: number; dia?: number; spo2?: number }): BandState {
   return {
     heartRate: baseHr,
     temperature: 36.6,
     gsr: 6,
     fatigue: 22,
+    baseHr,
+    baseSys: seed?.sys ?? 118,
+    baseDia: seed?.dia ?? 76,
+    baseSpo2: seed?.spo2 ?? 98,
   };
 }
 
@@ -152,15 +163,33 @@ export function useWearable(patientId?: string, enabled = true, baseHr = HR_REST
     if (!enabled || !patientId) return;
     connect();
 
-    // Send first reading immediately so Home/Vitals have data
-    const first = packetFrom(bandRef.current, patientId);
-    wearableService.sendReading(first).catch(() => {});
-    setState((s) => ({ ...s, latest: first, lastSynced: formatTime(new Date(first.timestamp)) }));
+    /* Seed the walk from the patient's OWN latest row, so live readings
+       continue their story instead of resetting everyone to 118/76. Falls
+       back to the resting defaults for brand-new accounts. */
+    vitalService
+      .getByPatient(patientId)
+      .then((rows) => {
+        const last = rows?.[0];
+        if (last) {
+          bandRef.current = initialBandState(last.heartRate ?? baseHr, {
+            sys: last.bloodPressureSystolic ?? undefined,
+            dia: last.bloodPressureDiastolic ?? undefined,
+            spo2: last.spo2 ?? undefined,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        // Send first reading immediately so Home/Vitals have data
+        const first = packetFrom(bandRef.current, patientId);
+        wearableService.sendReading(first).catch(() => {});
+        setState((s) => ({ ...s, latest: first, lastSynced: formatTime(new Date(first.timestamp)) }));
+      });
 
     intervalRef.current = setInterval(() => {
       const id = patientIdRef.current;
       if (!id) return;
-      bandRef.current = step(bandRef.current, baseHr);
+      bandRef.current = step(bandRef.current);
       const reading = packetFrom(bandRef.current, id);
       wearableService.sendReading(reading).catch(() => {});
       setState((s) => ({

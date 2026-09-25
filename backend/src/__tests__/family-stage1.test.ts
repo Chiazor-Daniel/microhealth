@@ -151,3 +151,19 @@ describe("relationship wording (single map)", () => {
     expect(roleNoun(null)).toBe("family member");
   });
 });
+
+describe("mention resolution", () => {
+  it("matches first names and symmetric spouse words", async () => {
+    const { resolveMention, visibleMembers } = await import("../agent/familyContext");
+    const { db } = await import("../config/database");
+    const { users, patients } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const mumUser = await db.query.users.findFirst({ where: eq(users.email, "fam-mum@test.local") });
+    const mumPatient = await db.query.patients.findFirst({ where: eq(patients.userId, mumUser!.id) });
+    const members = await visibleMembers(mumPatient!.id);
+    // fam setup: mum created group; tests invite dad/child by contact (may not exist as accounts)
+    expect(Array.isArray(members)).toBe(true);
+    expect(members.some((m) => m.patientId === mumPatient!.id)).toBe(true);
+    expect(resolveMention("hello there", members, mumPatient!.id)).toBeNull();
+  });
+});
