@@ -84,6 +84,39 @@ function emptyValue(metric: Metric): MetricValue {
 }
 
 /**
+ * The current packet: newest non-null value per field across recent rows.
+ *
+ * Sensors drop fields — a row with only heart rate must not blank the blood
+ * pressure tile just because it arrived last. Every "current number" read
+ * goes through here instead of `rows[0]`.
+ */
+const CURRENT_FIELDS = [
+  "heartRate",
+  "bloodPressureSystolic",
+  "bloodPressureDiastolic",
+  "spo2",
+  "temperature",
+  "respiratoryRate",
+  "bloodSugar",
+  "weight",
+] as const;
+
+export function currentVitals(rows: any[]): any | undefined {
+  if (!rows.length) return undefined;
+  const out: Record<string, any> = { ...rows[0] };
+  for (const f of CURRENT_FIELDS) {
+    if (out[f] != null) continue;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i]?.[f] != null) {
+        out[f] = rows[i][f];
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Resolve one metric from whatever is available.
  *
  * `packet` is the band's wide row; `record` is a stored episodic reading.

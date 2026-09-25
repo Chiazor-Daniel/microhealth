@@ -72,17 +72,23 @@ export function Sparkline({
 }) {
   if (data.length < 2 || width <= 0) return null;
 
+  /* Non-finite points poison the whole path string ("NaN" is not a number
+     react-native-svg can parse — it throws on the 'N'). Drop them here so
+     no caller can crash the chart with a gappy series. */
+  const clean = data.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (clean.length < 2) return null;
+
   const padTop = SPARK_PAD.top;
   const padX = 4;
   const innerW = width - padX * 2;
   const innerH = height - SPARK_PAD.top - SPARK_PAD.bottom;
 
-  const [min, max] = domain ?? sparkDomain(data);
+  const [min, max] = domain ?? sparkDomain(clean);
   /* A flat series would divide by zero; give it the middle of the band. */
   const span = max - min || 1;
 
-  const points = data.map((v, i) => ({
-    x: padX + (innerW * i) / (data.length - 1),
+  const points = clean.map((v, i) => ({
+    x: padX + (innerW * i) / (clean.length - 1),
     y: padTop + innerH - ((v - min) / span) * innerH,
   }));
 

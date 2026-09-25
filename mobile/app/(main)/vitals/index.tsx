@@ -8,7 +8,7 @@ import { usePatientData } from "@app/hooks/usePatientData";
 import { useWearable } from "@app/patient/hooks/useWearable";
 import { buildSeries } from "@app/patient/lib/timeSeries";
 import { CATEGORY_LABEL, CATEGORY_ORDER, metricsIn, type Metric } from "@metrics/registry";
-import { resolveAll, type MetricValue } from "@metrics/readings";
+import { resolveAll, currentVitals, type MetricValue } from "@metrics/readings";
 
 import { Screen } from "@/ui/Screen";
 import { Reveal, TapScale } from "@/ui/motion";
@@ -176,7 +176,7 @@ export default function Vitals() {
     return list;
   }, [existingVitals, wearableLatest]);
 
-  const current: any = vitals[0];
+  const current: any = currentVitals(vitals);
 
   /* Every metric the registry defines, resolved against the packet and the
      patient's episodic records. Metrics with nothing yet come back empty

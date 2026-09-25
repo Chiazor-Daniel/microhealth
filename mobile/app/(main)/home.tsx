@@ -12,7 +12,7 @@ import { dashboardService } from "@app/services/dashboard.service";
 import { vitalService } from "@app/services/vital.service";
 import { familyGroupService } from "@app/services/family.service";
 import { buildSeries } from "@app/patient/lib/timeSeries";
-import { resolveAll, toScoreReadings, recordsBefore, type MetricValue } from "@metrics/readings";
+import { resolveAll, toScoreReadings, recordsBefore, currentVitals, type MetricValue } from "@metrics/readings";
 import { computeHealthScore } from "@metrics/healthScore";
 import type { Metric } from "@metrics/registry";
 
@@ -118,7 +118,7 @@ export default function Home() {
     [wearableLatest, existingVitals],
   );
 
-  const latest: any = sourceVitals[0];
+  const latest: any = currentVitals(sourceVitals);
 
   const hasReadings = sourceVitals.length > 0;
 

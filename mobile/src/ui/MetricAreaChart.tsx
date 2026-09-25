@@ -35,6 +35,11 @@ export function MetricAreaChart({
 }) {
   if (data.length < 2 || width <= 0) return null;
 
+  /* Same guard as Sparkline: non-finite values serialize as "NaN" and the
+     SVG parser throws on the 'N'. */
+  const clean = data.filter((d) => typeof d.value === "number" && Number.isFinite(d.value));
+  if (clean.length < 2) return null;
+
   /* The web's own chart margins, with the strip its x-axis needs reserved
      along the bottom. */
   const padTop = 10;
@@ -46,7 +51,7 @@ export function MetricAreaChart({
   const top = padTop;
   const bottom = height - axisHeight;
 
-  const values = data.map((d) => d.value);
+  const values = clean.map((d) => d.value);
   /* The web anchors this chart at `dataMin - 4` … `dataMax + 4` rather than at
      zero: the line is read against its own variation, which is why this is not
      the zero-anchored shape `Sparkline` defaults to. */
@@ -54,10 +59,10 @@ export function MetricAreaChart({
   const max = Math.max(...values) + 4;
   const span = max - min || 1;
 
-  const xAt = (i: number) => left + ((right - left) * i) / (data.length - 1);
+  const xAt = (i: number) => left + ((right - left) * i) / (clean.length - 1);
   const yAt = (v: number) => bottom - ((v - min) / span) * (bottom - top);
 
-  const points = data.map((d, i) => ({ x: xAt(i), y: yAt(d.value) }));
+  const points = clean.map((d, i) => ({ x: xAt(i), y: yAt(d.value) }));
   const line = smoothPath(points);
   const area = `${line} L ${points[points.length - 1].x} ${bottom} L ${points[0].x} ${bottom} Z`;
 

@@ -5,7 +5,7 @@ import { colors, radii, semantic, spacing } from "@tokens";
 import { font } from "@rn/theme";
 import { vitalService } from "@app/services/vital.service";
 import { api } from "@app/services/api";
-import { resolveAll, toScoreReadings } from "@metrics/readings";
+import { resolveAll, toScoreReadings, currentVitals } from "@metrics/readings";
 import { buildSeries } from "@app/patient/lib/timeSeries";
 import { computeHealthScore } from "@metrics/healthScore";
 
@@ -91,7 +91,7 @@ export default function MemberVitals() {
     );
   }
 
-  const latest = vitals[0];
+  const latest = currentVitals(vitals);
   const allValues = resolveAll(latest, records);
   const score = computeHealthScore(toScoreReadings(allValues));
   const display = name || "Family member";
@@ -99,7 +99,9 @@ export default function MemberVitals() {
   const verdict = scoreVerdict(score, null, firstName);
   const hrMetric = allValues.find((v) => v.metric.key === "heartRate");
   const series = hrMetric?.metric.read
-    ? buildSeries(vitals, "day", (v) => hrMetric.metric.read!(v)).map((p) => p.value as number)
+    ? buildSeries(vitals, "day", (v) => hrMetric.metric.read!(v))
+        .map((p) => p.value as number)
+        .filter((v): v is number => typeof v === "number" && Number.isFinite(v))
     : [];
 
   const tiles = [    { label: "Blood Pressure", value: latest?.bloodPressureSystolic != null ? `${latest.bloodPressureSystolic}/${latest.bloodPressureDiastolic ?? "—"}` : "—", unit: "mmHg" },

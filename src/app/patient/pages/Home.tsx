@@ -17,7 +17,7 @@ import { BrandMark } from "../components/BrandMark";
 import { ScoreRing, ScoreBandChip, ScoreDelta, scoreVerdict } from "../components/HealthScore";
 import { MetricTile } from "../components/MetricTile";
 import { GlyphIcon, HeartIcon, CalendarIcon, SparkIcon, SpeakerIcon, TrendIcon, ChevronRightIcon } from "../icons";
-import { resolveAll, toScoreReadings, recordsBefore, type MetricValue } from "../../../metrics/readings";
+import { resolveAll, toScoreReadings, recordsBefore, currentVitals, type MetricValue } from "../../../metrics/readings";
 import { computeHealthScore } from "../../../metrics/healthScore";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 import { buildSeries } from "../lib/timeSeries";
@@ -186,7 +186,7 @@ export default function Home() {
     [wearableLatest, existingVitals]
   );
 
-  const current: any = sourceVitals[0];
+  const current: any = currentVitals(sourceVitals);
   const updatedAt = wearableLatest?.timestamp ?? current?.recordedAt;
 
   /* Every metric the registry knows, resolved — the same call the Vitals

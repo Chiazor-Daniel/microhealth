@@ -12,7 +12,7 @@ import { SegmentedTabs } from "../components/SegmentedTabs";
 import { MetricTile } from "../components/MetricTile";
 import { buildSeries } from "../lib/timeSeries";
 import { CATEGORY_ORDER, CATEGORY_LABEL, metricsIn, type Metric } from "../../../metrics/registry";
-import { resolveAll, type MetricValue } from "../../../metrics/readings";
+import { resolveAll, currentVitals, type MetricValue } from "../../../metrics/readings";
 
 const tabs = [
   { value: "today", label: "Day" },
@@ -180,7 +180,7 @@ export default function Vitals() {
     return list;
   }, [existingVitals, wearableLatest]);
 
-  const current: any = vitals[0];
+  const current: any = currentVitals(vitals);
 
   /* Every metric the registry defines, resolved against the packet and the
      patient's episodic records. Metrics with nothing yet come back empty
