@@ -1,0 +1,66 @@
+# MicroHealth full stack (self-hosted alternative to Render).
+#
+#   docker compose up --build            # api + local ollama (CPU)
+#
+# Two ways the API reaches a model:
+#   1. Ollama Cloud (recommended): set OLLAMA_API_KEY (ollama.com → keys)
+#      and OLLAMA_HOST=https://ollama.com. No GPU box needed.
+#   2. Local daemon below: leave OLLAMA_HOST unset (http://ollama:11434).
+#      First boot pulls gemma3:4b (~2.5GB); chat model override via
+#      OLLAMA_CHAT_MODEL if the box can hold more.
+#
+# Copy to .env next to this file before launching:
+#   JWT_SECRET=...
+#   JWT_REFRESH_SECRET=...
+#   OLLAMA_API_KEY=...        # option 1 only
+#   OLLAMA_HOST=...           # option 1 only
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: microhealth-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=/app/data/microhealth.db
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change-me-in-production}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080}
+      - NODE_ENV=production
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
+      - OLLAMA_CHAT_MODEL=${OLLAMA_CHAT_MODEL:-gemma3:4b}
+      - OLLAMA_INSIGHT_MODEL=${OLLAMA_INSIGHT_MODEL:-gemma3:4b}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: microhealth-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    command: serve
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  ollama-models:

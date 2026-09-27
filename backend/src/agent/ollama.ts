@@ -52,11 +52,14 @@ export interface AgentPromptInput {
  * otherwise queue up cloud calls with nobody waiting on them.
  */
 const MODEL_FOR = {
-  chat: process.env.OLLAMA_CHAT_MODEL || "deepseek-v4-flash:cloud",
+  chat: process.env.OLLAMA_CHAT_MODEL || "gpt-oss:20b-cloud",
   insight: process.env.OLLAMA_INSIGHT_MODEL || "gemma3:4b",
 } as const;
 
 const OLLAMA_URL = process.env.OLLAMA_HOST || "http://localhost:11434";
+/* Cloud deployments have no local daemon: OLLAMA_API_KEY (from `ollama
+   signin` / ollama.com settings) authenticates straight to Ollama Cloud. */
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || "";
 
 /**
  * How long to wait for a completion.
@@ -99,7 +102,10 @@ export async function generateAgentResponse(input: AgentPromptInput): Promise<Ag
   try {
     const res = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(OLLAMA_API_KEY ? { Authorization: `Bearer ${OLLAMA_API_KEY}` } : {}),
+      },
       signal: controller.signal,
       body: JSON.stringify({
         model,
