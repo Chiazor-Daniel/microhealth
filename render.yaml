@@ -1,0 +1,33 @@
+# MicroHealth backend on Render + Neon Postgres.
+#
+# 1. Create a Neon project (https://neon.tech) and copy the pooled
+#    connection string, e.g.
+#    postgres://user:pass@ep-xxx-pooler.us-east-2.aws.neon.tech/microhealth?sslmode=require
+# 2. `render blueprint launch` from the repo root, or "New Blueprint" in the
+#    Render dashboard pointed at this file.
+# 3. Set DATABASE_URL to the Neon string (and JWT secrets) in the dashboard.
+# 4. On first deploy only: open a shell on the service and run
+#       npm run db:migrate   # creates all tables (drizzle push)
+#       npm run db:seed      # admin + demo accounts
+#    (db:migrate runs automatically on every boot via the Dockerfile CMD.)
+
+services:
+  - type: web
+    name: microhealth-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    healthCheckPath: /api/health
+    buildCommand: npm install
+    startCommand: npm run db:migrate && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "https://krypton-till-passivism.ngrok-free.dev"
