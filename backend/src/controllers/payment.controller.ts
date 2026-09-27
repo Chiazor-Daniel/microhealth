@@ -52,7 +52,7 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     const id = String(req.params.id);
     const { status } = req.body;
     const [payment] = await db.update(payments)
-      .set({ status, paidAt: status === "paid" ? new Date() : null, updatedAt: new Date() })
+      .set({ status, paidAt: (status === "paid" ? new Date() : null) as unknown as Date, updatedAt: new Date() })
       .where(eq(payments.id, id))
       .returning();
     if (!payment) throw new AppError("Payment not found", 404);

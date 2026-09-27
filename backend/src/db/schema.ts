@@ -1,11 +1,43 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text as sqliteText, integer as sqliteInt, real as sqliteReal } from "drizzle-orm/sqlite-core";
+import { pgTable, text as pgText, integer as pgInt, real as pgReal, timestamp as pgTs, boolean as pgBool } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
-const id = () => text("id").$defaultFn(() => randomUUID()).primaryKey();
-const ts = (name: string) => integer(name, { mode: "timestamp" }).$defaultFn(() => new Date()).notNull();
+/**
+ * Dual dialect: SQLite locally, Postgres (Neon) in the cloud.
+ *
+ * One schema file serves both. `DATABASE_URL` starting with postgres://
+ * selects pg builders; anything else stays on SQLite. Column usage is kept
+ * to the shared subset (text/integer/real) plus the `ts`/`bool` helpers
+ * below, so neither dialect sees a type it cannot build.
+ */
+export const IS_PG = /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "");
 
-export const users = sqliteTable("users", {
+const table = (IS_PG ? pgTable : sqliteTable) as unknown as typeof sqliteTable;
+const text = (IS_PG ? pgText : sqliteText) as typeof sqliteText;
+const integer = (IS_PG ? pgInt : sqliteInt) as typeof sqliteInt;
+const real = (IS_PG ? pgReal : sqliteReal) as typeof sqliteReal;
+
+const id = () => text("id").$defaultFn(() => randomUUID()).primaryKey();
+/* Reference builders: the helpers below must expose exactly these types so
+   every consumer keeps the nullability it always had. */
+const _tsRef = (name: string) => sqliteInt(name, { mode: "timestamp" }).$defaultFn(() => new Date()).notNull();
+const _boolRef = (name: string) => sqliteInt(name, { mode: "boolean" }).default(false);
+const ts = (name: string): ReturnType<typeof _tsRef> =>
+  IS_PG
+    ? (pgTs(name).$defaultFn(() => new Date()).notNull() as unknown as ReturnType<typeof _tsRef>)
+    : _tsRef(name);
+const bool = (name: string, def = false): ReturnType<typeof _boolRef> =>
+  IS_PG
+    ? (pgBool(name).default(def) as unknown as ReturnType<typeof _boolRef>)
+    : sqliteInt(name, { mode: "boolean" }).default(def) as unknown as ReturnType<typeof _boolRef>;
+/** Nullable timestamp (matches the columns that never had .notNull()). */
+const tsOpt = (name: string) =>
+  IS_PG
+    ? (pgTs(name).$defaultFn(() => new Date()) as unknown as ReturnType<typeof integer>)
+    : integer(name, { mode: "timestamp" }).$defaultFn(() => new Date());
+
+export const users = table("users", {
   id: id(),
   email: text("email").unique(),
   phone: text("phone"),
@@ -14,7 +46,7 @@ export const users = sqliteTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   avatarUrl: text("avatar_url"),
-  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+  lastLoginAt: tsOpt("last_login_at"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -33,7 +65,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   notifications: many(notifications),
 }));
 
-export const patients = sqliteTable("patients", {
+export const patients = table("patients", {
   id: id(),
   userId: text("user_id").references(() => users.id).unique(),
   patientCode: text("patient_code").unique().notNull(),
@@ -67,7 +99,7 @@ export const patientsRelations = relations(patients, ({ one, many }) => ({
   familyMembers: many(familyMembers),
 }));
 
-export const staff = sqliteTable("staff", {
+export const staff = table("staff", {
   id: id(),
   userId: text("user_id").references(() => users.id).unique(),
   role: text("role").notNull(),
@@ -91,7 +123,7 @@ export const staffRelations = relations(staff, ({ one, many }) => ({
   referralsFrom: many(referrals, { relationName: "fromDoctor" }),
 }));
 
-export const appointments = sqliteTable("appointments", {
+export const appointments = table("appointments", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   doctorId: text("doctor_id").references(() => staff.id).notNull(),
@@ -131,7 +163,7 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
  * The metric registry in `src/metrics/registry.ts` is the authoritative list;
  * a column here exists to feed a metric whose `source` is "vitals".
  */
-export const vitals = sqliteTable("vitals", {
+export const vitals = table("vitals", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   bloodPressureSystolic: integer("blood_pressure_systolic"),
@@ -171,7 +203,7 @@ export const vitals = sqliteTable("vitals", {
  * carries whatever is genuinely metric-specific and not worth a column —
  * the ECG's rhythm classification, a composition scan's device — as JSON.
  */
-export const metricReadings = sqliteTable("metric_readings", {
+export const metricReadings = table("metric_readings", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   /** Matches a `key` in src/metrics/registry.ts. */
@@ -209,11 +241,11 @@ export const metricReadingsRelations = relations(metricReadings, ({ one }) => ({
   }),
 }));
 
-export const labTests = sqliteTable("lab_tests", {
+export const labTests = table("lab_tests", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   testName: text("test_name").notNull(),
-  orderedAt: integer("ordered_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  orderedAt: ts("ordered_at"),
   doctorId: text("doctor_id").references(() => staff.id),
   status: text("status").default("pending"),
   result: text("result"),
@@ -233,14 +265,14 @@ export const labTestsRelations = relations(labTests, ({ one }) => ({
   }),
 }));
 
-export const prescriptions = sqliteTable("prescriptions", {
+export const prescriptions = table("prescriptions", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   medicine: text("medicine").notNull(),
   dosage: text("dosage").notNull(),
   duration: text("duration"),
   doctorId: text("doctor_id").references(() => staff.id),
-  issuedAt: integer("issued_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  issuedAt: ts("issued_at"),
   status: text("status").default("pending"),
   refills: integer("refills").default(0),
   expiryDate: text("expiry_date"),
@@ -259,7 +291,7 @@ export const prescriptionsRelations = relations(prescriptions, ({ one }) => ({
   }),
 }));
 
-export const inventory = sqliteTable("inventory", {
+export const inventory = table("inventory", {
   id: id(),
   name: text("name").notNull(),
   category: text("category").notNull(),
@@ -272,14 +304,14 @@ export const inventory = sqliteTable("inventory", {
   updatedAt: ts("updated_at"),
 });
 
-export const payments = sqliteTable("payments", {
+export const payments = table("payments", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   service: text("service").notNull(),
   amount: real("amount").notNull(),
   method: text("method"),
   status: text("status").default("pending"),
-  paidAt: integer("paid_at", { mode: "timestamp" }),
+  paidAt: ts("paid_at"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -291,7 +323,7 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   }),
 }));
 
-export const referrals = sqliteTable("referrals", {
+export const referrals = table("referrals", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   fromDoctorId: text("from_doctor_id").references(() => staff.id),
@@ -314,13 +346,13 @@ export const referralsRelations = relations(referrals, ({ one }) => ({
   }),
 }));
 
-export const messages = sqliteTable("messages", {
+export const messages = table("messages", {
   id: id(),
   senderId: text("sender_id").references(() => users.id).notNull(),
   recipientId: text("recipient_id").references(() => users.id),
   content: text("content").notNull(),
   subject: text("subject"),
-  isRead: integer("is_read", { mode: "boolean" }).default(false),
+  isRead: bool("is_read"),
   sentAt: ts("sent_at"),
 });
 
@@ -337,14 +369,14 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-export const notifications = sqliteTable("notifications", {
+export const notifications = table("notifications", {
   id: id(),
   userId: text("user_id").references(() => users.id).notNull(),
   title: text("title").notNull(),
   message: text("message").notNull(),
   type: text("type"),
   subjectPatientId: text("subject_patient_id").references(() => patients.id),
-  isRead: integer("is_read", { mode: "boolean" }).default(false),
+  isRead: bool("is_read"),
   createdAt: ts("created_at"),
 });
 
@@ -355,7 +387,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
-export const familyMembers = sqliteTable("family_members", {
+export const familyMembers = table("family_members", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   name: text("name").notNull(),
@@ -372,7 +404,7 @@ export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
   }),
 }));
 
-export const aiInsights = sqliteTable("ai_insights", {
+export const aiInsights = table("ai_insights", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   type: text("type").notNull(),
@@ -382,8 +414,8 @@ export const aiInsights = sqliteTable("ai_insights", {
   explanation: text("explanation"),
   suggestedActions: text("suggested_actions"),
   context: text("context"),
-  isRead: integer("is_read", { mode: "boolean" }).default(false),
-  dismissedAt: integer("dismissed_at", { mode: "timestamp" }),
+  isRead: bool("is_read"),
+  dismissedAt: ts("dismissed_at"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -403,7 +435,7 @@ export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
  * AI-written case summary. A clinician picks it up, acts, and resolves it —
  * every step logged on the row.
  */
-export const escalations = sqliteTable("escalations", {
+export const escalations = table("escalations", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   reason: text("reason").notNull(),
@@ -414,7 +446,7 @@ export const escalations = sqliteTable("escalations", {
   assignedStaffId: text("assigned_staff_id").references(() => staff.id),
   actionTaken: text("action_taken"),
   actionNote: text("action_note"),
-  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+  resolvedAt: ts("resolved_at"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -433,13 +465,13 @@ export const escalationsRelations = relations(escalations, ({ one }) => ({
  * (patient tapped "taken"), or missed (window passed with no confirmation).
  * Repeated misses on a high-risk patient escalate.
  */
-export const medicationLogs = sqliteTable("medication_logs", {
+export const medicationLogs = table("medication_logs", {
   id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   prescriptionId: text("prescription_id").references(() => prescriptions.id).notNull(),
-  dueAt: integer("due_at", { mode: "timestamp" }).notNull(),
-  remindedAt: integer("reminded_at", { mode: "timestamp" }),
-  confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+  dueAt: ts("due_at").notNull(),
+  remindedAt: ts("reminded_at"),
+  confirmedAt: ts("confirmed_at"),
   status: text("status").notNull().default("due"),
   createdAt: ts("created_at"),
 });
@@ -450,14 +482,14 @@ export const medicationLogs = sqliteTable("medication_logs", {
  * Consent-based and per-category: the patient chooses which alert kinds each
  * trusted contact may receive. No row (or no consent) means no alerts.
  */
-export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {  id: id(),
+export const caregiverAlertPrefs = table("caregiver_alert_prefs", {  id: id(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   familyMemberId: text("family_member_id").references(() => familyMembers.id).notNull(),
   contactPhone: text("contact_phone"),
-  alertAbnormal: integer("alert_abnormal", { mode: "boolean" }).default(true),
-  alertMissedMedication: integer("alert_missed_medication", { mode: "boolean" }).default(true),
-  alertUrgent: integer("alert_urgent", { mode: "boolean" }).default(true),
-  consentedAt: integer("consented_at", { mode: "timestamp" }),
+  alertAbnormal: bool("alert_abnormal", true),
+  alertMissedMedication: bool("alert_missed_medication", true),
+  alertUrgent: bool("alert_urgent", true),
+  consentedAt: ts("consented_at"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -470,13 +502,13 @@ export const caregiverAlertPrefs = sqliteTable("caregiver_alert_prefs", {  id: i
  * a native build); everything around it — shared vitals, chat, summary —
  * runs on this row today.
  */
-export const visitSessions = sqliteTable("visit_sessions", {
+export const visitSessions = table("visit_sessions", {
   id: id(),
   appointmentId: text("appointment_id").references(() => appointments.id).notNull(),
   patientId: text("patient_id").references(() => patients.id).notNull(),
   status: text("status").notNull().default("waiting"),
-  joinedAt: integer("joined_at", { mode: "timestamp" }),
-  endedAt: integer("ended_at", { mode: "timestamp" }),
+  joinedAt: ts("joined_at"),
+  endedAt: ts("ended_at"),
   summary: text("summary"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
@@ -490,7 +522,7 @@ export const visitSessions = sqliteTable("visit_sessions", {
  * until then it sits as `invited` holding the contact it was sent to. Typed
  * names never become accounts (see the onboarding contract).
  */
-export const familyGroups = sqliteTable("family_groups", {
+export const familyGroups = table("family_groups", {
   id: id(),
   plan: text("plan").notNull().default("family"),
   createdBy: text("created_by").references(() => patients.id).notNull(),
@@ -500,7 +532,7 @@ export const familyGroups = sqliteTable("family_groups", {
 
 export type FamilyRole = "Mum" | "Dad" | "Spouse" | "Child" | "Grandparent" | "Other";
 
-export const familyMemberships = sqliteTable("family_memberships", {
+export const familyMemberships = table("family_memberships", {
   id: id(),
   groupId: text("group_id").references(() => familyGroups.id).notNull(),
   patientId: text("patient_id").references(() => patients.id),
@@ -523,7 +555,7 @@ export const familyMembershipsRelations = relations(familyMemberships, ({ one })
 }));
 
 /** Audit: who viewed whose health data, and when. */
-export const familyViews = sqliteTable("family_views", {
+export const familyViews = table("family_views", {
   id: id(),
   viewerPatientId: text("viewer_patient_id").references(() => patients.id).notNull(),
   subjectPatientId: text("subject_patient_id").references(() => patients.id).notNull(),
@@ -531,7 +563,7 @@ export const familyViews = sqliteTable("family_views", {
 });
 
 /** Invite links: token resolves to a group + role without exposing health data. */
-export const familyInvites = sqliteTable("family_invites", {
+export const familyInvites = table("family_invites", {
   id: id(),
   token: text("token").notNull().unique(),
   groupId: text("group_id").references(() => familyGroups.id).notNull(),
@@ -546,13 +578,13 @@ export const familyInvites = sqliteTable("family_invites", {
  * want?" A subscriber gets notified about the target's abnormal / missed /
  * urgent events, subject to the same family authorization as everything else.
  */
-export const alertSubscriptions = sqliteTable("alert_subscriptions", {
+export const alertSubscriptions = table("alert_subscriptions", {
   id: id(),
   subscriberPatientId: text("subscriber_patient_id").references(() => patients.id).notNull(),
   targetPatientId: text("target_patient_id").references(() => patients.id).notNull(),
-  alertAbnormal: integer("alert_abnormal", { mode: "boolean" }).default(true),
-  alertMissedMedication: integer("alert_missed_medication", { mode: "boolean" }).default(true),
-  alertUrgent: integer("alert_urgent", { mode: "boolean" }).default(true),
+  alertAbnormal: bool("alert_abnormal", true),
+  alertMissedMedication: bool("alert_missed_medication", true),
+  alertUrgent: bool("alert_urgent", true),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
