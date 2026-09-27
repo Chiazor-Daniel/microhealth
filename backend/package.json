@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "db:migrate": "drizzle-kit push --force",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed-demo": "tsx src/db/seedDemo.ts",
     "db:seed-metrics": "tsx src/db/seedMetrics.ts"
   },
   "dependencies": {
