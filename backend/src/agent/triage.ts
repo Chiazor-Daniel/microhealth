@@ -157,7 +157,10 @@ export function matchPathway(message: string, ctx?: PatientContext, opts?: { abo
   // Vitals-driven fallback: concerning numbers with no clear topic.
   // Skipped when asking ABOUT someone — "how is Dad?" is a question for
   // the agent, not a symptom report, and must reach chat, not triage.
+  // Skipped for direct questions too ("how am I doing?") — those want a
+  // status answer; triage is for statements ("I feel off").
   if (opts?.aboutSomeoneElse) return null;
+  if (/\?\s*$/.test(message.trim())) return null;
   if (ctx?.recentVitals[0]) {
     const v = ctx.recentVitals[0];
     if (v.bloodPressureSystolic != null && v.bloodPressureSystolic >= 140) return TRIAGE_PATHWAYS[0];
