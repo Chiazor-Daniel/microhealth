@@ -151,7 +151,9 @@ function combineParts(
   metric: Metric,
   values: { key: string; label: string; value: number | null; band: Band }[]
 ): { score: number; status: MetricStatus; worst: number; verdict: { key: string; label: string; band: Band; value: number } | null } {
-  const scored = values.filter((v): v is typeof v & { value: number } => v.value != null);
+  const scored = values.filter(
+    (v): v is typeof v & { value: number } => v.value != null && Number.isFinite(v.value)
+  );
   if (!scored.length) return { score: 0, status: "normal", worst: 0, verdict: null };
 
   const each = scored.map((v) => ({
@@ -238,7 +240,7 @@ export function computeHealthScore(readings: MetricReading[]): HealthScore {
   const capped = ratio == null ? null : Math.min(ratio, cap);
   const limited = ratio != null && capped !== ratio;
 
-  const score = capped == null ? null : Math.round(capped * 100);
+  const score = capped == null || !Number.isFinite(capped) ? null : Math.round(capped * 100);
 
   return {
     score,

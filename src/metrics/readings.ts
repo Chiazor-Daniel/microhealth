@@ -66,6 +66,9 @@ export interface MetricValue {
  * is a lie the precision was there to prevent.
  */
 export function formatValue(value: number, metric: Metric): string {
+  /* Non-finite values serialize as "NaN" — a card must show an em dash,
+     never the word. Central rule: no NaN text anywhere, on any screen. */
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   const dp = metric.precision;
   if (metric.shape === "cumulative" && dp === 0) return group(Math.round(value));
   return value.toFixed(dp);
@@ -153,10 +156,15 @@ function valueFromParts(
   packet?: any,
   at?: string
 ): MetricValue {
+  /* NaN is not a value — normalize before anything formats or scores it. */
+  const clean = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  const safeValue = clean(value);
+  if (safeValue == null) return { ...emptyValue(metric), at };
   const meta = record?.meta ? safeParse(record.meta) : undefined;
 
   const parts = (metric.parts ?? []).map((p) => {
-    const pv = packet ? p.read?.(packet) ?? null : (meta?.[p.key] ?? null);
+    const pv = clean(packet ? p.read?.(packet) ?? null : (meta?.[p.key] ?? null));
     return {
       key: p.key,
       label: p.label,
@@ -174,18 +182,18 @@ function valueFromParts(
 
   const display = dual
     ? `${parts[0].display}/${parts[1].display}`
-    : formatValue(value, metric);
+    : formatValue(safeValue, metric);
 
   /* For a dual metric the status is the worst of the pair: either number
      being high is what matters, so averaging them would hide it. */
   const status =
     metric.shape === "dual" && parts.length
       ? worstStatus(parts.map((p) => p.status))
-      : classify(value, metric.band);
+      : classify(safeValue, metric.band);
 
   return {
     metric,
-    value,
+    value: safeValue,
     display,
     unit: metric.unit,
     status,
